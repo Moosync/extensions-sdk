@@ -45,7 +45,7 @@ __pdoc__ = {
 
 class EnhancedJSONEncoder(json.JSONEncoder):
         def default(self, o):
-            if dataclasses.is_dataclass(o):
+            if dataclasses.is_dataclass(o) and not isinstance(o, type):
                 return dataclasses.asdict(o)
             return super().default(o)
 
@@ -328,6 +328,24 @@ class Api:
             "UpdateAccounts": None
         }
         send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
+
+    def register_user_preferences(self, prefs: List[PreferenceUIData]) -> None:
+        """
+        Registered preferences will show up in settings
+        """
+        data = {
+            "RegisterUserPreference": prefs
+        }
+        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
+
+    def unregister_user_preferences(self, pref_keys: List[str]) -> None:
+            """
+            Removes preferences from settings
+            """
+            data = {
+                "UnregisterUserPreference": pref_keys
+            }
+            send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
 
 class Extension:
     api = Api()

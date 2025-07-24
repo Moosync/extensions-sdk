@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Union, Any, Literal
 import inspect
+from enum import Enum
 
 ProviderScopes = Literal[
     "search",
@@ -387,3 +388,37 @@ class AddToPlaylistRequest:
             k: v for k, v in data.items()
             if k in inspect.signature(cls).parameters
         })
+
+class PreferenceTypes(Enum):
+    DirectoryGroup = "DirectoryGroup"
+    EditText = "EditText"
+    FilePicker = "FilePicker"
+    CheckboxGroup = "CheckboxGroup"
+    ThemeSelector = "ThemeSelector"
+    Extensions = "Extensions"
+    ButtonGroup = "ButtonGroup"
+    ProgressBar = "ProgressBar"
+    TextField = "TextField"
+    InfoField = "InfoField"
+    Dropdown = "Dropdown"
+
+class InputType(Enum):
+    Text = "text"
+    Number = "number"
+
+@dataclass(frozen=True)
+class CheckboxItems:
+    title: str
+    key: str
+
+@dataclass
+class PreferenceUIData:
+    type: 'PreferenceTypes'  # Use string annotation for forward reference or import the actual class
+    title: str
+    key: str
+    description: str
+    inputType: Optional['InputType'] = None
+    single: Optional[bool] = None
+    items: Optional[List['CheckboxItems']] = None
+    default: Optional[Any] = None  # Replace Any with the actual Value type if available
+    mobile: Optional[bool] = None

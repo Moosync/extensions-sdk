@@ -482,6 +482,42 @@ export interface ContextMenuReturnType {
   action_id: string;
 }
 
+export enum PreferenceTypes {
+  DirectoryGroup = "DirectoryGroup",
+  EditText = "EditText",
+  FilePicker = "FilePicker",
+  CheckboxGroup = "CheckboxGroup",
+  ThemeSelector = "ThemeSelector",
+  Extensions = "Extensions",
+  ButtonGroup = "ButtonGroup",
+  ProgressBar = "ProgressBar",
+  TextField = "TextField",
+  InfoField = "InfoField",
+  Dropdown = "Dropdown",
+}
+
+export enum InputType {
+  Text = "text",
+  Number = "number",
+}
+
+export interface CheckboxItems {
+  title: string;
+  key: string;
+}
+
+export interface PreferenceUIData {
+  type: PreferenceTypes;
+  title: string;
+  key: string;
+  description: string;
+  inputType?: InputType;
+  single?: boolean;
+  items?: CheckboxItems[];
+  default?: any;
+  mobile?: boolean;
+}
+
 /**
  * The API exposed to extensions
  */
@@ -837,6 +873,18 @@ export interface ExtensionAPI {
    * @param url The URL to open
    */
   openExternalUrl(url: string): void;
+
+  /**
+   * Registers user preferences to show in settings.
+   * @param prefs An array of PreferenceUIData objects representing the preferences to register
+   */
+  registerUserPreferences(prefs: PreferenceUIData[]): void;
+
+  /**
+   * Unregisters user preferences from the main app.
+   * @param pref_keys An array of preference keys to unregister
+   */
+  unregisterUserPreferences(pref_keys: string[]): void;
 
   /**
    * Updates the list of accounts in the main app.

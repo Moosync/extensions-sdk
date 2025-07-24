@@ -375,6 +375,16 @@ func OpenExternalUrl(url string) error {
 	return err
 }
 
+func RegisterUserPreference(prefs []types.PreferenceUIData) error {
+	err := sendMainCommandOptional("RegisterUserPreference", prefs)
+	return err
+}
+
+func UnregisterUserPreference(prefs []string) error {
+	err := sendMainCommandOptional("UnregisterUserPreference", prefs)
+	return err
+}
+
 // UpdateAccounts updates the accounts status.
 func UpdateAccounts(packageName string) error {
 	err := sendMainCommandOptional("UpdateAccounts", packageName)

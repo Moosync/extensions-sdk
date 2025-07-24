@@ -234,3 +234,43 @@ const (
 	PlayerStateStopped PlayerState = "STOPPED"
 	PlayerStateLoading PlayerState = "LOADING"
 )
+
+type PreferenceTypes string
+
+const (
+	DirectoryGroup PreferenceTypes = "DirectoryGroup"
+	EditText       PreferenceTypes = "EditText"
+	FilePicker     PreferenceTypes = "FilePicker"
+	CheckboxGroup  PreferenceTypes = "CheckboxGroup"
+	ThemeSelector  PreferenceTypes = "ThemeSelector"
+	Extensions     PreferenceTypes = "Extensions"
+	ButtonGroup    PreferenceTypes = "ButtonGroup"
+	ProgressBar    PreferenceTypes = "ProgressBar"
+	TextField      PreferenceTypes = "TextField"
+	InfoField      PreferenceTypes = "InfoField"
+	Dropdown       PreferenceTypes = "Dropdown"
+)
+
+type InputType string
+
+const (
+	Text   InputType = "text"
+	Number InputType = "number"
+)
+
+type CheckboxItems struct {
+	Title string `json:"title"`
+	Key   string `json:"key"`
+}
+
+type PreferenceUIData struct {
+	Type        PreferenceTypes  `json:"type"`
+	Title       string           `json:"title"`
+	Key         string           `json:"key"`
+	Description string           `json:"description"`
+	InputType   *InputType       `json:"inputType,omitempty"`
+	Single      *bool            `json:"single,omitempty"`
+	Items       *[]CheckboxItems `json:"items,omitempty"`
+	Default     any              `json:"default,omitempty"`
+	Mobile      *bool            `json:"mobile,omitempty"`
+}

@@ -439,6 +439,20 @@ pub mod extension_api {
         ///
         /// * `package_name` - The optional package name to filter the accounts.
         update_accounts(UpdateAccounts, package_name: Option<String>) -> ();
+
+        /// Registers user preferences with the main app.
+        ///
+        /// # Arguments
+        ///
+        /// * `prefs` - A vector of `PreferenceUIData` representing the user preferences to register.
+        register_user_preferences(RegisterUserPreference, prefs: Vec<PreferenceUIData>) -> ();
+
+        /// Unregisters user preferences from the main app.
+        ///
+        /// # Arguments
+        ///
+        /// * `pref_keys` - A vector of strings representing the keys of the preferences to unregister.
+        unregister_user_preferences(UnregisterUserPreference, pref_keys: Vec<String>) -> ();
     }
 
     pub fn get_system_time() -> u64 {

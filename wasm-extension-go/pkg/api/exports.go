@@ -335,8 +335,7 @@ func perform_account_login_wrapper() int32 {
 //go:wasmexport scrobble_wrapper
 func scrobble_wrapper() int32 {
 	var song types.Song
-	in := [...]any{&song}
-	return runWrapper(&in, func() (any, error) {
+	return runWrapper(&song, func() (any, error) {
 		return nil, extension.Scrobble(song)
 	})
 }
