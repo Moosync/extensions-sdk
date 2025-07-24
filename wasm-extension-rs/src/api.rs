@@ -351,7 +351,7 @@ pub mod extension_api {
         /// # Returns
         ///
         /// A `Value` object representing the preference.
-        get_preference(GetPreference, data: PreferenceData) -> Value;
+        get_preference(GetPreference, data: PreferenceData) -> PreferenceData;
 
         /// Retrieves a secure preference value based on the provided data.
         ///
@@ -362,7 +362,7 @@ pub mod extension_api {
         /// # Returns
         ///
         /// A `Value` object representing the secure preference.
-        get_secure(GetSecure, data: PreferenceData) -> Value;
+        get_secure(GetSecure, data: PreferenceData) -> PreferenceData;
 
         /// Adds a new playlist to the main app.
         ///
