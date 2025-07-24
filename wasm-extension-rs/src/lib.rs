@@ -28,7 +28,7 @@ use handler::{
 use serde_json::Value;
 
 pub use types::{
-    entities::*, errors::*, extensions::*, songs::*, ui::extensions::*,
+    entities::*, errors::*, extensions::*, preferences::*, songs::*, ui::extensions::*,
     ui::player_details::PlayerState,
 };
 

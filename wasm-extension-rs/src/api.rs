@@ -233,6 +233,7 @@ pub mod extension_api {
     use types::entities::{GetEntityOptions, QueryablePlaylist};
     use types::errors::{MoosyncError, Result as MoosyncResult};
     use types::extensions::MainCommand;
+    use types::preferences::PreferenceUIData;
     use types::songs::{GetSongOptions, Song};
     use types::ui::extensions::{AddToPlaylistRequest, PreferenceData};
     use types::ui::player_details::PlayerState;
