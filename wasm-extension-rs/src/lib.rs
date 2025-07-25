@@ -68,10 +68,7 @@ pub fn get_playlist_content_wrapper(
     Json((id, token)): Json<(String, Option<String>)>,
 ) -> FnResult<Json<SongsWithPageTokenReturnType>> {
     let ret = get_playlist_content(id, token)?;
-    Ok(Json(SongsWithPageTokenReturnType {
-        songs: ret,
-        next_page_token: None,
-    }))
+    Ok(Json(ret))
 }
 
 #[tracing::instrument(level = "debug", skip())]
@@ -136,10 +133,7 @@ pub fn get_artist_songs_wrapper(
     Json((artist, token)): Json<(QueryableArtist, Option<String>)>,
 ) -> FnResult<Json<SongsWithPageTokenReturnType>> {
     let ret = get_artist_songs(artist, token)?;
-    Ok(Json(SongsWithPageTokenReturnType {
-        songs: ret,
-        next_page_token: None,
-    }))
+    Ok(Json(ret))
 }
 
 #[tracing::instrument(level = "debug", skip())]
@@ -148,10 +142,7 @@ pub fn get_album_songs_wrapper(
     Json((album, token)): Json<(QueryableAlbum, Option<String>)>,
 ) -> FnResult<Json<SongsWithPageTokenReturnType>> {
     let ret = get_album_songs(album, token)?;
-    Ok(Json(SongsWithPageTokenReturnType {
-        songs: ret,
-        next_page_token: None,
-    }))
+    Ok(Json(ret))
 }
 
 #[tracing::instrument(level = "debug", skip(id))]

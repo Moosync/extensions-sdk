@@ -23,6 +23,7 @@ use types::songs::Song;
 use types::ui::extensions::{
     AccountLoginArgs, ContextMenuReturnType, CustomRequestReturnType, ExtensionAccountDetail,
     ExtensionProviderScope, PlaybackDetailsReturnType, PreferenceArgs,
+    SongsWithPageTokenReturnType,
 };
 
 #[allow(unused_variables)]
@@ -122,7 +123,7 @@ pub trait Provider {
         &self,
         id: String,
         next_page_token: Option<String>,
-    ) -> MoosyncResult<Vec<Song>> {
+    ) -> MoosyncResult<SongsWithPageTokenReturnType> {
         Err("Not implemented".into())
     }
 
@@ -161,7 +162,7 @@ pub trait Provider {
         &self,
         artist: QueryableArtist,
         next_page_token: Option<String>,
-    ) -> MoosyncResult<Vec<Song>> {
+    ) -> MoosyncResult<SongsWithPageTokenReturnType> {
         Err("Not implemented".into())
     }
 
@@ -170,7 +171,7 @@ pub trait Provider {
         &self,
         album: QueryableAlbum,
         next_page_token: Option<String>,
-    ) -> MoosyncResult<Vec<Song>> {
+    ) -> MoosyncResult<SongsWithPageTokenReturnType> {
         Err("Not implemented".into())
     }
 
