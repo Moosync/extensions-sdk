@@ -84,13 +84,7 @@ export interface Playlist {
 /**
  * Types of media players supported by the system
  */
-export type PlayerTypes =
-  | "LOCAL"
-  | "YOUTUBE"
-  | "SPOTIFY"
-  | "URL"
-  | "DASH"
-  | "HLS";
+export type PlayerTypes = "LOCAL" | "SPOTIFY" | "URL" | "DASH" | "HLS";
 
 /**
  * Represents a song entity in the system

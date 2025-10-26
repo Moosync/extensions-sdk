@@ -183,7 +183,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             List[Song]: A list of songs matching the options.
         &#34;&#34;&#34;
         data = {
-            &#34;GetSong&#34;: [options]
+            &#34;GetSong&#34;: options
         }
         return parse_main_command_list(json.dumps(data, cls=EnhancedJSONEncoder), Song)
 
@@ -195,7 +195,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             Optional[Song]: The current playing song, or None if no song is playing.
         &#34;&#34;&#34;
         data = {
-            &#34;GetCurrentSong&#34;: []
+            &#34;GetCurrentSong&#34;: None
         }
         return parse_main_command_optional(json.dumps(data, cls=EnhancedJSONEncoder), Song)
 
@@ -219,7 +219,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             float: The current volume level.
         &#34;&#34;&#34;
         data = {
-            &#34;GetVolume&#34;: []
+            &#34;GetVolume&#34;: None
         }
         return float(send_main_command(json.dumps(data, cls=EnhancedJSONEncoder)))
 
@@ -231,7 +231,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             float: The current playback time of the song.
         &#34;&#34;&#34;
         data = {
-            &#34;GetTime&#34;: []
+            &#34;GetTime&#34;: None
         }
         return float(send_main_command(json.dumps(data, cls=EnhancedJSONEncoder)))
 
@@ -243,7 +243,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             List[Song]: The current queue of songs.
         &#34;&#34;&#34;
         data = {
-            &#34;GetQueue&#34;: []
+            &#34;GetQueue&#34;: None
         }
         return parse_main_command_list(json.dumps(data, cls=EnhancedJSONEncoder), Song)
 
@@ -258,7 +258,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             Any: The retrieved preference data.
         &#34;&#34;&#34;
         request = {
-            &#34;GetPreference&#34;: [data]
+            &#34;GetPreference&#34;: data
         }
         return json.loads(send_main_command(json.dumps(request, cls=EnhancedJSONEncoder)))
 
@@ -273,7 +273,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             Any: The retrieved encrypted preference data.
         &#34;&#34;&#34;
         request = {
-            &#34;GetSecure&#34;: [data]
+            &#34;GetSecure&#34;: data
         }
         return json.loads(send_main_command(json.dumps(request, cls=EnhancedJSONEncoder)))
 
@@ -285,7 +285,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             data (PreferenceData): The preference data to set.
         &#34;&#34;&#34;
         request = {
-            &#34;SetPreference&#34;: [data]
+            &#34;SetPreference&#34;: data
         }
         send_main_command(json.dumps(request, cls=EnhancedJSONEncoder))
 
@@ -297,7 +297,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             data (PreferenceData): The encrypted preference data to set.
         &#34;&#34;&#34;
         request = {
-            &#34;SetSecure&#34;: [data]
+            &#34;SetSecure&#34;: data
         }
         send_main_command(json.dumps(request, cls=EnhancedJSONEncoder))
 
@@ -309,7 +309,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             songs (List[Song]): The list of songs to add.
         &#34;&#34;&#34;
         data = {
-            &#34;AddSongs&#34;: [songs]
+            &#34;AddSongs&#34;: songs
         }
         send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
 
@@ -321,7 +321,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             song (Song): The song to remove.
         &#34;&#34;&#34;
         data = {
-            &#34;RemoveSong&#34;: [song]
+            &#34;RemoveSong&#34;: song
         }
         send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
 
@@ -333,7 +333,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             song (Song): The song to update.
         &#34;&#34;&#34;
         data = {
-            &#34;UpdateSong&#34;: [song]
+            &#34;UpdateSong&#34;: song
         }
         send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
 
@@ -348,7 +348,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             str: The ID of the added playlist.
         &#34;&#34;&#34;
         data = {
-            &#34;AddPlaylist&#34;: [playlist]
+            &#34;AddPlaylist&#34;: playlist
         }
         return send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
 
@@ -360,7 +360,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             req (AddToPlaylistRequest): The request containing playlist ID and songs to add.
         &#34;&#34;&#34;
         data = {
-            &#34;AddToPlaylist&#34;: [req]
+            &#34;AddToPlaylist&#34;: req
         }
         send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
 
@@ -372,7 +372,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             token (str): The OAuth token.
         &#34;&#34;&#34;
         data = {
-            &#34;RegisterOAuth&#34;: [token]
+            &#34;RegisterOAuth&#34;: token
         }
         send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
 
@@ -384,7 +384,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
             url (str): The URL to open.
         &#34;&#34;&#34;
         data = {
-            &#34;OpenExternalUrl&#34;: [url]
+            &#34;OpenExternalUrl&#34;: url
         }
         send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
 
@@ -393,9 +393,27 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         Update accounts status.
         &#34;&#34;&#34;
         data = {
-            &#34;UpdateAccounts&#34;: []
+            &#34;UpdateAccounts&#34;: None
         }
-        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
+        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
+
+    def register_user_preferences(self, prefs: List[PreferenceUIData]) -&gt; None:
+        &#34;&#34;&#34;
+        Registered preferences will show up in settings
+        &#34;&#34;&#34;
+        data = {
+            &#34;RegisterUserPreference&#34;: prefs
+        }
+        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
+
+    def unregister_user_preferences(self, pref_keys: List[str]) -&gt; None:
+            &#34;&#34;&#34;
+            Removes preferences from settings
+            &#34;&#34;&#34;
+            data = {
+                &#34;UnregisterUserPreference&#34;: pref_keys
+            }
+            send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Methods</h3>
@@ -419,7 +437,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         str: The ID of the added playlist.
     &#34;&#34;&#34;
     data = {
-        &#34;AddPlaylist&#34;: [playlist]
+        &#34;AddPlaylist&#34;: playlist
     }
     return send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
 </details>
@@ -451,7 +469,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         songs (List[Song]): The list of songs to add.
     &#34;&#34;&#34;
     data = {
-        &#34;AddSongs&#34;: [songs]
+        &#34;AddSongs&#34;: songs
     }
     send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
 </details>
@@ -478,7 +496,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         req (AddToPlaylistRequest): The request containing playlist ID and songs to add.
     &#34;&#34;&#34;
     data = {
-        &#34;AddToPlaylist&#34;: [req]
+        &#34;AddToPlaylist&#34;: req
     }
     send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
 </details>
@@ -505,7 +523,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         Optional[Song]: The current playing song, or None if no song is playing.
     &#34;&#34;&#34;
     data = {
-        &#34;GetCurrentSong&#34;: []
+        &#34;GetCurrentSong&#34;: None
     }
     return parse_main_command_optional(json.dumps(data, cls=EnhancedJSONEncoder), Song)</code></pre>
 </details>
@@ -562,7 +580,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         Any: The retrieved preference data.
     &#34;&#34;&#34;
     request = {
-        &#34;GetPreference&#34;: [data]
+        &#34;GetPreference&#34;: data
     }
     return json.loads(send_main_command(json.dumps(request, cls=EnhancedJSONEncoder)))</code></pre>
 </details>
@@ -594,7 +612,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         List[Song]: The current queue of songs.
     &#34;&#34;&#34;
     data = {
-        &#34;GetQueue&#34;: []
+        &#34;GetQueue&#34;: None
     }
     return parse_main_command_list(json.dumps(data, cls=EnhancedJSONEncoder), Song)</code></pre>
 </details>
@@ -624,7 +642,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         Any: The retrieved encrypted preference data.
     &#34;&#34;&#34;
     request = {
-        &#34;GetSecure&#34;: [data]
+        &#34;GetSecure&#34;: data
     }
     return json.loads(send_main_command(json.dumps(request, cls=EnhancedJSONEncoder)))</code></pre>
 </details>
@@ -659,7 +677,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         List[Song]: A list of songs matching the options.
     &#34;&#34;&#34;
     data = {
-        &#34;GetSong&#34;: [options]
+        &#34;GetSong&#34;: options
     }
     return parse_main_command_list(json.dumps(data, cls=EnhancedJSONEncoder), Song)</code></pre>
 </details>
@@ -691,7 +709,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         float: The current playback time of the song.
     &#34;&#34;&#34;
     data = {
-        &#34;GetTime&#34;: []
+        &#34;GetTime&#34;: None
     }
     return float(send_main_command(json.dumps(data, cls=EnhancedJSONEncoder)))</code></pre>
 </details>
@@ -718,7 +736,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         float: The current volume level.
     &#34;&#34;&#34;
     data = {
-        &#34;GetVolume&#34;: []
+        &#34;GetVolume&#34;: None
     }
     return float(send_main_command(json.dumps(data, cls=EnhancedJSONEncoder)))</code></pre>
 </details>
@@ -745,7 +763,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         url (str): The URL to open.
     &#34;&#34;&#34;
     data = {
-        &#34;OpenExternalUrl&#34;: [url]
+        &#34;OpenExternalUrl&#34;: url
     }
     send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
 </details>
@@ -772,7 +790,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         token (str): The OAuth token.
     &#34;&#34;&#34;
     data = {
-        &#34;RegisterOAuth&#34;: [token]
+        &#34;RegisterOAuth&#34;: token
     }
     send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
 </details>
@@ -782,6 +800,25 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
 <dt><strong><code>token</code></strong> :&ensp;<code>str</code></dt>
 <dd>The OAuth token.</dd>
 </dl></div>
+</dd>
+<dt id="moosync_edk.Api.register_user_preferences"><code class="name flex">
+<span>def <span class="ident">register_user_preferences</span></span>(<span>self,<br>prefs: List[<a title="moosync_edk.custom_types.PreferenceUIData" href="custom_types.html#moosync_edk.custom_types.PreferenceUIData">PreferenceUIData</a>]) ‑> None</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def register_user_preferences(self, prefs: List[PreferenceUIData]) -&gt; None:
+    &#34;&#34;&#34;
+    Registered preferences will show up in settings
+    &#34;&#34;&#34;
+    data = {
+        &#34;RegisterUserPreference&#34;: prefs
+    }
+    send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
+</details>
+<div class="desc"><p>Registered preferences will show up in settings</p></div>
 </dd>
 <dt id="moosync_edk.Api.remove_song"><code class="name flex">
 <span>def <span class="ident">remove_song</span></span>(<span>self,<br>song: <a title="moosync_edk.custom_types.Song" href="custom_types.html#moosync_edk.custom_types.Song">Song</a>) ‑> None</span>
@@ -799,7 +836,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         song (Song): The song to remove.
     &#34;&#34;&#34;
     data = {
-        &#34;RemoveSong&#34;: [song]
+        &#34;RemoveSong&#34;: song
     }
     send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
 </details>
@@ -826,7 +863,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         data (PreferenceData): The preference data to set.
     &#34;&#34;&#34;
     request = {
-        &#34;SetPreference&#34;: [data]
+        &#34;SetPreference&#34;: data
     }
     send_main_command(json.dumps(request, cls=EnhancedJSONEncoder))</code></pre>
 </details>
@@ -853,7 +890,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         data (PreferenceData): The encrypted preference data to set.
     &#34;&#34;&#34;
     request = {
-        &#34;SetSecure&#34;: [data]
+        &#34;SetSecure&#34;: data
     }
     send_main_command(json.dumps(request, cls=EnhancedJSONEncoder))</code></pre>
 </details>
@@ -863,6 +900,25 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
 <dt><strong><code>data</code></strong> :&ensp;<code>PreferenceData</code></dt>
 <dd>The encrypted preference data to set.</dd>
 </dl></div>
+</dd>
+<dt id="moosync_edk.Api.unregister_user_preferences"><code class="name flex">
+<span>def <span class="ident">unregister_user_preferences</span></span>(<span>self, pref_keys: List[str]) ‑> None</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def unregister_user_preferences(self, pref_keys: List[str]) -&gt; None:
+        &#34;&#34;&#34;
+        Removes preferences from settings
+        &#34;&#34;&#34;
+        data = {
+            &#34;UnregisterUserPreference&#34;: pref_keys
+        }
+        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
+</details>
+<div class="desc"><p>Removes preferences from settings</p></div>
 </dd>
 <dt id="moosync_edk.Api.update_accounts"><code class="name flex">
 <span>def <span class="ident">update_accounts</span></span>(<span>self) ‑> None</span>
@@ -877,7 +933,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
     Update accounts status.
     &#34;&#34;&#34;
     data = {
-        &#34;UpdateAccounts&#34;: []
+        &#34;UpdateAccounts&#34;: None
     }
     send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
 </details>
@@ -899,7 +955,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
         song (Song): The song to update.
     &#34;&#34;&#34;
     data = {
-        &#34;UpdateSong&#34;: [song]
+        &#34;UpdateSong&#34;: song
     }
     send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))</code></pre>
 </details>
@@ -980,7 +1036,7 @@ Only passes keys to the constructor that match the class's attributes.</p></div>
 </summary>
 <pre><code class="python">class EnhancedJSONEncoder(json.JSONEncoder):
         def default(self, o):
-            if dataclasses.is_dataclass(o):
+            if dataclasses.is_dataclass(o) and not isinstance(o, type):
                 return dataclasses.asdict(o)
             return super().default(o)</code></pre>
 </details>
@@ -1025,9 +1081,8 @@ object for <code>o</code> if possible, otherwise it should call the superclass
 implementation (to raise <code>TypeError</code>).</p>
 <p>Constructor for JSONEncoder, with sensible defaults.</p>
 <p>If skipkeys is false, then it is a TypeError to attempt
-encoding of keys that are not str, int, float or None.
-If
-skipkeys is True, such items are simply skipped.</p>
+encoding of keys that are not str, int, float, bool or None.
+If skipkeys is True, such items are simply skipped.</p>
 <p>If ensure_ascii is true, the output is guaranteed to be str
 objects with all incoming non-ASCII characters escaped.
 If
@@ -1074,7 +1129,7 @@ version of the object or raise a <code>TypeError</code>.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def default(self, o):
-    if dataclasses.is_dataclass(o):
+    if dataclasses.is_dataclass(o) and not isinstance(o, type):
         return dataclasses.asdict(o)
     return super().default(o)</code></pre>
 </details>
@@ -1807,7 +1862,7 @@ implement default like this::</p>
 <ul>
 <li>
 <h4><code><a title="moosync_edk.Api" href="#moosync_edk.Api">Api</a></code></h4>
-<ul class="two-column">
+<ul class="">
 <li><code><a title="moosync_edk.Api.add_playlist" href="#moosync_edk.Api.add_playlist">add_playlist</a></code></li>
 <li><code><a title="moosync_edk.Api.add_songs" href="#moosync_edk.Api.add_songs">add_songs</a></code></li>
 <li><code><a title="moosync_edk.Api.add_to_playlist" href="#moosync_edk.Api.add_to_playlist">add_to_playlist</a></code></li>
@@ -1821,9 +1876,11 @@ implement default like this::</p>
 <li><code><a title="moosync_edk.Api.get_volume" href="#moosync_edk.Api.get_volume">get_volume</a></code></li>
 <li><code><a title="moosync_edk.Api.open_external_url" href="#moosync_edk.Api.open_external_url">open_external_url</a></code></li>
 <li><code><a title="moosync_edk.Api.register_oauth" href="#moosync_edk.Api.register_oauth">register_oauth</a></code></li>
+<li><code><a title="moosync_edk.Api.register_user_preferences" href="#moosync_edk.Api.register_user_preferences">register_user_preferences</a></code></li>
 <li><code><a title="moosync_edk.Api.remove_song" href="#moosync_edk.Api.remove_song">remove_song</a></code></li>
 <li><code><a title="moosync_edk.Api.set_preference" href="#moosync_edk.Api.set_preference">set_preference</a></code></li>
 <li><code><a title="moosync_edk.Api.set_secure" href="#moosync_edk.Api.set_secure">set_secure</a></code></li>
+<li><code><a title="moosync_edk.Api.unregister_user_preferences" href="#moosync_edk.Api.unregister_user_preferences">unregister_user_preferences</a></code></li>
 <li><code><a title="moosync_edk.Api.update_accounts" href="#moosync_edk.Api.update_accounts">update_accounts</a></code></li>
 <li><code><a title="moosync_edk.Api.update_song" href="#moosync_edk.Api.update_song">update_song</a></code></li>
 </ul>

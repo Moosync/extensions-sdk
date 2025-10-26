@@ -42,7 +42,6 @@ class Album:
 
 @dataclass
 class ArtistExtraInfo:
-    youtube: Optional[Dict[str, Optional[str]]] = field(default_factory=dict)  # Extra information from YouTube
     spotify: Optional[Dict[str, Optional[str]]] = field(default_factory=dict)  # Extra information from Spotify
     extensions: Optional[Dict[str, Dict[str, Optional[str]]]] = field(default_factory=dict)  # Additional extensions
 
@@ -100,7 +99,7 @@ class Playlist:
             if k in inspect.signature(cls).parameters
         })
 
-PlayerTypes = Literal["LOCAL", "YOUTUBE", "SPOTIFY", "URL", "DASH", "HLS"]
+PlayerTypes = Literal["LOCAL", "SPOTIFY", "URL", "DASH", "HLS"]
 
 @dataclass
 class Song:

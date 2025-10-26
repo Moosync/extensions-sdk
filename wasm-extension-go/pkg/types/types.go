@@ -219,7 +219,6 @@ type SongType string
 const (
 	SongTypeLocal   SongType = "LOCAL"
 	SongTypeURL     SongType = "URL"
-	SongTypeYoutube SongType = "YOUTUBE"
 	SongTypeSpotify SongType = "SPOTIFY"
 	SongTypeDASH    SongType = "DASH"
 	SongTypeHLS     SongType = "HLS"

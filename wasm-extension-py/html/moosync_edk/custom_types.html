@@ -343,7 +343,7 @@ class Artist:
 </dd>
 <dt id="moosync_edk.custom_types.ArtistExtraInfo"><code class="flex name class">
 <span>class <span class="ident">ArtistExtraInfo</span></span>
-<span>(</span><span>youtube: Dict[str, str | None] | None = &lt;factory&gt;,<br>spotify: Dict[str, str | None] | None = &lt;factory&gt;,<br>extensions: Dict[str, Dict[str, str | None]] | None = &lt;factory&gt;)</span>
+<span>(</span><span>spotify: Dict[str, str | None] | None = &lt;factory&gt;,<br>extensions: Dict[str, Dict[str, str | None]] | None = &lt;factory&gt;)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -352,7 +352,6 @@ class Artist:
 </summary>
 <pre><code class="python">@dataclass
 class ArtistExtraInfo:
-    youtube: Optional[Dict[str, Optional[str]]] = field(default_factory=dict)  # Extra information from YouTube
     spotify: Optional[Dict[str, Optional[str]]] = field(default_factory=dict)  # Extra information from Spotify
     extensions: Optional[Dict[str, Dict[str, Optional[str]]]] = field(default_factory=dict)  # Additional extensions
 
@@ -363,7 +362,7 @@ class ArtistExtraInfo:
             if k in inspect.signature(cls).parameters
         })</code></pre>
 </details>
-<div class="desc"><p>ArtistExtraInfo(youtube: Optional[Dict[str, Optional[str]]] = <factory>, spotify: Optional[Dict[str, Optional[str]]] = <factory>, extensions: Optional[Dict[str, Dict[str, Optional[str]]]] = <factory>)</p></div>
+<div class="desc"><p>ArtistExtraInfo(spotify: Optional[Dict[str, Optional[str]]] = <factory>, extensions: Optional[Dict[str, Dict[str, Optional[str]]]] = <factory>)</p></div>
 <h3>Class variables</h3>
 <dl>
 <dt id="moosync_edk.custom_types.ArtistExtraInfo.extensions"><code class="name">var <span class="ident">extensions</span> : Dict[str, Dict[str, str | None]] | None</code></dt>
@@ -371,10 +370,6 @@ class ArtistExtraInfo:
 <div class="desc"><p>The type of the None singleton.</p></div>
 </dd>
 <dt id="moosync_edk.custom_types.ArtistExtraInfo.spotify"><code class="name">var <span class="ident">spotify</span> : Dict[str, str | None] | None</code></dt>
-<dd>
-<div class="desc"><p>The type of the None singleton.</p></div>
-</dd>
-<dt id="moosync_edk.custom_types.ArtistExtraInfo.youtube"><code class="name">var <span class="ident">youtube</span> : Dict[str, str | None] | None</code></dt>
 <dd>
 <div class="desc"><p>The type of the None singleton.</p></div>
 </dd>
@@ -386,6 +381,33 @@ class ArtistExtraInfo:
 </code></dt>
 <dd>
 <div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="moosync_edk.custom_types.CheckboxItems"><code class="flex name class">
+<span>class <span class="ident">CheckboxItems</span></span>
+<span>(</span><span>title: str, key: str)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@dataclass(frozen=True)
+class CheckboxItems:
+    title: str
+    key: str</code></pre>
+</details>
+<div class="desc"><p>CheckboxItems(title: str, key: str)</p></div>
+<h3>Class variables</h3>
+<dl>
+<dt id="moosync_edk.custom_types.CheckboxItems.key"><code class="name">var <span class="ident">key</span> : str</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.CheckboxItems.title"><code class="name">var <span class="ident">title</span> : str</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
 </dd>
 </dl>
 </dd>
@@ -593,6 +615,85 @@ class Genre:
 </code></dt>
 <dd>
 <div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="moosync_edk.custom_types.InputType"><code class="flex name class">
+<span>class <span class="ident">InputType</span></span>
+<span>(</span><span>*args, **kwds)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class InputType(Enum):
+    Text = &#34;text&#34;
+    Number = &#34;number&#34;</code></pre>
+</details>
+<div class="desc"><p>Create a collection of name/value pairs.</p>
+<p>Example enumeration:</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; class Color(Enum):
+...     RED = 1
+...     BLUE = 2
+...     GREEN = 3
+</code></pre>
+<p>Access them by:</p>
+<ul>
+<li>attribute access:</li>
+</ul>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>Color.RED
+<Color.RED: 1></p>
+</blockquote>
+</blockquote>
+</blockquote>
+<ul>
+<li>value lookup:</li>
+</ul>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>Color(1)
+<Color.RED: 1></p>
+</blockquote>
+</blockquote>
+</blockquote>
+<ul>
+<li>name lookup:</li>
+</ul>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>Color['RED']
+<Color.RED: 1></p>
+</blockquote>
+</blockquote>
+</blockquote>
+<p>Enumerations can be iterated over, and know how many members they have:</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; len(Color)
+3
+</code></pre>
+<pre><code class="language-python-repl">&gt;&gt;&gt; list(Color)
+[&lt;Color.RED: 1&gt;, &lt;Color.BLUE: 2&gt;, &lt;Color.GREEN: 3&gt;]
+</code></pre>
+<p>Methods can be added to enumerations, and members can have their own
+attributes &ndash; see the documentation for details.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>enum.Enum</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="moosync_edk.custom_types.InputType.Number"><code class="name">var <span class="ident">Number</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.InputType.Text"><code class="name">var <span class="ident">Text</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
 </dd>
 </dl>
 </dd>
@@ -884,6 +985,192 @@ class PreferenceData:
 </dd>
 </dl>
 </dd>
+<dt id="moosync_edk.custom_types.PreferenceTypes"><code class="flex name class">
+<span>class <span class="ident">PreferenceTypes</span></span>
+<span>(</span><span>*args, **kwds)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PreferenceTypes(Enum):
+    DirectoryGroup = &#34;DirectoryGroup&#34;
+    EditText = &#34;EditText&#34;
+    FilePicker = &#34;FilePicker&#34;
+    CheckboxGroup = &#34;CheckboxGroup&#34;
+    ThemeSelector = &#34;ThemeSelector&#34;
+    Extensions = &#34;Extensions&#34;
+    ButtonGroup = &#34;ButtonGroup&#34;
+    ProgressBar = &#34;ProgressBar&#34;
+    TextField = &#34;TextField&#34;
+    InfoField = &#34;InfoField&#34;
+    Dropdown = &#34;Dropdown&#34;</code></pre>
+</details>
+<div class="desc"><p>Create a collection of name/value pairs.</p>
+<p>Example enumeration:</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; class Color(Enum):
+...     RED = 1
+...     BLUE = 2
+...     GREEN = 3
+</code></pre>
+<p>Access them by:</p>
+<ul>
+<li>attribute access:</li>
+</ul>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>Color.RED
+<Color.RED: 1></p>
+</blockquote>
+</blockquote>
+</blockquote>
+<ul>
+<li>value lookup:</li>
+</ul>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>Color(1)
+<Color.RED: 1></p>
+</blockquote>
+</blockquote>
+</blockquote>
+<ul>
+<li>name lookup:</li>
+</ul>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>Color['RED']
+<Color.RED: 1></p>
+</blockquote>
+</blockquote>
+</blockquote>
+<p>Enumerations can be iterated over, and know how many members they have:</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; len(Color)
+3
+</code></pre>
+<pre><code class="language-python-repl">&gt;&gt;&gt; list(Color)
+[&lt;Color.RED: 1&gt;, &lt;Color.BLUE: 2&gt;, &lt;Color.GREEN: 3&gt;]
+</code></pre>
+<p>Methods can be added to enumerations, and members can have their own
+attributes &ndash; see the documentation for details.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>enum.Enum</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="moosync_edk.custom_types.PreferenceTypes.ButtonGroup"><code class="name">var <span class="ident">ButtonGroup</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceTypes.CheckboxGroup"><code class="name">var <span class="ident">CheckboxGroup</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceTypes.DirectoryGroup"><code class="name">var <span class="ident">DirectoryGroup</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceTypes.Dropdown"><code class="name">var <span class="ident">Dropdown</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceTypes.EditText"><code class="name">var <span class="ident">EditText</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceTypes.Extensions"><code class="name">var <span class="ident">Extensions</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceTypes.FilePicker"><code class="name">var <span class="ident">FilePicker</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceTypes.InfoField"><code class="name">var <span class="ident">InfoField</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceTypes.ProgressBar"><code class="name">var <span class="ident">ProgressBar</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceTypes.TextField"><code class="name">var <span class="ident">TextField</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceTypes.ThemeSelector"><code class="name">var <span class="ident">ThemeSelector</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+</dl>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceUIData"><code class="flex name class">
+<span>class <span class="ident">PreferenceUIData</span></span>
+<span>(</span><span>type: <a title="moosync_edk.custom_types.PreferenceTypes" href="#moosync_edk.custom_types.PreferenceTypes">PreferenceTypes</a>,<br>title: str,<br>key: str,<br>description: str,<br>inputType: ForwardRef('<a title="moosync_edk.custom_types.InputType" href="#moosync_edk.custom_types.InputType">InputType</a>') | None = None,<br>single: bool | None = None,<br>items: List[ForwardRef('<a title="moosync_edk.custom_types.CheckboxItems" href="#moosync_edk.custom_types.CheckboxItems">CheckboxItems</a>')] | None = None,<br>default: Any | None = None,<br>mobile: bool | None = None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@dataclass
+class PreferenceUIData:
+    type: &#39;PreferenceTypes&#39;  # Use string annotation for forward reference or import the actual class
+    title: str
+    key: str
+    description: str
+    inputType: Optional[&#39;InputType&#39;] = None
+    single: Optional[bool] = None
+    items: Optional[List[&#39;CheckboxItems&#39;]] = None
+    default: Optional[Any] = None  # Replace Any with the actual Value type if available
+    mobile: Optional[bool] = None</code></pre>
+</details>
+<div class="desc"><p>PreferenceUIData(type: 'PreferenceTypes', title: str, key: str, description: str, inputType: Optional[ForwardRef('InputType')] = None, single: Optional[bool] = None, items: Optional[List[ForwardRef('CheckboxItems')]] = None, default: Optional[Any] = None, mobile: Optional[bool] = None)</p></div>
+<h3>Class variables</h3>
+<dl>
+<dt id="moosync_edk.custom_types.PreferenceUIData.default"><code class="name">var <span class="ident">default</span> : Any | None</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceUIData.description"><code class="name">var <span class="ident">description</span> : str</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceUIData.inputType"><code class="name">var <span class="ident">inputType</span> : <a title="moosync_edk.custom_types.InputType" href="#moosync_edk.custom_types.InputType">InputType</a> | None</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceUIData.items"><code class="name">var <span class="ident">items</span> : List[<a title="moosync_edk.custom_types.CheckboxItems" href="#moosync_edk.custom_types.CheckboxItems">CheckboxItems</a>] | None</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceUIData.key"><code class="name">var <span class="ident">key</span> : str</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceUIData.mobile"><code class="name">var <span class="ident">mobile</span> : bool | None</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceUIData.single"><code class="name">var <span class="ident">single</span> : bool | None</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceUIData.title"><code class="name">var <span class="ident">title</span> : str</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="moosync_edk.custom_types.PreferenceUIData.type"><code class="name">var <span class="ident">type</span> : <a title="moosync_edk.custom_types.PreferenceTypes" href="#moosync_edk.custom_types.PreferenceTypes">PreferenceTypes</a></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+</dl>
+</dd>
 <dt id="moosync_edk.custom_types.RecommendationsReturnType"><code class="flex name class">
 <span>class <span class="ident">RecommendationsReturnType</span></span>
 <span>(</span><span>songs: List[<a title="moosync_edk.custom_types.Song" href="#moosync_edk.custom_types.Song">Song</a>])</span>
@@ -982,7 +1269,7 @@ class SearchReturnType:
 </dd>
 <dt id="moosync_edk.custom_types.SearchableSong"><code class="flex name class">
 <span>class <span class="ident">SearchableSong</span></span>
-<span>(</span><span>path: str | None = None,<br>title: str | None = None,<br>url: str | None = None,<br>playbackUrl: str | None = None,<br>hash: str | None = None,<br>size: int | None = None,<br>inode: str | None = None,<br>deviceno: str | None = None,<br>type: Literal['LOCAL', 'YOUTUBE', 'SPOTIFY', 'URL', 'DASH', 'HLS'] | None = None,<br>extension: bool | str | None = None,<br>showInLibrary: bool | None = None)</span>
+<span>(</span><span>path: str | None = None,<br>title: str | None = None,<br>url: str | None = None,<br>playbackUrl: str | None = None,<br>hash: str | None = None,<br>size: int | None = None,<br>inode: str | None = None,<br>deviceno: str | None = None,<br>type: Literal['LOCAL', 'SPOTIFY', 'URL', 'DASH', 'HLS'] | None = None,<br>extension: bool | str | None = None,<br>showInLibrary: bool | None = None)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -1011,7 +1298,7 @@ class SearchableSong:
             if k in inspect.signature(cls).parameters
         })</code></pre>
 </details>
-<div class="desc"><p>SearchableSong(_id: Optional[str] = None, path: Optional[str] = None, title: Optional[str] = None, url: Optional[str] = None, playbackUrl: Optional[str] = None, hash: Optional[str] = None, size: Optional[int] = None, inode: Optional[str] = None, deviceno: Optional[str] = None, type: Optional[Literal['LOCAL', 'YOUTUBE', 'SPOTIFY', 'URL', 'DASH', 'HLS']] = None, extension: Union[bool, str, NoneType] = None, showInLibrary: Optional[bool] = None)</p></div>
+<div class="desc"><p>SearchableSong(_id: Optional[str] = None, path: Optional[str] = None, title: Optional[str] = None, url: Optional[str] = None, playbackUrl: Optional[str] = None, hash: Optional[str] = None, size: Optional[int] = None, inode: Optional[str] = None, deviceno: Optional[str] = None, type: Optional[Literal['LOCAL', 'SPOTIFY', 'URL', 'DASH', 'HLS']] = None, extension: Union[bool, str, NoneType] = None, showInLibrary: Optional[bool] = None)</p></div>
 <h3>Class variables</h3>
 <dl>
 <dt id="moosync_edk.custom_types.SearchableSong.deviceno"><code class="name">var <span class="ident">deviceno</span> : str | None</code></dt>
@@ -1050,7 +1337,7 @@ class SearchableSong:
 <dd>
 <div class="desc"><p>The type of the None singleton.</p></div>
 </dd>
-<dt id="moosync_edk.custom_types.SearchableSong.type"><code class="name">var <span class="ident">type</span> : Literal['LOCAL', 'YOUTUBE', 'SPOTIFY', 'URL', 'DASH', 'HLS'] | None</code></dt>
+<dt id="moosync_edk.custom_types.SearchableSong.type"><code class="name">var <span class="ident">type</span> : Literal['LOCAL', 'SPOTIFY', 'URL', 'DASH', 'HLS'] | None</code></dt>
 <dd>
 <div class="desc"><p>The type of the None singleton.</p></div>
 </dd>
@@ -1071,7 +1358,7 @@ class SearchableSong:
 </dd>
 <dt id="moosync_edk.custom_types.Song"><code class="flex name class">
 <span>class <span class="ident">Song</span></span>
-<span>(</span><span>_id: str,<br>path: str | None = None,<br>size: int | None = None,<br>title: str = '',<br>song_coverPath_low: str | None = None,<br>song_coverPath_high: str | None = None,<br>album: <a title="moosync_edk.custom_types.Album" href="#moosync_edk.custom_types.Album">Album</a> | None = None,<br>artists: List[<a title="moosync_edk.custom_types.Artist" href="#moosync_edk.custom_types.Artist">Artist</a>] = &lt;factory&gt;,<br>date: str | None = None,<br>year: int | str | None = None,<br>genre: List[str] = &lt;factory&gt;,<br>lyrics: str | None = None,<br>releaseType: List[str] = &lt;factory&gt;,<br>bitrate: int | None = None,<br>codec: str | None = None,<br>container: str | None = None,<br>duration: int = 0,<br>sampleRate: int | None = None,<br>hash: str | None = None,<br>inode: str | None = None,<br>deviceno: str | None = None,<br>url: str | None = None,<br>playbackUrl: str | None = None,<br>date_added: int | None = None,<br>providerExtension: str | None = None,<br>icon: str | None = None,<br>type: Literal['LOCAL', 'YOUTUBE', 'SPOTIFY', 'URL', 'DASH', 'HLS'] = 'LOCAL',<br>playCount: int | None = None,<br>showInLibrary: bool | None = None,<br>track_no: int | None = None)</span>
+<span>(</span><span>_id: str,<br>path: str | None = None,<br>size: int | None = None,<br>title: str = '',<br>song_coverPath_low: str | None = None,<br>song_coverPath_high: str | None = None,<br>album: <a title="moosync_edk.custom_types.Album" href="#moosync_edk.custom_types.Album">Album</a> | None = None,<br>artists: List[<a title="moosync_edk.custom_types.Artist" href="#moosync_edk.custom_types.Artist">Artist</a>] = &lt;factory&gt;,<br>date: str | None = None,<br>year: int | str | None = None,<br>genre: List[str] = &lt;factory&gt;,<br>lyrics: str | None = None,<br>releaseType: List[str] = &lt;factory&gt;,<br>bitrate: int | None = None,<br>codec: str | None = None,<br>container: str | None = None,<br>duration: int = 0,<br>sampleRate: int | None = None,<br>hash: str | None = None,<br>inode: str | None = None,<br>deviceno: str | None = None,<br>url: str | None = None,<br>playbackUrl: str | None = None,<br>date_added: int | None = None,<br>providerExtension: str | None = None,<br>icon: str | None = None,<br>type: Literal['LOCAL', 'SPOTIFY', 'URL', 'DASH', 'HLS'] = 'LOCAL',<br>playCount: int | None = None,<br>showInLibrary: bool | None = None,<br>track_no: int | None = None)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -1118,7 +1405,7 @@ class Song:
             if k in inspect.signature(cls).parameters
         })</code></pre>
 </details>
-<div class="desc"><p>Song(_id: str, path: Optional[str] = None, size: Optional[int] = None, title: str = '', song_coverPath_low: Optional[str] = None, song_coverPath_high: Optional[str] = None, album: Optional[moosync_edk.custom_types.Album] = None, artists: List[moosync_edk.custom_types.Artist] = <factory>, date: Optional[str] = None, year: Union[int, str, NoneType] = None, genre: List[str] = <factory>, lyrics: Optional[str] = None, releaseType: List[str] = <factory>, bitrate: Optional[int] = None, codec: Optional[str] = None, container: Optional[str] = None, duration: int = 0, sampleRate: Optional[int] = None, hash: Optional[str] = None, inode: Optional[str] = None, deviceno: Optional[str] = None, url: Optional[str] = None, playbackUrl: Optional[str] = None, date_added: Optional[int] = None, providerExtension: Optional[str] = None, icon: Optional[str] = None, type: Literal['LOCAL', 'YOUTUBE', 'SPOTIFY', 'URL', 'DASH', 'HLS'] = 'LOCAL', playCount: Optional[int] = None, showInLibrary: Optional[bool] = None, track_no: Optional[int] = None)</p></div>
+<div class="desc"><p>Song(_id: str, path: Optional[str] = None, size: Optional[int] = None, title: str = '', song_coverPath_low: Optional[str] = None, song_coverPath_high: Optional[str] = None, album: Optional[moosync_edk.custom_types.Album] = None, artists: List[moosync_edk.custom_types.Artist] = <factory>, date: Optional[str] = None, year: Union[int, str, NoneType] = None, genre: List[str] = <factory>, lyrics: Optional[str] = None, releaseType: List[str] = <factory>, bitrate: Optional[int] = None, codec: Optional[str] = None, container: Optional[str] = None, duration: int = 0, sampleRate: Optional[int] = None, hash: Optional[str] = None, inode: Optional[str] = None, deviceno: Optional[str] = None, url: Optional[str] = None, playbackUrl: Optional[str] = None, date_added: Optional[int] = None, providerExtension: Optional[str] = None, icon: Optional[str] = None, type: Literal['LOCAL', 'SPOTIFY', 'URL', 'DASH', 'HLS'] = 'LOCAL', playCount: Optional[int] = None, showInLibrary: Optional[bool] = None, track_no: Optional[int] = None)</p></div>
 <h3>Class variables</h3>
 <dl>
 <dt id="moosync_edk.custom_types.Song.album"><code class="name">var <span class="ident">album</span> : <a title="moosync_edk.custom_types.Album" href="#moosync_edk.custom_types.Album">Album</a> | None</code></dt>
@@ -1225,7 +1512,7 @@ class Song:
 <dd>
 <div class="desc"><p>The type of the None singleton.</p></div>
 </dd>
-<dt id="moosync_edk.custom_types.Song.type"><code class="name">var <span class="ident">type</span> : Literal['LOCAL', 'YOUTUBE', 'SPOTIFY', 'URL', 'DASH', 'HLS']</code></dt>
+<dt id="moosync_edk.custom_types.Song.type"><code class="name">var <span class="ident">type</span> : Literal['LOCAL', 'SPOTIFY', 'URL', 'DASH', 'HLS']</code></dt>
 <dd>
 <div class="desc"><p>The type of the None singleton.</p></div>
 </dd>
@@ -1522,7 +1809,13 @@ class SongsWithPageTokenReturnType:
 <li><code><a title="moosync_edk.custom_types.ArtistExtraInfo.extensions" href="#moosync_edk.custom_types.ArtistExtraInfo.extensions">extensions</a></code></li>
 <li><code><a title="moosync_edk.custom_types.ArtistExtraInfo.from_dict" href="#moosync_edk.custom_types.ArtistExtraInfo.from_dict">from_dict</a></code></li>
 <li><code><a title="moosync_edk.custom_types.ArtistExtraInfo.spotify" href="#moosync_edk.custom_types.ArtistExtraInfo.spotify">spotify</a></code></li>
-<li><code><a title="moosync_edk.custom_types.ArtistExtraInfo.youtube" href="#moosync_edk.custom_types.ArtistExtraInfo.youtube">youtube</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="moosync_edk.custom_types.CheckboxItems" href="#moosync_edk.custom_types.CheckboxItems">CheckboxItems</a></code></h4>
+<ul class="">
+<li><code><a title="moosync_edk.custom_types.CheckboxItems.key" href="#moosync_edk.custom_types.CheckboxItems.key">key</a></code></li>
+<li><code><a title="moosync_edk.custom_types.CheckboxItems.title" href="#moosync_edk.custom_types.CheckboxItems.title">title</a></code></li>
 </ul>
 </li>
 <li>
@@ -1562,6 +1855,13 @@ class SongsWithPageTokenReturnType:
 <li><code><a title="moosync_edk.custom_types.Genre.genre_id" href="#moosync_edk.custom_types.Genre.genre_id">genre_id</a></code></li>
 <li><code><a title="moosync_edk.custom_types.Genre.genre_name" href="#moosync_edk.custom_types.Genre.genre_name">genre_name</a></code></li>
 <li><code><a title="moosync_edk.custom_types.Genre.genre_song_count" href="#moosync_edk.custom_types.Genre.genre_song_count">genre_song_count</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="moosync_edk.custom_types.InputType" href="#moosync_edk.custom_types.InputType">InputType</a></code></h4>
+<ul class="">
+<li><code><a title="moosync_edk.custom_types.InputType.Number" href="#moosync_edk.custom_types.InputType.Number">Number</a></code></li>
+<li><code><a title="moosync_edk.custom_types.InputType.Text" href="#moosync_edk.custom_types.InputType.Text">Text</a></code></li>
 </ul>
 </li>
 <li>
@@ -1616,6 +1916,36 @@ class SongsWithPageTokenReturnType:
 <li><code><a title="moosync_edk.custom_types.PreferenceData.from_dict" href="#moosync_edk.custom_types.PreferenceData.from_dict">from_dict</a></code></li>
 <li><code><a title="moosync_edk.custom_types.PreferenceData.key" href="#moosync_edk.custom_types.PreferenceData.key">key</a></code></li>
 <li><code><a title="moosync_edk.custom_types.PreferenceData.value" href="#moosync_edk.custom_types.PreferenceData.value">value</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="moosync_edk.custom_types.PreferenceTypes" href="#moosync_edk.custom_types.PreferenceTypes">PreferenceTypes</a></code></h4>
+<ul class="two-column">
+<li><code><a title="moosync_edk.custom_types.PreferenceTypes.ButtonGroup" href="#moosync_edk.custom_types.PreferenceTypes.ButtonGroup">ButtonGroup</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceTypes.CheckboxGroup" href="#moosync_edk.custom_types.PreferenceTypes.CheckboxGroup">CheckboxGroup</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceTypes.DirectoryGroup" href="#moosync_edk.custom_types.PreferenceTypes.DirectoryGroup">DirectoryGroup</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceTypes.Dropdown" href="#moosync_edk.custom_types.PreferenceTypes.Dropdown">Dropdown</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceTypes.EditText" href="#moosync_edk.custom_types.PreferenceTypes.EditText">EditText</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceTypes.Extensions" href="#moosync_edk.custom_types.PreferenceTypes.Extensions">Extensions</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceTypes.FilePicker" href="#moosync_edk.custom_types.PreferenceTypes.FilePicker">FilePicker</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceTypes.InfoField" href="#moosync_edk.custom_types.PreferenceTypes.InfoField">InfoField</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceTypes.ProgressBar" href="#moosync_edk.custom_types.PreferenceTypes.ProgressBar">ProgressBar</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceTypes.TextField" href="#moosync_edk.custom_types.PreferenceTypes.TextField">TextField</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceTypes.ThemeSelector" href="#moosync_edk.custom_types.PreferenceTypes.ThemeSelector">ThemeSelector</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="moosync_edk.custom_types.PreferenceUIData" href="#moosync_edk.custom_types.PreferenceUIData">PreferenceUIData</a></code></h4>
+<ul class="two-column">
+<li><code><a title="moosync_edk.custom_types.PreferenceUIData.default" href="#moosync_edk.custom_types.PreferenceUIData.default">default</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceUIData.description" href="#moosync_edk.custom_types.PreferenceUIData.description">description</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceUIData.inputType" href="#moosync_edk.custom_types.PreferenceUIData.inputType">inputType</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceUIData.items" href="#moosync_edk.custom_types.PreferenceUIData.items">items</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceUIData.key" href="#moosync_edk.custom_types.PreferenceUIData.key">key</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceUIData.mobile" href="#moosync_edk.custom_types.PreferenceUIData.mobile">mobile</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceUIData.single" href="#moosync_edk.custom_types.PreferenceUIData.single">single</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceUIData.title" href="#moosync_edk.custom_types.PreferenceUIData.title">title</a></code></li>
+<li><code><a title="moosync_edk.custom_types.PreferenceUIData.type" href="#moosync_edk.custom_types.PreferenceUIData.type">type</a></code></li>
 </ul>
 </li>
 <li>
