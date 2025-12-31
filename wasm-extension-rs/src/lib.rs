@@ -35,7 +35,7 @@ pub use types::{
 pub mod api;
 pub mod handler;
 
-extern "C" {
+unsafe extern "C" {
     fn init();
 }
 
@@ -130,7 +130,7 @@ pub fn handle_custom_request_wrapper(
 #[tracing::instrument(level = "debug", skip())]
 #[plugin_fn]
 pub fn get_artist_songs_wrapper(
-    Json((artist, token)): Json<(QueryableArtist, Option<String>)>,
+    Json((artist, token)): Json<(Artist, Option<String>)>,
 ) -> FnResult<Json<SongsWithPageTokenReturnType>> {
     let ret = get_artist_songs(artist, token)?;
     Ok(Json(ret))
@@ -139,7 +139,7 @@ pub fn get_artist_songs_wrapper(
 #[tracing::instrument(level = "debug", skip())]
 #[plugin_fn]
 pub fn get_album_songs_wrapper(
-    Json((album, token)): Json<(QueryableAlbum, Option<String>)>,
+    Json((album, token)): Json<(Album, Option<String>)>,
 ) -> FnResult<Json<SongsWithPageTokenReturnType>> {
     let ret = get_album_songs(album, token)?;
     Ok(Json(ret))
@@ -213,14 +213,14 @@ pub fn on_song_removed_wrapper(Json(song): Json<Song>) -> FnResult<Json<()>> {
 
 #[tracing::instrument(level = "debug", skip())]
 #[plugin_fn]
-pub fn on_playlist_added_wrapper(Json(playlist): Json<QueryablePlaylist>) -> FnResult<Json<()>> {
+pub fn on_playlist_added_wrapper(Json(playlist): Json<Playlist>) -> FnResult<Json<()>> {
     on_playlist_added(playlist)?;
     Ok(Json(()))
 }
 
 #[tracing::instrument(level = "debug", skip())]
 #[plugin_fn]
-pub fn on_playlist_removed_wrapper(Json(playlist): Json<QueryablePlaylist>) -> FnResult<Json<()>> {
+pub fn on_playlist_removed_wrapper(Json(playlist): Json<Playlist>) -> FnResult<Json<()>> {
     on_playlist_removed(playlist)?;
     Ok(Json(()))
 }
@@ -264,7 +264,7 @@ pub fn get_song_context_menu_wrapper(
 #[tracing::instrument(level = "debug", skip())]
 #[plugin_fn]
 pub fn get_playlist_context_menu_wrapper(
-    Json(playlist): Json<QueryablePlaylist>,
+    Json(playlist): Json<Playlist>,
 ) -> FnResult<Json<Vec<ContextMenuReturnType>>> {
     Ok(Json(get_playlist_context_menu(playlist)?))
 }

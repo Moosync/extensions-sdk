@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use extism_pdk::host_fn;
+use extism_pdk::{Json, host_fn};
 use serde_json::Value;
-use types::entities::{QueryableAlbum, QueryableArtist, QueryablePlaylist, SearchResult};
+use types::entities::{Album, Artist, Playlist, SearchResult};
 use types::errors::Result as MoosyncResult;
 use types::extensions::MainCommand;
 use types::songs::Song;
@@ -59,12 +59,12 @@ pub trait DatabaseEvents {
     }
 
     /// Called when a playlist is added to the database.
-    fn on_playlist_added(&self, playlist: QueryablePlaylist) -> MoosyncResult<()> {
+    fn on_playlist_added(&self, playlist: Playlist) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 
     /// Called when a playlist is removed from the database.
-    fn on_playlist_removed(&self, playlist: QueryablePlaylist) -> MoosyncResult<()> {
+    fn on_playlist_removed(&self, playlist: Playlist) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 }
@@ -114,7 +114,7 @@ pub trait Provider {
     fn get_provider_scopes(&self) -> MoosyncResult<Vec<ExtensionProviderScope>>;
 
     /// Called when the main app requests the list of playlists.
-    fn get_playlists(&self) -> MoosyncResult<Vec<QueryablePlaylist>> {
+    fn get_playlists(&self) -> MoosyncResult<Vec<Playlist>> {
         Err("Not implemented".into())
     }
 
@@ -128,7 +128,7 @@ pub trait Provider {
     }
 
     /// Called when the main app requests a playlist from a URL.
-    fn get_playlist_from_url(&self, url: String) -> MoosyncResult<Option<QueryablePlaylist>> {
+    fn get_playlist_from_url(&self, url: String) -> MoosyncResult<Option<Playlist>> {
         Err("Not implemented".into())
     }
 
@@ -160,7 +160,7 @@ pub trait Provider {
     /// Called when the main app requests songs of a specific artist.
     fn get_artist_songs(
         &self,
-        artist: QueryableArtist,
+        artist: Artist,
         next_page_token: Option<String>,
     ) -> MoosyncResult<SongsWithPageTokenReturnType> {
         Err("Not implemented".into())
@@ -169,7 +169,7 @@ pub trait Provider {
     /// Called when the main app requests songs of a specific album.
     fn get_album_songs(
         &self,
-        album: QueryableAlbum,
+        album: Album,
         next_page_token: Option<String>,
     ) -> MoosyncResult<SongsWithPageTokenReturnType> {
         Err("Not implemented".into())
@@ -202,7 +202,7 @@ pub trait ContextMenu {
     /// Called when the main app requests the context menu for a playlist.
     fn get_playlist_context_menu(
         &self,
-        playlist: QueryablePlaylist,
+        playlist: Playlist,
     ) -> MoosyncResult<Vec<ContextMenuReturnType>> {
         Err("Not implemented".into())
     }
@@ -221,7 +221,7 @@ pub trait Extension:
 
 #[host_fn]
 extern "ExtismHost" {
-    fn send_main_command(command: MainCommand) -> Option<Value>;
+    fn send_main_command(command: Json<MainCommand>) -> Option<Value>;
     fn system_time() -> u64;
     fn open_clientfd(path: String) -> i64;
     fn write_sock(sock_id: i64, buf: Vec<u8>) -> i64;
@@ -231,13 +231,13 @@ extern "ExtismHost" {
 
 pub mod extension_api {
     use serde_json::Value;
-    use types::entities::{GetEntityOptions, QueryablePlaylist};
+    use types::entities::{GetEntityOptions, Playlist};
     use types::errors::{MoosyncError, Result as MoosyncResult};
-    use types::extensions::MainCommand;
     use types::preferences::PreferenceUIData;
     use types::songs::{GetSongOptions, Song};
     use types::ui::extensions::{AddToPlaylistRequest, PreferenceData};
     use types::ui::player_details::PlayerState;
+    use types::extensions::MainCommand;
 
     use super::{
         hash, open_clientfd, read_sock as read_sock_ext, send_main_command, system_time,
@@ -256,7 +256,7 @@ pub mod extension_api {
                 $(#[doc = $doc])*
                 pub fn $fn_name($( $arg_name: $arg_type ),*) -> MoosyncResult<$ret_type> {
                     unsafe {
-                        match send_main_command(MainCommand::$variant($($arg_name),*)) {
+                        match send_main_command(extism_pdk::Json(MainCommand::$variant($($arg_name),*))) {
                             Ok(resp) => {
                                 if let Some(resp) = resp {
                                     return Ok(serde_json::from_value(resp)?);
@@ -283,7 +283,7 @@ pub mod extension_api {
                 $(#[doc = $doc])*
                 pub fn $fn_name($( $arg_name: $arg_type ),*) -> MoosyncResult<$ret_type> {
                     unsafe {
-                        match send_main_command(MainCommand::$variant($($arg_name),*)) {
+                        match send_main_command(extism_pdk::Json(MainCommand::$variant($($arg_name),*))) {
                             Ok(_) => {
                                 return Ok(())
                             }
@@ -375,7 +375,7 @@ pub mod extension_api {
         /// # Returns
         ///
         /// A string representing the ID of the added playlist.
-        add_playlist(AddPlaylist, playlist: QueryablePlaylist) -> String;
+        add_playlist(AddPlaylist, playlist: Playlist) -> String;
     }
 
     create_api_fn_no_resp! {

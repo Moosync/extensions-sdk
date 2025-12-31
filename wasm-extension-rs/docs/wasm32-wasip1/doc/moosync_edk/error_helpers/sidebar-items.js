@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["to_auth_error","to_cache_error","to_config_error","to_database_error","to_extension_error","to_file_system_error","to_media_error","to_mpris_error","to_network_error","to_parse_error","to_playback_error","to_plugin_error","to_provider_error","to_validation_error","to_webview_error"]};

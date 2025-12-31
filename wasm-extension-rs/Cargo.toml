@@ -1,6 +1,6 @@
 [package]
 name = "moosync-edk"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
@@ -10,7 +10,5 @@ serde = { version = "1.0.216", features = ["derive"] }
 tokio = { version = "1.42.0", features = ["rt", "time", "sync"] }
 serde_json = "1.0.133"
 tracing = "0.1.41"
-types = { git = "https://github.com/Moosync/moosync-tauri", default-features = false, features = [
-    "extensions",
-] }
+types = { git = "https://github.com/Moosync/Moosync", branch = "bazel" }
 extism-convert = "1.9.1"

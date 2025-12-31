@@ -18,7 +18,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use extism_pdk::FnResult;
 use serde_json::Value;
-use types::entities::{QueryableAlbum, QueryableArtist, QueryablePlaylist, SearchResult};
+use types::entities::{Playlist, Album, Artist, SearchResult};
 use types::errors::Result as MoosyncResult;
 use types::songs::Song;
 use types::ui::extensions::{
@@ -64,16 +64,16 @@ pub fn register_extension(extension: Box<dyn Extension>) -> FnResult<()> {
 generate_extension_methods!(
     // Provider trait methods
     get_provider_scopes() -> MoosyncResult<Vec<ExtensionProviderScope>>;
-    get_playlists() -> MoosyncResult<Vec<QueryablePlaylist>>;
+    get_playlists() -> MoosyncResult<Vec<Playlist>>;
     get_playlist_content(id: String, next_page_token: Option<String>) -> MoosyncResult<SongsWithPageTokenReturnType>;
-    get_playlist_from_url(url: String) -> MoosyncResult<Option<QueryablePlaylist>>;
+    get_playlist_from_url(url: String) -> MoosyncResult<Option<Playlist>>;
     get_playback_details(song: Song) -> MoosyncResult<PlaybackDetailsReturnType>;
     search(term: String) -> MoosyncResult<SearchResult>;
     get_recommendations() -> MoosyncResult<Vec<Song>>;
     get_song_from_url(url: String) -> MoosyncResult<Option<Song>>;
     handle_custom_request(url: String) -> MoosyncResult<CustomRequestReturnType>;
-    get_artist_songs(artist: QueryableArtist, next_page_token: Option<String>) -> MoosyncResult<SongsWithPageTokenReturnType>;
-    get_album_songs(album: QueryableAlbum, next_page_token: Option<String>) -> MoosyncResult<SongsWithPageTokenReturnType>;
+    get_artist_songs(artist: Artist, next_page_token: Option<String>) -> MoosyncResult<SongsWithPageTokenReturnType>;
+    get_album_songs(album: Album, next_page_token: Option<String>) -> MoosyncResult<SongsWithPageTokenReturnType>;
     get_song_from_id(id: String) -> MoosyncResult<Option<Song>>;
     scrobble(song: Song) -> MoosyncResult<()>;
     oauth_callback(code: String) -> MoosyncResult<()>;
@@ -92,8 +92,8 @@ generate_extension_methods!(
     // DatabaseEvents trait methods
     on_song_added(song: Song) -> MoosyncResult<()>;
     on_song_removed(song: Song) -> MoosyncResult<()>;
-    on_playlist_added(playlist: QueryablePlaylist) -> MoosyncResult<()>;
-    on_playlist_removed(playlist: QueryablePlaylist) -> MoosyncResult<()>;
+    on_playlist_added(playlist: Playlist) -> MoosyncResult<()>;
+    on_playlist_removed(playlist: Playlist) -> MoosyncResult<()>;
 
     // Account trait methods
     get_accounts() -> MoosyncResult<Vec<ExtensionAccountDetail>>;
@@ -101,6 +101,6 @@ generate_extension_methods!(
 
     // ContextMenu trait methods
     get_song_context_menu(songs: Vec<Song>) -> MoosyncResult<Vec<ContextMenuReturnType>>;
-    get_playlist_context_menu(playlist: QueryablePlaylist) -> MoosyncResult<Vec<ContextMenuReturnType>>;
+    get_playlist_context_menu(playlist: Playlist) -> MoosyncResult<Vec<ContextMenuReturnType>>;
     on_context_menu_action(action: String) -> MoosyncResult<()>;
 );
