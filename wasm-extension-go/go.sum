@@ -1,8 +1,0 @@
-github.com/extism/go-pdk v1.1.1 h1:c8twD4RXAgh5Q3bgQ4srBLnVJ1OJK1ZlKhD/0P/pbxA=
-github.com/extism/go-pdk v1.1.1/go.mod h1:Gz+LIU/YCKnKXhgge8yo5Yu1F/lbv7KtKFkiCSzW/P4=
-github.com/extism/go-pdk v1.1.2-0.20250318022428-084a212ce9f3 h1:fg6r79lPgjAuklSTIECD5bOcxOijWaE3igTqzASBfI8=
-github.com/extism/go-pdk v1.1.2-0.20250318022428-084a212ce9f3/go.mod h1:Gz+LIU/YCKnKXhgge8yo5Yu1F/lbv7KtKFkiCSzW/P4=
-github.com/extism/go-pdk v1.1.2 h1:DNP/9ugbNiXyBiMrNdMl/TF9J85uh0DC7sFnMuNZ/Ls=
-github.com/extism/go-pdk v1.1.2/go.mod h1:Gz+LIU/YCKnKXhgge8yo5Yu1F/lbv7KtKFkiCSzW/P4=
-google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
-google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
