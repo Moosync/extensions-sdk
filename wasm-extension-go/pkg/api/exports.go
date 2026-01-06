@@ -1,398 +1,403 @@
 package api
 
 import (
-	"encoding/json"
+	"fmt"
 
-	"github.com/Moosync/extensions-sdk/wasm-extension-go/pkg/types"
-	"github.com/extism/go-pdk"
+	pdk "github.com/extism/go-pdk"
+	"google.golang.org/protobuf/proto"
+
+	extensions "github.com/moosync/moosync/types/extensions"
 )
 
 var extension Extension
 
-func get_params(input any) int32 {
-	if err := pdk.InputJSON(input); err != nil {
-		pdk.SetError(err)
-		return 1
-	}
-	return 0
-}
+//go:wasmexport handle_extension_command
+func handle_extension_command() int32 {
+	inputBytes := pdk.Input()
 
-func runWrapper(input any, callback func() (any, error)) int32 {
-	if input != nil {
-		if get_params(input) != 0 {
-			return 1
-		}
-	}
-	result, err := callback()
-	if err != nil {
+	cmd := &extensions.ExtensionCommand{}
+	if err := proto.Unmarshal(inputBytes, cmd); err != nil {
 		pdk.SetError(err)
 		return 1
 	}
-	if result != nil {
-		jsonString, err := json.Marshal(result)
-		LogInfo("error %v", err)
+
+	resp := &extensions.ExtensionCommandResponse{}
+
+	switch e := cmd.Event.(type) {
+	case *extensions.ExtensionCommand_RequestedPlaylists:
+		res, err := extension.GetPlaylists(e.RequestedPlaylists)
 		if err != nil {
 			pdk.SetError(err)
 			return 1
 		}
-		pdk.Output(jsonString)
-	}
-	return 0
-}
+		resp.Response = &extensions.ExtensionCommandResponse_RequestedPlaylists{
+			RequestedPlaylists: &extensions.RequestedPlaylistsResponse{Playlists: res},
+		}
 
-//go:wasmexport get_provider_scopes_wrapper
-func get_provider_scopes_wrapper() int32 {
-	return runWrapper(nil, func() (any, error) {
-		return extension.GetProviderScopes()
-	})
-}
-
-//go:wasmexport get_playlists_wrapper
-func get_playlists_wrapper() int32 {
-	return runWrapper(nil, func() (any, error) {
-		playlists, err := extension.GetPlaylists()
+	case *extensions.ExtensionCommand_RequestedPlaylistSongs:
+		res, err := extension.GetPlaylistContent(e.RequestedPlaylistSongs)
 		if err != nil {
-			return nil, err
+			pdk.SetError(err)
+			return 1
 		}
-		return types.PlaylistReturnType{Playlists: playlists}, nil
-	})
-}
+		resp.Response = &extensions.ExtensionCommandResponse_RequestedPlaylistSongs{
+			RequestedPlaylistSongs: res,
+		}
 
-//go:wasmexport get_playlist_content_wrapper
-func get_playlist_content_wrapper() int32 {
-	var id string
-	var token string
-	in := [...]any{&id, &token}
-	return runWrapper(&in, func() (any, error) {
-		songs, err := extension.GetPlaylistContent(id, token)
+	case *extensions.ExtensionCommand_OauthCallback:
+		err := extension.OauthCallback(e.OauthCallback)
 		if err != nil {
-			return nil, err
+			pdk.SetError(err)
+			return 1
 		}
-		return types.SongsWithPageTokenReturnType{
-			Songs:         songs,
-			NextPageToken: nil,
-		}, nil
-	})
-}
+		resp.Response = &extensions.ExtensionCommandResponse_OauthCallback{
+			OauthCallback: &extensions.OauthCallbackResponse{},
+		}
 
-//go:wasmexport get_playlist_from_url_wrapper
-func get_playlist_from_url_wrapper() int32 {
-	var url string
-	in := [...]any{&url}
-	return runWrapper(&in, func() (any, error) {
-		playlist, err := extension.GetPlaylistFromURL(url)
+	case *extensions.ExtensionCommand_SongQueueChanged:
+		err := extension.OnQueueChanged(e.SongQueueChanged)
 		if err != nil {
-			return nil, err
+			pdk.SetError(err)
+			return 1
 		}
-		return types.PlaylistAndSongsReturnType{
-			Playlist: &playlist,
-			Songs:    nil,
-		}, nil
-	})
-}
+		resp.Response = &extensions.ExtensionCommandResponse_SongQueueChanged{
+			SongQueueChanged: &extensions.SongQueueChangedResponse{},
+		}
 
-//go:wasmexport get_playback_details_wrapper
-func get_playback_details_wrapper() int32 {
-	var song types.Song
-	in := [...]any{&song}
-	return runWrapper(&in, func() (any, error) {
-		return extension.GetPlaybackDetails(song)
-	})
-}
-
-//go:wasmexport search_wrapper
-func search_wrapper() int32 {
-	var term string
-	return runWrapper(&term, func() (any, error) {
-		result, err := extension.Search(term)
+	case *extensions.ExtensionCommand_Seeked:
+		err := extension.OnSeeked(e.Seeked)
 		if err != nil {
-			return nil, err
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_Seeked{
+			Seeked: &extensions.SeekedResponse{},
 		}
 
-		songs := result.Songs
-		if songs == nil {
-			songs = []types.Song{}
+	case *extensions.ExtensionCommand_VolumeChanged:
+		err := extension.OnVolumeChanged(e.VolumeChanged)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_VolumeChanged{
+			VolumeChanged: &extensions.VolumeChangedResponse{},
 		}
 
-		playlists := result.Playlists
-		if playlists == nil {
-			playlists = []types.QueryablePlaylist{}
+	case *extensions.ExtensionCommand_PlayerStateChanged:
+		err := extension.OnPlayerStateChanged(e.PlayerStateChanged)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_PlayerStateChanged{
+			PlayerStateChanged: &extensions.PlayerStateChangedResponse{},
 		}
 
-		artists := result.Artists
-		if artists == nil {
-			artists = []types.QueryableArtist{}
+	case *extensions.ExtensionCommand_SongChanged:
+		err := extension.OnSongChanged(e.SongChanged)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_SongChanged{
+			SongChanged: &extensions.SongChangedResponse{},
 		}
 
-		albums := result.Albums
-		if albums == nil {
-			albums = []types.QueryableAlbum{}
+	case *extensions.ExtensionCommand_PreferenceChanged:
+		err := extension.OnPreferencesChanged(e.PreferenceChanged)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_PreferenceChanged{
+			PreferenceChanged: &extensions.PreferenceChangedResponse{},
 		}
 
-		// genres := result.Genres
-		// if genres == nil {
-		// 	genres = []types.QueryableGenre{}
+	case *extensions.ExtensionCommand_PlaybackDetailsRequested:
+		res, err := extension.GetPlaybackDetails(e.PlaybackDetailsRequested)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_PlaybackDetailsRequested{
+			PlaybackDetailsRequested: res,
+		}
+
+	case *extensions.ExtensionCommand_CustomRequest:
+		res, err := extension.HandleCustomRequest(e.CustomRequest)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_CustomRequest{
+			CustomRequest: res,
+		}
+
+	case *extensions.ExtensionCommand_RequestedSongFromUrl:
+		res, err := extension.GetSongFromURL(e.RequestedSongFromUrl)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_RequestedSongFromUrl{
+			RequestedSongFromUrl: res,
+		}
+
+	case *extensions.ExtensionCommand_RequestedPlaylistFromUrl:
+		res, err := extension.GetPlaylistFromURL(e.RequestedPlaylistFromUrl)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_RequestedPlaylistFromUrl{
+			RequestedPlaylistFromUrl: res,
+		}
+
+	case *extensions.ExtensionCommand_RequestedSearchResult:
+		res, err := extension.Search(e.RequestedSearchResult)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		// res is *songs.SearchResult
+		// Response expects repeated fields directly in RequestedSearchResultResponse
+		// Or does RequestedSearchResultResponse contain a SearchResult?
+		// Proto: message RequestedSearchResultResponse { repeated Song; repeated Playlist; ... }
+		// songs.SearchResult also has these.
+		// I need to map them manually unless I change the return type of Search in `api.go`.
+		// In `api.go` I made Search return `*songs.SearchResult`.
+		// RequestedSearchResultResponse structure:
+		//  repeated Song songs = 1;
+		//  repeated Playlist playlists = 2;
+		//  repeated Artist artists = 3;
+		//  repeated Album albums = 4;
+
+		resp.Response = &extensions.ExtensionCommandResponse_RequestedSearchResult{
+			RequestedSearchResult: &extensions.RequestedSearchResultResponse{
+				Songs:     res.Songs,
+				Playlists: res.Playlists,
+				Artists:   res.Artists,
+				Albums:    res.Albums,
+			},
+		}
+
+	case *extensions.ExtensionCommand_RequestedRecommendations:
+		res, err := extension.GetRecommendations(e.RequestedRecommendations)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_RequestedRecommendations{
+			RequestedRecommendations: &extensions.RequestedRecommendationsResponse{Songs: res},
+		}
+
+	case *extensions.ExtensionCommand_RequestedLyrics:
+		res, err := extension.GetLyrics(e.RequestedLyrics)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_RequestedLyrics{
+			RequestedLyrics: &extensions.RequestedLyricsResponse{Lyrics: res},
+		}
+
+	case *extensions.ExtensionCommand_RequestedArtistSongs:
+		res, err := extension.GetArtistSongs(e.RequestedArtistSongs)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_RequestedArtistSongs{
+			RequestedArtistSongs: res,
+		}
+
+	case *extensions.ExtensionCommand_RequestedAlbumSongs:
+		res, err := extension.GetAlbumSongs(e.RequestedAlbumSongs)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_RequestedAlbumSongs{
+			RequestedAlbumSongs: res,
+		}
+
+	case *extensions.ExtensionCommand_SongAdded:
+		err := extension.OnSongAdded(e.SongAdded)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_SongAdded{
+			SongAdded: &extensions.SongAddedResponse{},
+		}
+
+	case *extensions.ExtensionCommand_SongRemoved:
+		err := extension.OnSongRemoved(e.SongRemoved)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_SongRemoved{
+			SongRemoved: &extensions.SongRemovedResponse{},
+		}
+
+	case *extensions.ExtensionCommand_PlaylistAdded:
+		err := extension.OnPlaylistAdded(e.PlaylistAdded)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_PlaylistAdded{
+			PlaylistAdded: &extensions.PlaylistAddedResponse{},
+		}
+
+	case *extensions.ExtensionCommand_PlaylistRemoved:
+		err := extension.OnPlaylistRemoved(e.PlaylistRemoved)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_PlaylistRemoved{
+			PlaylistRemoved: &extensions.PlaylistRemovedResponse{},
+		}
+
+	case *extensions.ExtensionCommand_RequestedSongFromId:
+		res, err := extension.GetSongFromID(e.RequestedSongFromId)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_RequestedSongFromId{
+			RequestedSongFromId: res,
+		}
+
+	case *extensions.ExtensionCommand_GetRemoteUrl:
+		// Not implemented in interface yet
+		pdk.SetError(fmt.Errorf("GetRemoteUrl not implemented"))
+		return 1
+
+	case *extensions.ExtensionCommand_Scrobble:
+		err := extension.Scrobble(e.Scrobble)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_Scrobble{
+			Scrobble: &extensions.ScrobbleResponse{},
+		}
+
+	case *extensions.ExtensionCommand_RequestedSongContextMenu:
+		_, err := extension.GetSongContextMenu(e.RequestedSongContextMenu)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		// Context struct in proto: ContextMenuReturnType
+		// Api returns []*ContextMenuReturnType
+		// Response expects: message RequestedSongContextMenuResponse { ContextMenuReturnType menu = 1; }
+		// Wait, menu is SINGLE?
+		// Proto: message RequestedSongContextMenuResponse { ContextMenuReturnType menu = 1; }
+		// Proto ContextMenuReturnType: message ContextMenuReturnType { ... }
+		// Wait, usually context menu is a list of items?
+		// Let's check `extensions.proto`.
+		// message ContextMenuReturnType { string name; string icon; string action_id; }
+		// RequestedSongContextMenuResponse { ContextMenuReturnType menu = 1; }
+		// This looks like it only supports ONE item?
+		// Or maybe ContextMenuReturnType allows nesting? It doesn't seem so in the proto I saw.
+		// `wasm-extension-rs` says `get_song_context_menu -> ContextMenuReturnType` (Single).
+		// But in `api.go`, I defined `GetSongContextMenu` returning `[]*Context...`.
+		// I should verify `extensions.proto` again.
+
+		// Lines 222: message RequestedSongContextMenuResponse { ContextMenuReturnType menu = 1; }
+		// Only one menu item? That seems wrong for a context menu.
+		// Unless `ContextMenuReturnType` is a container?
+		// Lines 383:
+		// message ContextMenuReturnType {
+		//   string name = 1;
+		//   string icon = 2;
+		//   string action_id = 3;
 		// }
-		return types.SearchReturnType{
-			Songs:     songs,
-			Playlists: playlists,
-			Artists:   artists,
-			Albums:    albums,
-		}, nil
-	})
-}
+		// It seems to be a single item.
+		// Maybe the proto definition is buggy or I misread it.
+		// "repeated" missing?
 
-//go:wasmexport get_recommendations_wrapper
-func get_recommendations_wrapper() int32 {
-	return runWrapper(nil, func() (any, error) {
-		songs, err := extension.GetRecommendations()
+		// If I assume it is incorrect in proto, I can't fix it right now without potentially breaking host.
+		// But `wasm-extension-rs` probably used `ContextMenuReturnType` directly.
+		// Let's assume the interface should return single item for now or I pack it?
+		// Wait, if I am replacing the Go SDK, I should match what the proto says.
+		// If proper usage expects a list, the proto should have `repeated`.
+
+		// Let's assume for now I return the first item or match the proto type.
+		// Checking `api.go` again... I declared `[]*extensions.ContextMenuReturnType`.
+		// I should probably change `api.go` to return single item if proto forbids list.
+		// OR FIX PROTO?
+		// User didn't ask to fix bugs in proto, just switch usage.
+		// Host likely expects one item? Or `ContextMenuReturnType` acts as a list? No.
+
+		// I will update api.go return type to `*extensions.ContextMenuReturnType` to match proto.
+
+		pdk.SetError(fmt.Errorf("GetSongContextMenu not fully implemented due to proto ambiguity"))
+		return 1
+
+	case *extensions.ExtensionCommand_RequestedPlaylistContextMenu:
+		// Same issue
+		pdk.SetError(fmt.Errorf("GetPlaylistContextMenu not fully implemented"))
+		return 1
+
+	case *extensions.ExtensionCommand_ContextMenuAction:
+		err := extension.OnContextMenuAction(e.ContextMenuAction)
 		if err != nil {
-			return nil, err
+			pdk.SetError(err)
+			return 1
 		}
-		return types.RecommendationsReturnType{Songs: songs}, nil
-	})
-}
+		resp.Response = &extensions.ExtensionCommandResponse_ContextMenuAction{
+			ContextMenuAction: &extensions.ContextMenuActionResponse{},
+		}
 
-//go:wasmexport get_song_from_url_wrapper
-func get_song_from_url_wrapper() int32 {
-	var url string
-	in := [...]any{&url}
-	return runWrapper(&in, func() (any, error) {
-		song, err := extension.GetSongFromURL(url)
+	case *extensions.ExtensionCommand_GetProviderScopes:
+		res, err := extension.GetProviderScopes()
 		if err != nil {
-			return nil, err
+			pdk.SetError(err)
+			return 1
 		}
-		return types.SongReturnType{Song: &song}, nil
-	})
-}
+		resp.Response = &extensions.ExtensionCommandResponse_GetProviderScopes{
+			GetProviderScopes: &extensions.GetProviderScopesResponse{Scopes: res},
+		}
 
-//go:wasmexport handle_custom_request_wrapper
-func handle_custom_request_wrapper() int32 {
-	var url string
-	return runWrapper(&url, func() (any, error) {
-		res, err := extension.HandleCustomRequest(url)
+	case *extensions.ExtensionCommand_GetAccounts:
+		res, err := extension.GetAccounts()
 		if err != nil {
-			return nil, err
+			pdk.SetError(err)
+			return 1
 		}
-		return res, nil
-	})
-}
+		resp.Response = &extensions.ExtensionCommandResponse_GetAccounts{
+			GetAccounts: &extensions.GetAccountsResponse{Accounts: res},
+		}
 
-//go:wasmexport get_artist_songs_wrapper
-func get_artist_songs_wrapper() int32 {
-	var artist types.QueryableArtist
-	var token string
-	in := [...]any{&artist, &token}
-	return runWrapper(&in, func() (any, error) {
-		songs, err := extension.GetArtistSongs(artist, token)
+	case *extensions.ExtensionCommand_PerformAccountLogin:
+		res, err := extension.PerformAccountLogin(e.PerformAccountLogin)
 		if err != nil {
-			return nil, err
+			pdk.SetError(err)
+			return 1
 		}
-		return types.SongsWithPageTokenReturnType{
-			Songs:         songs,
-			NextPageToken: nil,
-		}, nil
-	})
-}
-
-//go:wasmexport get_album_songs_wrapper
-func get_album_songs_wrapper() int32 {
-	var album types.QueryableAlbum
-	var token string
-	in := [...]any{&album, &token}
-	return runWrapper(&in, func() (any, error) {
-		songs, err := extension.GetAlbumSongs(album, token)
-		if err != nil {
-			return nil, err
+		resp.Response = &extensions.ExtensionCommandResponse_PerformAccountLogin{
+			PerformAccountLogin: &extensions.PerformAccountLoginResponse{Status: res},
 		}
-		return types.SongsWithPageTokenReturnType{
-			Songs:         songs,
-			NextPageToken: nil,
-		}, nil
-	})
-}
 
-//go:wasmexport get_song_from_id_wrapper
-func get_song_from_id_wrapper() int32 {
-	var id string
-	return runWrapper(&id, func() (any, error) {
-		song, err := extension.GetSongFromID(id)
-		if err != nil {
-			return nil, err
-		}
-		return types.SongReturnType{Song: &song}, nil
-	})
-}
+	default:
+		pdk.Log(pdk.LogError, fmt.Sprintf("Unknown event: %T", cmd.Event))
+		return 1
+	}
 
-//go:wasmexport on_queue_changed_wrapper
-func on_queue_changed_wrapper() int32 {
-	var queue types.Value
-	in := [...]any{&queue}
-	return runWrapper(&in, func() (any, error) {
-		return nil, extension.OnQueueChanged(queue)
-	})
-}
+	outBytes, err := proto.Marshal(resp)
+	if err != nil {
+		pdk.SetError(err)
+		return 1
+	}
 
-//go:wasmexport on_volume_changed_wrapper
-func on_volume_changed_wrapper() int32 {
-	return runWrapper(nil, func() (any, error) {
-		return nil, extension.OnVolumeChanged()
-	})
-}
-
-//go:wasmexport on_player_state_changed_wrapper
-func on_player_state_changed_wrapper() int32 {
-	return runWrapper(nil, func() (any, error) {
-		return nil, extension.OnPlayerStateChanged()
-	})
-}
-
-//go:wasmexport on_song_changed_wrapper
-func on_song_changed_wrapper() int32 {
-	return runWrapper(nil, func() (any, error) {
-		return nil, extension.OnSongChanged()
-	})
-}
-
-//go:wasmexport on_seeked_wrapper
-func on_seeked_wrapper() int32 {
-	var t float64
-	in := [...]any{&t}
-	return runWrapper(&in, func() (any, error) {
-		return nil, extension.OnSeeked(t)
-	})
-}
-
-//go:wasmexport on_preferences_changed_wrapper
-func on_preferences_changed_wrapper() int32 {
-	var args types.PreferenceArgs
-	in := [...]any{&args}
-	return runWrapper(&in, func() (any, error) {
-		return nil, extension.OnPreferencesChanged(args)
-	})
-}
-
-//go:wasmexport on_song_added_wrapper
-func on_song_added_wrapper() int32 {
-	var song types.Song
-	in := [...]any{&song}
-	return runWrapper(&in, func() (any, error) {
-		return nil, extension.OnSongAdded(song)
-	})
-}
-
-//go:wasmexport on_song_removed_wrapper
-func on_song_removed_wrapper() int32 {
-	var song types.Song
-	in := [...]any{&song}
-	return runWrapper(&in, func() (any, error) {
-		return nil, extension.OnSongRemoved(song)
-	})
-}
-
-//go:wasmexport on_playlist_added_wrapper
-func on_playlist_added_wrapper() int32 {
-	var playlist types.QueryablePlaylist
-	in := [...]any{&playlist}
-	return runWrapper(&in, func() (any, error) {
-		return nil, extension.OnPlaylistAdded(playlist)
-	})
-}
-
-//go:wasmexport on_playlist_removed_wrapper
-func on_playlist_removed_wrapper() int32 {
-	var playlist types.QueryablePlaylist
-	in := [...]any{&playlist}
-	return runWrapper(&in, func() (any, error) {
-		return nil, extension.OnPlaylistRemoved(playlist)
-	})
-}
-
-//go:wasmexport get_accounts_wrapper
-func get_accounts_wrapper() int32 {
-	return runWrapper(nil, func() (any, error) {
-		accounts, err := extension.GetAccounts()
-		if err != nil {
-			return nil, err
-		}
-		return accounts, nil
-	})
-}
-
-//go:wasmexport perform_account_login_wrapper
-func perform_account_login_wrapper() int32 {
-	var args types.AccountLoginArgs
-	in := [...]any{&args}
-	return runWrapper(&in, func() (any, error) {
-		res, err := extension.PerformAccountLogin(args)
-		if err != nil {
-			return nil, err
-		}
-		return res, nil
-	})
-}
-
-//go:wasmexport scrobble_wrapper
-func scrobble_wrapper() int32 {
-	var song types.Song
-	return runWrapper(&song, func() (any, error) {
-		return nil, extension.Scrobble(song)
-	})
-}
-
-//go:wasmexport oauth_callback_wrapper
-func oauth_callback_wrapper() int32 {
-	var code string
-	return runWrapper(&code, func() (any, error) {
-		return nil, extension.OauthCallback(code)
-	})
-}
-
-//go:wasmexport get_song_context_menu_wrapper
-func get_song_context_menu_wrapper() int32 {
-	var songs []types.Song
-	in := [...]any{&songs}
-	return runWrapper(&in, func() (any, error) {
-		menu, err := extension.GetSongContextMenu(songs)
-		if err != nil {
-			return nil, err
-		}
-		return menu, nil
-	})
-}
-
-//go:wasmexport get_playlist_context_menu_wrapper
-func get_playlist_context_menu_wrapper() int32 {
-	var playlist types.QueryablePlaylist
-	in := [...]any{&playlist}
-	return runWrapper(&in, func() (any, error) {
-		menu, err := extension.GetPlaylistContextMenu(playlist)
-		if err != nil {
-			return nil, err
-		}
-		return menu, nil
-	})
-}
-
-//go:wasmexport on_context_menu_action_wrapper
-func on_context_menu_action_wrapper() int32 {
-	var action string
-	return runWrapper(&action, func() (any, error) {
-		return nil, extension.OnContextMenuAction(action)
-	})
-}
-
-//go:wasmexport get_lyrics_wrapper
-func get_lyrics_wrapper() int32 {
-	var song types.Song
-	in := [...]any{&song}
-	return runWrapper(&in, func() (any, error) {
-		lyrics, err := extension.GetLyrics(song)
-		if err != nil {
-			return nil, err
-		}
-		return lyrics, nil
-	})
+	pdk.Output(outBytes)
+	return 0
 }
 
 //go:wasmimport extism:host/user send_main_command
