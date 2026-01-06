@@ -14,17 +14,32 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use extism_pdk::{Json, host_fn};
-use serde_json::Value;
-use types::entities::{Album, Artist, Playlist, SearchResult};
-use types::errors::Result as MoosyncResult;
-use types::extensions::MainCommand;
-use types::songs::Song;
-use types::ui::extensions::{
-    AccountLoginArgs, ContextMenuReturnType, CustomRequestReturnType, ExtensionAccountDetail,
-    ExtensionProviderScope, PlaybackDetailsReturnType, PreferenceArgs,
-    SongsWithPageTokenReturnType,
+use extism_pdk::{Prost, host_fn};
+use serde::{Deserialize, Serialize};
+
+use extensions_proto::moosync::types::{
+    AddPlaylistRequest, AddSongsRequest, AddToPlaylistRequest, ContextMenuActionRequest,
+    ContextMenuReturnType, CustomRequest, ExtensionAccountDetail, ExtensionProviderScope,
+    GetCurrentSongRequest, GetEntityRequest, GetPlayerStateRequest, GetPreferenceRequest,
+    GetQueueRequest, GetSecureRequest, GetSongRequest, GetTimeRequest, GetVolumeRequest,
+    MainCommand, MainCommandResponse, OauthCallbackRequest, OpenExternalUrlRequest,
+    PerformAccountLoginRequest, PlaybackDetailsRequestedRequest, PlayerState,
+    PlayerStateChangedRequest, PlaylistAddedRequest, PlaylistRemovedRequest,
+    PreferenceChangedRequest, PreferenceData, RegisterOauthRequest, RegisterUserPreferenceRequest,
+    RemoveSongRequest, RequestedAlbumSongsRequest, RequestedArtistSongsRequest,
+    RequestedLyricsRequest, RequestedPlaylistContextMenuRequest, RequestedPlaylistFromUrlRequest,
+    RequestedPlaylistSongsRequest, RequestedPlaylistsRequest, RequestedRecommendationsRequest,
+    RequestedSearchResultRequest, RequestedSongContextMenuRequest, RequestedSongFromIdRequest,
+    RequestedSongFromUrlRequest, ScrobbleRequest, SeekedRequest, SetPreferenceRequest,
+    SetSecureRequest, SongAddedRequest, SongChangedRequest, SongQueueChangedRequest,
+    SongRemovedRequest, UnregisterUserPreferenceRequest, UpdateAccountsRequest, UpdateSongRequest,
+    VolumeChangedRequest,
 };
+use songs_proto::moosync::types::{Playlist, SearchResult, Song};
+use ui_proto::moosync::types::PreferenceUiData;
+
+pub type MoosyncResult<T> = Result<T, crate::handler::MoosyncError>;
+pub type AccountLoginArgs = PerformAccountLoginRequest;
 
 #[allow(unused_variables)]
 /// Trait for handling account-related events.
@@ -35,12 +50,12 @@ pub trait Accounts {
     }
 
     /// Called when the main app requests to perform an account login.
-    fn perform_account_login(&self, args: AccountLoginArgs) -> MoosyncResult<String> {
+    fn perform_account_login(&self, req: PerformAccountLoginRequest) -> MoosyncResult<String> {
         Err("Not implemented".into())
     }
 
     /// Called when the main app provides an OAuth callback code.
-    fn oauth_callback(&self, code: String) -> MoosyncResult<()> {
+    fn oauth_callback(&self, req: OauthCallbackRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 }
@@ -49,22 +64,22 @@ pub trait Accounts {
 /// Trait for handling database-related events.
 pub trait DatabaseEvents {
     /// Called when a song is added to the database.
-    fn on_song_added(&self, song: Song) -> MoosyncResult<()> {
+    fn on_song_added(&self, req: SongAddedRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 
     /// Called when a song is removed from the database.
-    fn on_song_removed(&self, song: Song) -> MoosyncResult<()> {
+    fn on_song_removed(&self, req: SongRemovedRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 
     /// Called when a playlist is added to the database.
-    fn on_playlist_added(&self, playlist: Playlist) -> MoosyncResult<()> {
+    fn on_playlist_added(&self, req: PlaylistAddedRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 
     /// Called when a playlist is removed from the database.
-    fn on_playlist_removed(&self, playlist: Playlist) -> MoosyncResult<()> {
+    fn on_playlist_removed(&self, req: PlaylistRemovedRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 }
@@ -73,7 +88,7 @@ pub trait DatabaseEvents {
 /// Trait for handling preference-related events.
 pub trait PreferenceEvents {
     /// Called when preferences are changed.
-    fn on_preferences_changed(&self, args: PreferenceArgs) -> MoosyncResult<()> {
+    fn on_preferences_changed(&self, req: PreferenceChangedRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 }
@@ -82,27 +97,27 @@ pub trait PreferenceEvents {
 /// Trait for handling player-related events.
 pub trait PlayerEvents {
     /// Called when the queue is changed.
-    fn on_queue_changed(&self, queue: Value) -> MoosyncResult<()> {
+    fn on_queue_changed(&self, req: SongQueueChangedRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 
     /// Called when the volume is changed.
-    fn on_volume_changed(&self) -> MoosyncResult<()> {
+    fn on_volume_changed(&self, req: VolumeChangedRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 
     /// Called when the player state is changed.
-    fn on_player_state_changed(&self) -> MoosyncResult<()> {
+    fn on_player_state_changed(&self, req: PlayerStateChangedRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 
     /// Called when the song is changed.
-    fn on_song_changed(&self) -> MoosyncResult<()> {
+    fn on_song_changed(&self, req: SongChangedRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 
     /// Called when the player is seeked to a specific time.
-    fn on_seeked(&self, time: f64) -> MoosyncResult<()> {
+    fn on_seeked(&self, req: SeekedRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 }
@@ -114,79 +129,75 @@ pub trait Provider {
     fn get_provider_scopes(&self) -> MoosyncResult<Vec<ExtensionProviderScope>>;
 
     /// Called when the main app requests the list of playlists.
-    fn get_playlists(&self) -> MoosyncResult<Vec<Playlist>> {
+    fn get_playlists(&self, req: RequestedPlaylistsRequest) -> MoosyncResult<Vec<Playlist>> {
         Err("Not implemented".into())
     }
 
     /// Called when the main app requests the content of a specific playlist.
     fn get_playlist_content(
         &self,
-        id: String,
-        next_page_token: Option<String>,
-    ) -> MoosyncResult<SongsWithPageTokenReturnType> {
-        Err("Not implemented".into())
-    }
+        req: RequestedPlaylistSongsRequest,
+    ) -> MoosyncResult<SongsWithPageTokenReturnType>;
 
     /// Called when the main app requests a playlist from a URL.
-    fn get_playlist_from_url(&self, url: String) -> MoosyncResult<Option<Playlist>> {
+    fn get_playlist_from_url(
+        &self,
+        req: RequestedPlaylistFromUrlRequest,
+    ) -> MoosyncResult<Option<Playlist>> {
         Err("Not implemented".into())
     }
 
     /// Called when the main app requests playback details for a song.
-    fn get_playback_details(&self, song: Song) -> MoosyncResult<PlaybackDetailsReturnType> {
+    fn get_playback_details(
+        &self,
+        req: PlaybackDetailsRequestedRequest,
+    ) -> MoosyncResult<PlaybackDetailsReturnType> {
         Err("Not implemented".into())
     }
 
     /// Called when the main app performs a search.
-    fn search(&self, term: String) -> MoosyncResult<SearchResult> {
+    fn search(&self, req: RequestedSearchResultRequest) -> MoosyncResult<SearchResult> {
         Err("Not implemented".into())
     }
 
     /// Called when the main app requests recommendations.
-    fn get_recommendations(&self) -> MoosyncResult<Vec<Song>> {
-        Err("Not implemented".into())
+    fn get_recommendations(
+        &self,
+        req: RequestedRecommendationsRequest,
+    ) -> MoosyncResult<Vec<Song>> {
+        Err("MoosyncError::String(\"Not implemented\".into())".into())
     }
 
     /// Called when the main app requests a song from a URL.
-    fn get_song_from_url(&self, url: String) -> MoosyncResult<Option<Song>> {
-        Err("Not implemented".into())
-    }
+    fn get_song_from_url(&self, req: RequestedSongFromUrlRequest) -> MoosyncResult<Option<Song>>;
 
     /// Called when the main app handles a custom request.
-    fn handle_custom_request(&self, url: String) -> MoosyncResult<CustomRequestReturnType> {
-        Err("Not implemented".into())
-    }
+    fn handle_custom_request(&self, req: CustomRequest) -> MoosyncResult<CustomRequestReturnType>;
 
     /// Called when the main app requests songs of a specific artist.
     fn get_artist_songs(
         &self,
-        artist: Artist,
-        next_page_token: Option<String>,
-    ) -> MoosyncResult<SongsWithPageTokenReturnType> {
-        Err("Not implemented".into())
-    }
+        req: RequestedArtistSongsRequest,
+    ) -> MoosyncResult<SongsWithPageTokenReturnType>;
 
     /// Called when the main app requests songs of a specific album.
     fn get_album_songs(
         &self,
-        album: Album,
-        next_page_token: Option<String>,
-    ) -> MoosyncResult<SongsWithPageTokenReturnType> {
-        Err("Not implemented".into())
-    }
+        req: RequestedAlbumSongsRequest,
+    ) -> MoosyncResult<SongsWithPageTokenReturnType>;
 
     /// Called when the main app requests a song from an ID.
-    fn get_song_from_id(&self, id: String) -> MoosyncResult<Option<Song>> {
+    fn get_song_from_id(&self, req: RequestedSongFromIdRequest) -> MoosyncResult<Option<Song>> {
         Err("Not implemented".into())
     }
 
     /// Called when the main app requests to scrobble a song.
-    fn scrobble(&self, song: Song) -> MoosyncResult<()> {
+    fn scrobble(&self, req: ScrobbleRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 
     /// Called when the main app requests lyrics for a song.
-    fn get_lyrics(&self, song: Song) -> MoosyncResult<String> {
+    fn get_lyrics(&self, req: RequestedLyricsRequest) -> MoosyncResult<String> {
         Err("Not implemented".into())
     }
 }
@@ -195,20 +206,23 @@ pub trait Provider {
 /// Trait for handling context menu-related events.
 pub trait ContextMenu {
     /// Called when the main app requests the context menu for songs.
-    fn get_song_context_menu(&self, songs: Vec<Song>) -> MoosyncResult<Vec<ContextMenuReturnType>> {
+    fn get_song_context_menu(
+        &self,
+        req: RequestedSongContextMenuRequest,
+    ) -> MoosyncResult<Vec<ContextMenuReturnType>> {
         Err("Not implemented".into())
     }
 
     /// Called when the main app requests the context menu for a playlist.
     fn get_playlist_context_menu(
         &self,
-        playlist: Playlist,
+        req: RequestedPlaylistContextMenuRequest,
     ) -> MoosyncResult<Vec<ContextMenuReturnType>> {
         Err("Not implemented".into())
     }
 
     /// Called when the main app performs an action from the context menu.
-    fn on_context_menu_action(&self, action: String) -> MoosyncResult<()> {
+    fn on_context_menu_action(&self, req: ContextMenuActionRequest) -> MoosyncResult<()> {
         Err("Not implemented".into())
     }
 }
@@ -219,9 +233,31 @@ pub trait Extension:
 {
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PlaybackDetailsReturnType {
+    pub duration: u32,
+    pub url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SongsWithPageTokenReturnType {
+    pub songs: Vec<Song>,
+    pub next_page_token: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContextMenuReturnTypeWrapper(pub ContextMenuReturnType);
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CustomRequestReturnType {
+    pub mime_type: Option<String>,
+    pub data: Option<Vec<u8>>,
+    pub redirect_url: Option<String>,
+}
+
 #[host_fn]
 extern "ExtismHost" {
-    fn send_main_command(command: Json<MainCommand>) -> Option<Value>;
+    fn send_main_command(command: Prost<MainCommand>) -> Prost<MainCommandResponse>;
     fn system_time() -> u64;
     fn open_clientfd(path: String) -> i64;
     fn write_sock(sock_id: i64, buf: Vec<u8>) -> i64;
@@ -230,14 +266,13 @@ extern "ExtismHost" {
 }
 
 pub mod extension_api {
+    use super::*;
+    use crate::handler::MoosyncError;
+    use crate::response_utils::Extract;
+    use extensions_proto::moosync::types::main_command::Command as MainCommandEnum;
+    use extensions_proto::moosync::types::main_command_response::Response as MainCommandResponseEnum;
     use serde_json::Value;
-    use types::entities::{GetEntityOptions, Playlist};
-    use types::errors::{MoosyncError, Result as MoosyncResult};
-    use types::preferences::PreferenceUIData;
-    use types::songs::{GetSongOptions, Song};
-    use types::ui::extensions::{AddToPlaylistRequest, PreferenceData};
-    use types::ui::player_details::PlayerState;
-    use types::extensions::MainCommand;
+    use songs_proto::moosync::types::{GetEntityOptions, GetSongOptions}; // Needed
 
     use super::{
         hash, open_clientfd, read_sock as read_sock_ext, send_main_command, system_time,
@@ -248,23 +283,33 @@ pub mod extension_api {
         ($(
             $(#[doc = $doc:literal])*
             $fn_name:ident (
-                $variant:ident,
-                $( $arg_name:ident : $arg_type:ty ),*
+                $Variant:ident,
+                $ReqType:ident,
+                $RespType:ident
+                $(, $arg_name:ident : $arg_type:ty )*
             ) -> $ret_type:ty
         );* $(;)?) => {
             $(
                 $(#[doc = $doc])*
                 pub fn $fn_name($( $arg_name: $arg_type ),*) -> MoosyncResult<$ret_type> {
                     unsafe {
-                        match send_main_command(extism_pdk::Json(MainCommand::$variant($($arg_name),*))) {
-                            Ok(resp) => {
-                                if let Some(resp) = resp {
-                                    return Ok(serde_json::from_value(resp)?);
-                                }
-                                Err(MoosyncError::String("No response".into()))
-                            }
-                            Err(e) => Err(e.to_string().into()),
+                        let request = $ReqType {
+                            $( $arg_name: Some($arg_name.into()) ),*
+                        };
+                        let cmd_enum = MainCommandEnum::$Variant(request);
+                        let cmd = MainCommand { command: Some(cmd_enum) };
+
+                        let extism_pdk::Prost(res) = send_main_command(extism_pdk::Prost(cmd)).unwrap();
+
+                        if let Some(MainCommandResponseEnum::Error(e)) = res.response.as_ref() {
+                            return Err(MoosyncError::String(e.message.clone()));
                         }
+
+                        if let Some(MainCommandResponseEnum::$Variant(data)) = res.response {
+                            return Ok(data.extract());
+                        }
+
+                        Err(MoosyncError::String("Host returned invalid response".into()))
                     }
                 }
             )*
@@ -275,20 +320,70 @@ pub mod extension_api {
         ($(
             $(#[doc = $doc:literal])*
             $fn_name:ident (
-                $variant:ident,
-                $( $arg_name:ident : $arg_type:ty ),*
+                $Variant:ident,
+                $ReqType:ident
+                $(, $arg_name:ident : $arg_type:ty )*
             ) -> $ret_type:ty
         );* $(;)?) => {
             $(
                 $(#[doc = $doc])*
                 pub fn $fn_name($( $arg_name: $arg_type ),*) -> MoosyncResult<$ret_type> {
                     unsafe {
-                        match send_main_command(extism_pdk::Json(MainCommand::$variant($($arg_name),*))) {
-                            Ok(_) => {
-                                return Ok(())
-                            }
-                            Err(e) => Err(e.to_string().into()),
+                        let request = $ReqType {
+                            $( $arg_name: Some($arg_name.into()) ),*
+                        };
+                         let cmd_enum = MainCommandEnum::$Variant(request);
+                        let cmd = MainCommand { command: Some(cmd_enum) };
+
+                        let extism_pdk::Prost(res) = send_main_command(extism_pdk::Prost(cmd)).unwrap();
+
+                        if let Some(MainCommandResponseEnum::Error(e)) = res.response.as_ref() {
+                            return Err(MoosyncError::String(e.message.clone()));
                         }
+
+                        if let Some(MainCommandResponseEnum::$Variant(_)) = res.response {
+                            return Ok(());
+                        }
+
+                        Err(MoosyncError::String("Host returned invalid response".into()))
+                    }
+                }
+            )*
+        };
+    }
+
+    // Special macro for repeated fields or non-optional ones if pattern differs
+    macro_rules! create_api_fn_repeated {
+        ($(
+            $(#[doc = $doc:literal])*
+            $fn_name:ident (
+                $Variant:ident,
+                $ReqType:ident,
+                $field:ident,
+                $arg_name:ident : $arg_type:ty
+            ) -> $ret_type:ty
+        );* $(;)?) => {
+            $(
+                $(#[doc = $doc])*
+                pub fn $fn_name( $arg_name: $arg_type ) -> MoosyncResult<$ret_type> {
+                    unsafe {
+                        let request = $ReqType {
+                            $field: $arg_name, // Direct assignment for repeated
+                        };
+                         let cmd_enum = MainCommandEnum::$Variant(request);
+                        let cmd = MainCommand { command: Some(cmd_enum) };
+
+                        let extism_pdk::Prost(res) = send_main_command(extism_pdk::Prost(cmd)).unwrap();
+
+                        if let Some(MainCommandResponseEnum::Error(e)) = res.response.as_ref() {
+                            return Err(MoosyncError::String(e.message.clone()));
+                        }
+
+                        if let Some(MainCommandResponseEnum::$Variant(_)) = res.response {
+                            return Ok(());
+                        }
+
+                         Err(MoosyncError::String("Host returned invalid response".into()))
                     }
                 }
             )*
@@ -297,165 +392,173 @@ pub mod extension_api {
 
     create_api_fn! {
         /// Retrieves a list of songs based on the provided options.
-        ///
-        /// # Arguments
-        ///
-        /// * `options` - The options to filter the songs.
-        ///
-        /// # Returns
-        ///
-        /// A vector of `Song` objects.
-        get_song(GetSong, options: GetSongOptions) -> Vec<Song>;
+        get_song(GetSong, GetSongRequest, GetSongResponse, options: GetSongOptions) -> Vec<Song>;
 
         /// Retrieves the current song being played.
-        ///
-        /// # Returns
-        ///
-        /// An optional `Song` object representing the current song.
-        get_current_song(GetCurrentSong,) -> Option<Song>;
+        get_current_song(GetCurrentSong, GetCurrentSongRequest, GetCurrentSongResponse) -> Option<Song>;
 
-        get_entity(GetEntity, options: GetEntityOptions) -> Vec<Value>;
+        get_entity(GetEntity, GetEntityRequest, GetEntityResponse, options: GetEntityOptions) -> Value;
 
         /// Retrieves the current state of the player.
-        ///
-        /// # Returns
-        ///
-        /// A `PlayerState` object representing the current state of the player.
-        get_player_state(GetPlayerState,) -> PlayerState;
+        get_player_state(GetPlayerState, GetPlayerStateRequest, GetPlayerStateResponse) -> PlayerState;
 
         /// Retrieves the current volume level.
-        ///
-        /// # Returns
-        ///
-        /// A floating-point number representing the current volume level.
-        get_volume(GetVolume,) -> f64;
+        get_volume(GetVolume, GetVolumeRequest, GetVolumeResponse) -> f64;
 
         /// Retrieves the current playback time.
-        ///
-        /// # Returns
-        ///
-        /// A floating-point number representing the current playback time in seconds.
-        get_time(GetTime,) -> f64;
+        get_time(GetTime, GetTimeRequest, GetTimeResponse) -> f64;
 
         /// Retrieves the current playback queue.
-        ///
-        /// # Returns
-        ///
-        /// A vector of `Song` objects representing the current queue.
-        get_queue(GetQueue,) -> Vec<Song>;
+        get_queue(GetQueue, GetQueueRequest, GetQueueResponse) -> Value;
 
         /// Retrieves a preference value based on the provided data.
-        ///
-        /// # Arguments
-        ///
-        /// * `data` - The data to filter the preference.
-        ///
-        /// # Returns
-        ///
-        /// A `Value` object representing the preference.
-        get_preference(GetPreference, data: PreferenceData) -> PreferenceData;
+        get_preference(GetPreference, GetPreferenceRequest, GetPreferenceResponse, data: PreferenceData) -> PreferenceData;
 
         /// Retrieves a secure preference value based on the provided data.
-        ///
-        /// # Arguments
-        ///
-        /// * `data` - The data to filter the secure preference.
-        ///
-        /// # Returns
-        ///
-        /// A `Value` object representing the secure preference.
-        get_secure(GetSecure, data: PreferenceData) -> PreferenceData;
+        get_secure(GetSecure, GetSecureRequest, GetSecureResponse, data: PreferenceData) -> PreferenceData;
 
         /// Adds a new playlist to the main app.
-        ///
-        /// # Arguments
-        ///
-        /// * `playlist` - The playlist to be added.
-        ///
-        /// # Returns
-        ///
-        /// A string representing the ID of the added playlist.
-        add_playlist(AddPlaylist, playlist: Playlist) -> String;
+        add_playlist(AddPlaylist, AddPlaylistRequest, AddPlaylistResponse, playlist: Playlist) -> String;
     }
 
     create_api_fn_no_resp! {
         /// Sets a preference value based on the provided data.
-        ///
-        /// # Arguments
-        ///
-        /// * `data` - The data to set the preference.
-        set_preference(SetPreference, data: PreferenceData) -> ();
+        set_preference(SetPreference, SetPreferenceRequest, data: PreferenceData) -> ();
 
         /// Sets a secure preference value based on the provided data.
-        ///
-        /// # Arguments
-        ///
-        /// * `data` - The data to set the secure preference.
-        set_secure(SetSecure, data: PreferenceData) -> ();
-
-        /// Adds a list of songs to the main app.
-        ///
-        /// # Arguments
-        ///
-        /// * `songs` - The list of songs to be added.
-        add_songs(AddSongs, songs: Vec<Song>) -> ();
+        set_secure(SetSecure, SetSecureRequest, data: PreferenceData) -> ();
 
         /// Removes a song from the main app.
-        ///
-        /// # Arguments
-        ///
-        /// * `song` - The song to be removed.
-        remove_song(RemoveSong, song: Song) -> ();
+        remove_song(RemoveSong, RemoveSongRequest, song: Song) -> ();
 
         /// Updates a song in the main app.
-        ///
-        /// # Arguments
-        ///
-        /// * `song` - The song to be updated.
-        update_song(UpdateSong, song: Song) -> ();
-
-        /// Adds a song to a playlist.
-        ///
-        /// # Arguments
-        ///
-        /// * `request` - The request containing the song and playlist details.
-        add_to_playlist(AddToPlaylist, request: AddToPlaylistRequest) -> ();
-
-        /// Registers an OAuth token with the main app.
-        ///
-        /// # Arguments
-        ///
-        /// * `token` - The OAuth token to be registered.
-        register_oauth(RegisterOAuth, token: String) -> ();
-
-        /// Opens an external URL.
-        ///
-        /// # Arguments
-        ///
-        /// * `url` - The URL to be opened.
-        open_external_url(OpenExternalUrl, url: String) -> ();
-
-        /// Updates the list of accounts in the main app.
-        ///
-        /// # Arguments
-        ///
-        /// * `package_name` - The optional package name to filter the accounts.
-        update_accounts(UpdateAccounts, package_name: Option<String>) -> ();
-
-        /// Registers user preferences with the main app.
-        ///
-        /// # Arguments
-        ///
-        /// * `prefs` - A vector of `PreferenceUIData` representing the user preferences to register.
-        register_user_preferences(RegisterUserPreference, prefs: Vec<PreferenceUIData>) -> ();
-
-        /// Unregisters user preferences from the main app.
-        ///
-        /// # Arguments
-        ///
-        /// * `pref_keys` - A vector of strings representing the keys of the preferences to unregister.
-        unregister_user_preferences(UnregisterUserPreference, pref_keys: Vec<String>) -> ();
+        update_song(UpdateSong, UpdateSongRequest, song: Song) -> ();
     }
+
+    /// Updates the list of accounts in the main app.
+    pub fn update_accounts(account: Option<String>) -> MoosyncResult<()> {
+        unsafe {
+            let request = UpdateAccountsRequest { account };
+            let cmd_enum = MainCommandEnum::UpdateAccounts(request);
+            let cmd = MainCommand {
+                command: Some(cmd_enum),
+            };
+
+            let extism_pdk::Prost(res) = send_main_command(extism_pdk::Prost(cmd)).unwrap();
+
+            if let Some(MainCommandResponseEnum::Error(e)) = res.response.as_ref() {
+                return Err(MoosyncError::String(e.message.clone()));
+            }
+
+            if let Some(MainCommandResponseEnum::UpdateAccounts(_)) = res.response {
+                return Ok(());
+            }
+
+            Err(MoosyncError::String(
+                "Host returned invalid response".into(),
+            ))
+        }
+    }
+    // If I pass the struct directly, I don't need to construct it.
+    // I need a special macro for "Pass Through Request".
+
+    // Pass-through request (argument IS the request)
+    macro_rules! create_api_fn_pass_through {
+        ($(
+            $(#[doc = $doc:literal])*
+            $fn_name:ident (
+                $Variant:ident,
+                $ReqType:ident,
+                $arg_name:ident : $arg_type:ty
+            ) -> $ret_type:ty
+        );* $(;)?) => {
+            $(
+                $(#[doc = $doc])*
+                pub fn $fn_name( $arg_name: $arg_type ) -> MoosyncResult<$ret_type> {
+                    unsafe {
+                        // Argument is the request itself
+                         let cmd_enum = MainCommandEnum::$Variant($arg_name);
+                        let cmd = MainCommand { command: Some(cmd_enum) };
+
+                        let extism_pdk::Prost(res) = send_main_command(extism_pdk::Prost(cmd)).unwrap();
+
+                        if let Some(MainCommandResponseEnum::Error(e)) = res.response.as_ref() {
+                            return Err(MoosyncError::String(e.message.clone()));
+                        }
+
+                        if let Some(MainCommandResponseEnum::$Variant(_)) = res.response {
+                            return Ok(());
+                        }
+
+                        Err(MoosyncError::String("Host returned invalid response".into()))
+                    }
+                }
+            )*
+        };
+    }
+
+    create_api_fn_pass_through! {
+         /// Adds a song to a playlist.
+        add_to_playlist(AddToPlaylist, AddToPlaylistRequest, request: AddToPlaylistRequest) -> ();
+    }
+
+    create_api_fn_repeated! {
+         /// Adds a list of songs to the main app.
+        add_songs(AddSongs, AddSongsRequest, songs, songs: Vec<Song>) -> ();
+
+        // RegisterUserPreferenceRequest has 'prefs' field (repeated).
+        /// Registers user preferences with the main app.
+        register_user_preferences(RegisterUserPreference, RegisterUserPreferenceRequest, prefs, prefs: Vec<PreferenceUiData>) -> ();
+
+        // UnregisterUserPreferenceRequest has 'keys' field.
+        /// Unregisters user preferences from the main app.
+        unregister_user_preferences(UnregisterUserPreference, UnregisterUserPreferenceRequest, keys, keys: Vec<String>) -> ();
+    }
+
+    // RegisterOAuth: `url`. Request field `url`.
+    // OpenExternalUrl: `url`. Request field `url`.
+
+    pub fn register_oauth(url: String) -> MoosyncResult<()> {
+        unsafe {
+            let request = RegisterOauthRequest { url };
+            let cmd_enum = MainCommandEnum::RegisterOauth(request);
+            let cmd = MainCommand {
+                command: Some(cmd_enum),
+            };
+            let extism_pdk::Prost(res) = send_main_command(extism_pdk::Prost(cmd)).unwrap();
+
+            if let Some(MainCommandResponseEnum::Error(e)) = res.response.as_ref() {
+                return Err(MoosyncError::String(e.message.clone()));
+            }
+            if let Some(MainCommandResponseEnum::RegisterOauth(_)) = res.response {
+                return Ok(());
+            }
+            // Ignore other responses or treat as success if no error?
+            // Better to return Ok only on matching response or if we don't care about specific return
+            Ok(())
+        }
+    }
+
+    pub fn open_external_url(url: String) -> MoosyncResult<()> {
+        unsafe {
+            let request = OpenExternalUrlRequest { url };
+            let cmd_enum = MainCommandEnum::OpenExternalUrl(request);
+            let cmd = MainCommand {
+                command: Some(cmd_enum),
+            };
+            let extism_pdk::Prost(res) = send_main_command(extism_pdk::Prost(cmd)).unwrap();
+
+            if let Some(MainCommandResponseEnum::Error(e)) = res.response.as_ref() {
+                return Err(MoosyncError::String(e.message.clone()));
+            }
+            // OpenExternalUrlResponse
+            Ok(())
+        }
+    }
+
+    // update_accounts needs rename in signature or macro usage?
+    // Macro assumes arg matches field.
+    // I will rename signature arg to 'account'.
 
     pub fn get_system_time() -> u64 {
         unsafe {

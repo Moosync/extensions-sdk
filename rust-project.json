@@ -1,0 +1,33 @@
+{
+  "sysroot": "/home/ovenoboyo/.cache/bazel/_bazel_ovenoboyo/5389e36607b6df97ac2bcf649075dd41/external/rules_rust++rust+rust_analyzer_nightly-2025-12-16_tools",
+  "sysroot_src": "/home/ovenoboyo/.cache/bazel/_bazel_ovenoboyo/5389e36607b6df97ac2bcf649075dd41/external/rules_rust++rust+rust_analyzer_nightly-2025-12-16_tools/lib/rustlib/src/library",
+  "crates": [],
+  "runnables": [
+    {
+      "program": "bazel",
+      "args": [
+        "build",
+        "{label}"
+      ],
+      "cwd": "/home/ovenoboyo/projects/moosync/tauri/Moosync/lib/extensions_sdk",
+      "kind": "check"
+    },
+    {
+      "program": "bazel",
+      "args": [
+        "test",
+        "{label}",
+        "--test_output",
+        "streamed",
+        "--test_arg",
+        "--nocapture",
+        "--test_arg",
+        "--exact",
+        "--test_arg",
+        "{test_id}"
+      ],
+      "cwd": "/home/ovenoboyo/projects/moosync/tauri/Moosync/lib/extensions_sdk",
+      "kind": "testOne"
+    }
+  ]
+}

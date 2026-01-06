@@ -6,3 +6,5 @@ wasm-extension-rs/docs/debug
 wasm-extension-rs/docs/wasm32-wasip1/debug
 wasm-extension-rs/docs/.rustc_info.json
 wasm-extension-rs/docs/.rustdoc_fingerprint.json
+bazel-*
+*.log
