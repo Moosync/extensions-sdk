@@ -1,59 +1,43 @@
-import extism
-from typing import cast, Optional, List, Union, Any
-from moosync_edk.custom_types import *
-import json
 import sys
-import dataclasses
-from collections import defaultdict
+import extism
+from typing import Optional, List, Union, Any, cast
+from core.types.protos import extensions_pb2
+from core.types.protos import songs_pb2
+from core.types.protos import ui_pb2
+from core.types.protos import themes_pb2
+
+# Re-export protos
+from core.types.protos.extensions_pb2 import *
+from core.types.protos.songs_pb2 import *
+from core.types.protos.ui_pb2 import *
+from core.types.protos.themes_pb2 import *
+
+# Fix module split issue when running as entry point
+if "moosync_edk" not in sys.modules:
+    sys.modules["moosync_edk"] = sys.modules[__name__]
 
 
-# __pdoc__ = defaultdict(lambda: False, default_factory=lambda k: False if 'wrapper' in k else True )
-__pdoc__ = {
- 'get_provider_scopes_wrapper': False,
- 'get_playlists_wrapper': False,
- 'get_playlist_content_wrapper': False,
- 'get_playlist_from_url_wrapper': False,
- 'get_playback_details_wrapper': False,
- 'get_search_wrapper': False,
- 'get_recommendations_wrapper': False,
- 'get_song_from_url_wrapper': False,
- 'handle_custom_request_wrapper': False,
- 'get_artist_songs_wrapper': False,
- 'get_album_songs_wrapper': False,
- 'get_song_from_id_wrapper': False,
- 'on_queue_changed_wrapper': False,
- 'on_volume_changed_wrapper': False,
- 'on_player_state_changed_wrapper': False,
- 'on_song_changed_wrapper': False,
- 'on_seeked_wrapper': False,
- 'on_preferences_changed_wrapper': False,
- 'on_song_added_wrapper': False,
- 'on_song_removed_wrapper': False,
- 'on_playlist_added_wrapper': False,
- 'on_playlist_removed_wrapper': False,
- 'get_accounts_wrapper': False,
- 'perform_account_login_wrapper': False,
- 'scrobble_wrapper': False,
- 'oauth_callback_wrapper': False,
- 'get_song_context_menu_wrapper': False,
- 'get_playlist_context_menu_wrapper': False,
- 'on_context_menu_action_wrapper': False,
- 'get_lyrics_wrapper': False,
- 'open_sock': True
-}
+@extism.import_fn("extism:host/user", "open_clientfd")
+def open_sock(path: str) -> int: ...
 
+@extism.import_fn("extism:host/user", "write_sock")
+def write_sock(sock_id:int, buf: bytes) -> int: ...
 
-class EnhancedJSONEncoder(json.JSONEncoder):
-        def default(self, o):
-            if dataclasses.is_dataclass(o) and not isinstance(o, type):
-                return dataclasses.asdict(o)
-            return super().default(o)
+@extism.import_fn("extism:host/user", "read_sock")
+def read_sock(sock_id: int, read_len: int) -> bytes: ...
+
+@extism.import_fn("extism:host/user", "hash")
+def hash(hash_type: str, data: bytes) -> bytes: ...
+
+@extism.import_fn("extism:host/user", "send_main_command")
+def send_main_command(data: int) -> int: ...
 
 class CustomPrint():
     buf = ""
 
     def write(self, text):
         self.buf += text
+        self.flush()
 
     def flush(self):
         extism.log(extism.LogLevel.Debug, self.buf)
@@ -62,695 +46,334 @@ class CustomPrint():
 def http_request(url: str, method: str = "GET", body: Optional[Union[bytes, str]] = None, headers: Optional[dict] = None) -> Any:
     return extism.Http.request(url, method, body, headers)
 
-# sys.stdout = CustomPrint()
+def send_main_command_(cmd: extensions_pb2.MainCommand) -> extensions_pb2.MainCommandResponse:
+    data = cmd.SerializeToString()
+    mem = extism.memory.alloc(data)
+    res_offset = send_main_command(mem.offset)
+    
+    res_mem_handle = extism.memory.find(res_offset)
+    if res_mem_handle is None:
+        raise Exception(f"Failed to find memory for response at offset {res_offset}")
+        
+    res_bytes = extism.memory.bytes(res_mem_handle)
+    
+    extism.memory.free(mem)
+    
+    resp = extensions_pb2.MainCommandResponse()
+    resp.ParseFromString(res_bytes)
+    return resp
 
-extension_instance = None
-def register_extension(extension: "Extension"):
-    global extension_instance
-    extension_instance = extension
-
-
-@extism.import_fn("extism:host/user", "open_clientfd")
-def open_sock(path: str) -> int: ...
-
-@extism.import_fn("extism:host/user", "write_sock")
-def write_sock(sock_id:int, buf: str) -> int: ...
-
-@extism.import_fn("extism:host/user", "read_sock")
-def read_sock(sock_id: int, buf: str) -> str: ...
-
-@extism.import_fn("extism:host/user", "hash")
-def hash(hash_type: str, data: bytes) -> bytes: ...
-
-@extism.import_fn("extism:host/user", "send_main_command")
-def send_main_command(data: str) -> str: ...
-
-def parse_main_command(data: str, parse_as):
-    res = send_main_command(data)
-    return parse_as(json.loads(res))
-
-def parse_main_command_list(data: str, parse_as):
-    res = send_main_command(data)
-    arr = json.loads(res)
-    return [parse_as.from_dict(data) for data in arr]
-
-def parse_main_command_optional(data: str, parse_as):
-    res = send_main_command(data)
-    arr = json.loads(res)
-    if arr is not None:
-        return parse_as.from_dict(arr)
-    return None
-
-
-# API class to send requests to Moosync
 class Api:
-    def get_song(self, options: SongAPIOptions) -> List[Song]:
-        """
-        Get songs by options.
+    def get_song(self, options: songs_pb2.GetSongOptions) -> List[songs_pb2.Song]:
+        req = extensions_pb2.MainCommand(get_song=extensions_pb2.GetSongRequest(options=options))
+        resp = send_main_command_(req)
+        return list(resp.get_song.songs)
 
-        Args:
-            options (SongAPIOptions): The options to filter songs.
+    def get_current_song(self) -> Optional[songs_pb2.Song]:
+        req = extensions_pb2.MainCommand(get_current_song=extensions_pb2.GetCurrentSongRequest())
+        resp = send_main_command_(req)
+        if resp.HasField("get_current_song"):
+             if resp.get_current_song.HasField("song"):
+                 return resp.get_current_song.song
+        return None
 
-        Returns:
-            List[Song]: A list of songs matching the options.
-        """
-        data = {
-            "GetSong": options
-        }
-        return parse_main_command_list(json.dumps(data, cls=EnhancedJSONEncoder), Song)
-
-    def get_current_song(self) -> Optional[Song]:
-        """
-        Get the current playing song.
-
-        Returns:
-            Optional[Song]: The current playing song, or None if no song is playing.
-        """
-        data = {
-            "GetCurrentSong": None
-        }
-        return parse_main_command_optional(json.dumps(data, cls=EnhancedJSONEncoder), Song)
-
-    def get_player_state(self) -> PlayerState:
-        """
-        Get the current player state.
-
-        Returns:
-            PlayerState: The current state of the player.
-        """
-        data = {
-            "GetPlayerState": []
-        }
-        return cast(PlayerState, send_main_command(json.dumps(data, cls=EnhancedJSONEncoder)))
+    def get_player_state(self) -> extensions_pb2.PlayerState:
+        req = extensions_pb2.MainCommand(get_player_state=extensions_pb2.GetPlayerStateRequest())
+        resp = send_main_command_(req)
+        return resp.get_player_state.state
 
     def get_volume(self) -> float:
-        """
-        Get the current volume.
-
-        Returns:
-            float: The current volume level.
-        """
-        data = {
-            "GetVolume": None
-        }
-        return float(send_main_command(json.dumps(data, cls=EnhancedJSONEncoder)))
+        req = extensions_pb2.MainCommand(get_volume=extensions_pb2.GetVolumeRequest())
+        resp = send_main_command_(req)
+        return resp.get_volume.volume
 
     def get_time(self) -> float:
-        """
-        Get the current duration of the playing song.
+        req = extensions_pb2.MainCommand(get_time=extensions_pb2.GetTimeRequest())
+        resp = send_main_command_(req)
+        return resp.get_time.time
 
-        Returns:
-            float: The current playback time of the song.
-        """
-        data = {
-            "GetTime": None
-        }
-        return float(send_main_command(json.dumps(data, cls=EnhancedJSONEncoder)))
+    def get_queue(self) -> Any: # Returns Struct
+        req = extensions_pb2.MainCommand(get_queue=extensions_pb2.GetQueueRequest())
+        resp = send_main_command_(req)
+        return resp.get_queue.queue
 
-    def get_queue(self) -> List[Song]:
-        """
-        Get the queue of songs.
+    def get_preference(self, data: extensions_pb2.PreferenceData) -> extensions_pb2.PreferenceData:
+        req = extensions_pb2.MainCommand(get_preference=extensions_pb2.GetPreferenceRequest(data=data))
+        resp = send_main_command_(req)
+        return resp.get_preference.data
 
-        Returns:
-            List[Song]: The current queue of songs.
-        """
-        data = {
-            "GetQueue": None
-        }
-        return parse_main_command_list(json.dumps(data, cls=EnhancedJSONEncoder), Song)
+    def get_secure(self, data: extensions_pb2.PreferenceData) -> extensions_pb2.PreferenceData:
+        req = extensions_pb2.MainCommand(get_secure=extensions_pb2.GetSecureRequest(data=data))
+        resp = send_main_command_(req)
+        return resp.get_secure.data
 
-    def get_preference(self, data: PreferenceData) -> Any:
-        """
-        Get preference for this extension.
+    def set_preference(self, data: extensions_pb2.PreferenceData) -> bool:
+        req = extensions_pb2.MainCommand(set_preference=extensions_pb2.SetPreferenceRequest(data=data))
+        resp = send_main_command_(req)
+        return resp.set_preference.success
 
-        Args:
-            data (PreferenceData): The preference data to retrieve.
+    def set_secure(self, data: extensions_pb2.PreferenceData) -> bool:
+        req = extensions_pb2.MainCommand(set_secure=extensions_pb2.SetSecureRequest(data=data))
+        resp = send_main_command_(req)
+        return resp.set_secure.success
 
-        Returns:
-            Any: The retrieved preference data.
-        """
-        request = {
-            "GetPreference": data
-        }
-        return json.loads(send_main_command(json.dumps(request, cls=EnhancedJSONEncoder)))
+    def add_songs(self, songs: List[songs_pb2.Song]) -> List[songs_pb2.Song]:
+        req = extensions_pb2.MainCommand(add_songs=extensions_pb2.AddSongsRequest(songs=songs))
+        resp = send_main_command_(req)
+        return list(resp.add_songs.songs)
 
-    def get_secure(self, data: PreferenceData) -> Any:
-        """
-        Get encrypted preference for this extension.
+    def remove_song(self, song: songs_pb2.Song) -> bool:
+        req = extensions_pb2.MainCommand(remove_song=extensions_pb2.RemoveSongRequest(song=song))
+        resp = send_main_command_(req)
+        return resp.remove_song.success
 
-        Args:
-            data (PreferenceData): The encrypted preference data to retrieve.
+    def update_song(self, song: songs_pb2.Song) -> songs_pb2.Song:
+        req = extensions_pb2.MainCommand(update_song=extensions_pb2.UpdateSongRequest(song=song))
+        resp = send_main_command_(req)
+        return resp.update_song.song
 
-        Returns:
-            Any: The retrieved encrypted preference data.
-        """
-        request = {
-            "GetSecure": data
-        }
-        return json.loads(send_main_command(json.dumps(request, cls=EnhancedJSONEncoder)))
+    def add_playlist(self, playlist: songs_pb2.Playlist) -> str:
+        req = extensions_pb2.MainCommand(add_playlist=extensions_pb2.AddPlaylistRequest(playlist=playlist))
+        resp = send_main_command_(req)
+        return resp.add_playlist.playlist_id
 
-    def set_preference(self, data: PreferenceData) -> None:
-        """
-        Set preference for this extension.
+    def add_to_playlist(self, playlist_id: str, songs: List[songs_pb2.Song]) -> bool:
+        req = extensions_pb2.MainCommand(
+            add_to_playlist=extensions_pb2.AddToPlaylistRequest(playlist_id=playlist_id, songs=songs)
+        )
+        resp = send_main_command_(req)
+        return resp.add_to_playlist.success
 
-        Args:
-            data (PreferenceData): The preference data to set.
-        """
-        request = {
-            "SetPreference": data
-        }
-        send_main_command(json.dumps(request, cls=EnhancedJSONEncoder))
+    def register_oauth(self, url: str) -> bool:
+        req = extensions_pb2.MainCommand(register_oauth=extensions_pb2.RegisterOauthRequest(url=url))
+        resp = send_main_command_(req)
+        return resp.register_oauth.success
 
-    def set_secure(self, data: PreferenceData) -> None:
-        """
-        Set encrypted preference for this extension.
+    def open_external_url(self, url: str) -> bool:
+        req = extensions_pb2.MainCommand(open_external_url=extensions_pb2.OpenExternalUrlRequest(url=url))
+        resp = send_main_command_(req)
+        return resp.open_external_url.success
 
-        Args:
-            data (PreferenceData): The encrypted preference data to set.
-        """
-        request = {
-            "SetSecure": data
-        }
-        send_main_command(json.dumps(request, cls=EnhancedJSONEncoder))
+    def update_accounts(self, account: Optional[str] = None) -> bool:
+        req = extensions_pb2.MainCommand(update_accounts=extensions_pb2.UpdateAccountsRequest(account=account))
+        resp = send_main_command_(req)
+        return resp.update_accounts.success
 
-    def add_songs(self, songs: List[Song]) -> None:
-        """
-        Add songs to the library.
-
-        Args:
-            songs (List[Song]): The list of songs to add.
-        """
-        data = {
-            "AddSongs": songs
-        }
-        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
-
-    def remove_song(self, song: Song) -> None:
-        """
-        Remove a song from the library.
-
-        Args:
-            song (Song): The song to remove.
-        """
-        data = {
-            "RemoveSong": song
-        }
-        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
-
-    def update_song(self, song: Song) -> None:
-        """
-        Update a song in the library. The song with matching _id field is updated.
-
-        Args:
-            song (Song): The song to update.
-        """
-        data = {
-            "UpdateSong": song
-        }
-        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
-
-    def add_playlist(self, playlist: Playlist) -> str:
-        """
-        Add a playlist to the library.
-
-        Args:
-            playlist (Playlist): The playlist to add.
-
-        Returns:
-            str: The ID of the added playlist.
-        """
-        data = {
-            "AddPlaylist": playlist
-        }
-        return send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
-
-    def add_to_playlist(self, req: AddToPlaylistRequest) -> None:
-        """
-        Add songs to a playlist.
-
-        Args:
-            req (AddToPlaylistRequest): The request containing playlist ID and songs to add.
-        """
-        data = {
-            "AddToPlaylist": req
-        }
-        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
-
-    def register_oauth(self, token: str) -> None:
-        """
-        Register OAuth callback.
-
-        Args:
-            token (str): The OAuth token.
-        """
-        data = {
-            "RegisterOAuth": token
-        }
-        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
-
-    def open_external_url(self, url: str) -> None:
-        """
-        Open a URL in the default browser.
-
-        Args:
-            url (str): The URL to open.
-        """
-        data = {
-            "OpenExternalUrl": url
-        }
-        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
-
-    def update_accounts(self) -> None:
-        """
-        Update accounts status.
-        """
-        data = {
-            "UpdateAccounts": None
-        }
-        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
-
-    def register_user_preferences(self, prefs: List[PreferenceUIData]) -> None:
-        """
-        Registered preferences will show up in settings
-        """
-        data = {
-            "RegisterUserPreference": prefs
-        }
-        send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
-
-    def unregister_user_preferences(self, pref_keys: List[str]) -> None:
-            """
-            Removes preferences from settings
-            """
-            data = {
-                "UnregisterUserPreference": pref_keys
-            }
-            send_main_command(json.dumps(data, cls=EnhancedJSONEncoder))
+    def register_user_preferences(self, prefs: List[ui_pb2.PreferenceUiData]) -> bool:
+        req = extensions_pb2.MainCommand(register_user_preference=extensions_pb2.RegisterUserPreferenceRequest(prefs=prefs))
+        resp = send_main_command_(req)
+        return resp.register_user_preference.success
+    
+    def unregister_user_preferences(self, keys: List[str]) -> bool:
+        req = extensions_pb2.MainCommand(unregister_user_preference=extensions_pb2.UnregisterUserPreferenceRequest(keys=keys))
+        resp = send_main_command_(req)
+        return resp.unregister_user_preference.success
 
 class Extension:
     api = Api()
 
-    def get_provider_scopes(self) -> List[ProviderScopes]:
-        """
-        Called when the main app is requesting provider scopes.
-        """
-        return []
+    def get_provider_scopes(self, req: extensions_pb2.GetProviderScopesRequest) -> extensions_pb2.GetProviderScopesResponse:
+        return extensions_pb2.GetProviderScopesResponse()
 
-    def get_playlists(self) -> List[Playlist]:
-        """
-        Called when the main app is requesting playlists.
-        """
-        raise NotImplementedError("get_playlists method is not implemented")
+    def get_playlists(self, req: extensions_pb2.RequestedPlaylistsRequest) -> extensions_pb2.RequestedPlaylistsResponse:
+        raise NotImplementedError()
 
-    def get_playlist_content(self, id: str, token: Optional[str] = None) -> SongsWithPageTokenReturnType:
-        """
-        Called when the main app is requesting the content of a playlist.
-        """
-        raise NotImplementedError("get_playlist_content method is not implemented")
+    def get_playlist_content(self, req: extensions_pb2.RequestedPlaylistSongsRequest) -> extensions_pb2.RequestedPlaylistSongsResponse:
+        raise NotImplementedError()
 
-    def get_playlist_from_url(self, url: str) -> PlaylistAndSongsReturnType:
-        """
-        Called when the main app is requesting a playlist from a URL.
-        """
-        raise NotImplementedError("get_playlist_from_url method is not implemented")
+    def get_playlist_from_url(self, req: extensions_pb2.RequestedPlaylistFromUrlRequest) -> extensions_pb2.RequestedPlaylistFromUrlResponse:
+        raise NotImplementedError()
 
-    def get_playback_details(self, song: Song) -> PlaybackDetailsReturnType:
-        """
-        Called when the main app is requesting playback details of a song.
-        """
-        raise NotImplementedError("get_playback_details method is not implemented")
+    def get_playback_details(self, req: extensions_pb2.PlaybackDetailsRequestedRequest) -> extensions_pb2.PlaybackDetailsRequestedResponse:
+        raise NotImplementedError()
 
-    def get_search(self, term: str) -> SearchReturnType:
-        """
-        Called when the main app is requesting a search.
-        """
-        raise NotImplementedError("get_search method is not implemented")
+    def get_search(self, req: extensions_pb2.RequestedSearchResultRequest) -> extensions_pb2.RequestedSearchResultResponse:
+        raise NotImplementedError()
 
-    def get_recommendations(self) -> RecommendationsReturnType:
-        """
-        Called when the main app is requesting recommendations.
-        """
-        raise NotImplementedError("get_recommendations method is not implemented")
+    def get_recommendations(self, req: extensions_pb2.RequestedRecommendationsRequest) -> extensions_pb2.RequestedRecommendationsResponse:
+        raise NotImplementedError()
 
-    def get_song_from_url(self, url: str) -> SongReturnType:
-        """
-        Called when the main app is requesting a song from a URL.
-        """
-        raise NotImplementedError("get_song_from_url method is not implemented")
+    def get_song_from_url(self, req: extensions_pb2.RequestedSongFromUrlRequest) -> extensions_pb2.RequestedSongFromUrlResponse:
+        raise NotImplementedError()
 
-    def handle_custom_request(self, url: str) -> CustomRequestReturnType:
-        """
-        Called when the main app is handling a custom request.
-        """
-        raise NotImplementedError("handle_custom_request method is not implemented")
+    def handle_custom_request(self, req: extensions_pb2.CustomRequest) -> extensions_pb2.CustomRequestResponse:
+        raise NotImplementedError()
 
-    def get_artist_songs(self, artist: Artist, token: Optional[str] = None) -> SongsWithPageTokenReturnType:
-        """
-        Called when the main app is requesting songs of an artist.
-        """
-        raise NotImplementedError("get_artist_songs method is not implemented")
+    def get_artist_songs(self, req: extensions_pb2.RequestedArtistSongsRequest) -> extensions_pb2.RequestedArtistSongsResponse:
+        raise NotImplementedError()
 
-    def get_album_songs(self, album: Album, token: Optional[str] = None) -> SongsWithPageTokenReturnType:
-        """
-        Called when the main app is requesting songs of an album.
-        """
-        raise NotImplementedError("get_album_songs method is not implemented")
+    def get_album_songs(self, req: extensions_pb2.RequestedAlbumSongsRequest) -> extensions_pb2.RequestedAlbumSongsResponse:
+        raise NotImplementedError()
 
-    def get_song_from_id(self, id: str) -> SongReturnType:
-        """
-        Called when the main app is requesting a song by its ID.
-        """
-        raise NotImplementedError("get_song_from_id method is not implemented")
+    def get_song_from_id(self, req: extensions_pb2.RequestedSongFromIdRequest) -> extensions_pb2.RequestedSongFromIdResponse:
+        raise NotImplementedError()
 
-    def on_queue_changed(self, queue: Any):
-        """
-        Called when the main app is notifying that the queue has changed.
-        """
-        raise NotImplementedError("on_queue_changed method is not implemented")
+    def on_queue_changed(self, req: extensions_pb2.SongQueueChangedRequest) -> extensions_pb2.SongQueueChangedResponse:
+        raise NotImplementedError()
 
-    def on_volume_changed(self, volume: float):
-        """
-        Called when the main app is notifying that the volume has changed.
-        """
-        raise NotImplementedError("on_volume_changed method is not implemented")
+    def on_volume_changed(self, req: extensions_pb2.VolumeChangedRequest) -> extensions_pb2.VolumeChangedResponse:
+        raise NotImplementedError()
 
-    def on_player_state_changed(self, state: PlayerState):
-        """
-        Called when the main app is notifying that the player state has changed.
-        """
-        raise NotImplementedError("on_player_state_changed method is not implemented")
+    def on_player_state_changed(self, req: extensions_pb2.PlayerStateChangedRequest) -> extensions_pb2.PlayerStateChangedResponse:
+        raise NotImplementedError()
 
-    def on_song_changed(self, song: Optional[Song]):
-        """
-        Called when the main app is notifying that the song has changed.
-        """
-        raise NotImplementedError("on_song_changed method is not implemented")
+    def on_song_changed(self, req: extensions_pb2.SongChangedRequest) -> extensions_pb2.SongChangedResponse:
+        raise NotImplementedError()
 
-    def on_seeked(self, time: float):
-        """
-        Called when the main app is notifying that the playback has been seeked.
-        """
-        raise NotImplementedError("on_seeked method is not implemented")
+    def on_seeked(self, req: extensions_pb2.SeekedRequest) -> extensions_pb2.SeekedResponse:
+        raise NotImplementedError()
 
-    def on_preferences_changed(self, args: PreferenceArgs):
-        """
-        Called when the main app is notifying that preferences have changed.
-        """
-        raise NotImplementedError("on_preferences_changed method is not implemented")
+    def on_preferences_changed(self, req: extensions_pb2.PreferenceChangedRequest) -> extensions_pb2.PreferenceChangedResponse:
+        raise NotImplementedError()
 
-    def on_song_added(self, song: Song):
-        """
-        Called when the main app is notifying that a song has been added.
-        """
-        raise NotImplementedError("on_song_added method is not implemented")
+    def on_song_added(self, req: extensions_pb2.SongAddedRequest) -> extensions_pb2.SongAddedResponse:
+        raise NotImplementedError()
 
-    def on_song_removed(self, song: Song):
-        """
-        Called when the main app is notifying that a song has been removed.
-        """
-        raise NotImplementedError("on_song_removed method is not implemented")
+    def on_song_removed(self, req: extensions_pb2.SongRemovedRequest) -> extensions_pb2.SongRemovedResponse:
+        raise NotImplementedError()
 
-    def on_playlist_added(self, playlist: Playlist):
-        """
-        Called when the main app is notifying that a playlist has been added.
-        """
-        raise NotImplementedError("on_playlist_added method is not implemented")
+    def on_playlist_added(self, req: extensions_pb2.PlaylistAddedRequest) -> extensions_pb2.PlaylistAddedResponse:
+        raise NotImplementedError()
 
-    def on_playlist_removed(self, playlist: Playlist):
-        """
-        Called when the main app is notifying that a playlist has been removed.
-        """
-        raise NotImplementedError("on_playlist_removed method is not implemented")
+    def on_playlist_removed(self, req: extensions_pb2.PlaylistRemovedRequest) -> extensions_pb2.PlaylistRemovedResponse:
+        raise NotImplementedError()
 
-    def get_accounts(self) -> List[AccountDetails]:
-        """
-        Called when the main app is requesting account details.
-        """
-        return []
+    def get_accounts(self, req: extensions_pb2.GetAccountsRequest) -> extensions_pb2.GetAccountsResponse:
+        return extensions_pb2.GetAccountsResponse()
 
-    def perform_account_login(self, args: AccountLoginArgs) -> str:
-        """
-        Called when the main app is requesting an account login.
-        """
-        raise NotImplementedError("perform_account_login method is not implemented")
+    def perform_account_login(self, req: extensions_pb2.PerformAccountLoginRequest) -> extensions_pb2.PerformAccountLoginResponse:
+        raise NotImplementedError()
 
-    def scrobble(self, song: Song):
-        """
-        Called when the main app is requesting to scrobble a song.
-        """
-        raise NotImplementedError("scrobble method is not implemented")
+    def scrobble(self, req: extensions_pb2.ScrobbleRequest) -> extensions_pb2.ScrobbleResponse:
+        raise NotImplementedError()
 
-    def oauth_callback(self, code: str):
-        """
-        Called when the main app is handling an OAuth callback.
-        """
-        raise NotImplementedError("oauth_callback method is not implemented")
+    def oauth_callback(self, req: extensions_pb2.OauthCallbackRequest) -> extensions_pb2.OauthCallbackResponse:
+        raise NotImplementedError()
 
-    def get_song_context_menu(self, songs: List[Song]) -> List[ContextMenuReturnType]:
-        """
-        Called when the main app is requesting the context menu for songs.
-        """
-        raise NotImplementedError("get_song_context_menu method is not implemented")
+    def get_song_context_menu(self, req: extensions_pb2.RequestedSongContextMenuRequest) -> extensions_pb2.RequestedSongContextMenuResponse:
+        raise NotImplementedError()
 
-    def get_playlist_context_menu(self, playlist: Playlist) -> List[ContextMenuReturnType]:
-        """
-        Called when the main app is requesting the context menu for a playlist.
-        """
-        raise NotImplementedError("get_playlist_context_menu method is not implemented")
+    def get_playlist_context_menu(self, req: extensions_pb2.RequestedPlaylistContextMenuRequest) -> extensions_pb2.RequestedPlaylistContextMenuResponse:
+        raise NotImplementedError()
 
-    def on_context_menu_action(self, action: str):
-        """
-        Called when the main app is notifying that a context menu action has been performed.
-        """
-        raise NotImplementedError("on_context_menu_action method is not implemented")
+    def on_context_menu_action(self, req: extensions_pb2.ContextMenuActionRequest) -> extensions_pb2.ContextMenuActionResponse:
+        raise NotImplementedError()
 
-    def get_lyrics(self, song: Song) -> str:
-        """
-        Called when the main app is requesting lyrics for a song.
-        """
-        raise NotImplementedError("get_lyrics method is not implemented")
+    def get_lyrics(self, req: extensions_pb2.RequestedLyricsRequest) -> extensions_pb2.RequestedLyricsResponse:
+        raise NotImplementedError()
 
-def ensure_extension_instance() -> "Extension":
+extension_instance: Optional[Extension] = None
+def register_extension(extension: Extension):
+    print("Registering extension")
+    global extension_instance
+    extension_instance = extension
+
+def ensure_extension_instance() -> Extension:
     if extension_instance is None:
-        # entry()
         raise Exception("Extension instance is not initialized")
     return extension_instance
 
 
-def build_object(cls, data: dict):
-    """
-    Build an object of the given class `cls` using the dictionary `data`.
-    Only passes keys to the constructor that match the class's attributes.
-    """
-    return cls(**{k: v for k, v in data.items() if hasattr(cls, k)})
+@extism.plugin_fn
+def handle_extension_command():
+    print("PYTHON: handle_extension_command called")
+    print("Extism dir: " + str(dir(extism)))
+    
+    print("Extism dir: " + str(dir(extism)))
+    input_data = extism.input_bytes()
+    print("Got input bytes: " + str(len(input_data)))
+    cmd = extensions_pb2.ExtensionCommand()
+    cmd.ParseFromString(input_data)
+    print("Parsed command: " + str(cmd.WhichOneof("event")))
+    
+    instance = ensure_extension_instance()
+    response = extensions_pb2.ExtensionCommandResponse()
+    
+    which = cmd.WhichOneof("event")
+    print("Dispatching...")
+    
+    if which == "get_provider_scopes":
+        response.get_provider_scopes.CopyFrom(instance.get_provider_scopes(cmd.get_provider_scopes))
+    elif which == "requested_playlists":
+        response.requested_playlists.CopyFrom(instance.get_playlists(cmd.requested_playlists))
+    elif which == "requested_playlist_songs":
+        response.requested_playlist_songs.CopyFrom(instance.get_playlist_content(cmd.requested_playlist_songs))
+    elif which == "oauth_callback":
+        response.oauth_callback.CopyFrom(instance.oauth_callback(cmd.oauth_callback))
+    elif which == "song_queue_changed":
+        response.song_queue_changed.CopyFrom(instance.on_queue_changed(cmd.song_queue_changed))
+    elif which == "seeked":
+        response.seeked.CopyFrom(instance.on_seeked(cmd.seeked))
+    elif which == "volume_changed":
+        response.volume_changed.CopyFrom(instance.on_volume_changed(cmd.volume_changed))
+    elif which == "player_state_changed":
+        response.player_state_changed.CopyFrom(instance.on_player_state_changed(cmd.player_state_changed))
+    elif which == "song_changed":
+        response.song_changed.CopyFrom(instance.on_song_changed(cmd.song_changed))
+    elif which == "preference_changed":
+        response.preference_changed.CopyFrom(instance.on_preferences_changed(cmd.preference_changed))
+    elif which == "playback_details_requested":
+        response.playback_details_requested.CopyFrom(instance.get_playback_details(cmd.playback_details_requested))
+    elif which == "custom_request":
+        response.custom_request.CopyFrom(instance.handle_custom_request(cmd.custom_request))
+    elif which == "requested_song_from_url":
+        response.requested_song_from_url.CopyFrom(instance.get_song_from_url(cmd.requested_song_from_url))
+    elif which == "requested_playlist_from_url":
+        response.requested_playlist_from_url.CopyFrom(instance.get_playlist_from_url(cmd.requested_playlist_from_url))
+    elif which == "requested_search_result":
+        response.requested_search_result.CopyFrom(instance.get_search(cmd.requested_search_result))
+    elif which == "requested_recommendations":
+        response.requested_recommendations.CopyFrom(instance.get_recommendations(cmd.requested_recommendations))
+    elif which == "requested_lyrics":
+        response.requested_lyrics.CopyFrom(instance.get_lyrics(cmd.requested_lyrics))
+    elif which == "requested_artist_songs":
+        response.requested_artist_songs.CopyFrom(instance.get_artist_songs(cmd.requested_artist_songs))
+    elif which == "requested_album_songs":
+        response.requested_album_songs.CopyFrom(instance.get_album_songs(cmd.requested_album_songs))
+    elif which == "song_added":
+        response.song_added.CopyFrom(instance.on_song_added(cmd.song_added))
+    elif which == "song_removed":
+        response.song_removed.CopyFrom(instance.on_song_removed(cmd.song_removed))
+    elif which == "playlist_added":
+        response.playlist_added.CopyFrom(instance.on_playlist_added(cmd.playlist_added))
+    elif which == "playlist_removed":
+        response.playlist_removed.CopyFrom(instance.on_playlist_removed(cmd.playlist_removed))
+    elif which == "requested_song_from_id":
+        response.requested_song_from_id.CopyFrom(instance.get_song_from_id(cmd.requested_song_from_id))
+    elif which == "scrobble":
+        response.scrobble.CopyFrom(instance.scrobble(cmd.scrobble))
+    elif which == "requested_song_context_menu":
+        response.requested_song_context_menu.CopyFrom(instance.get_song_context_menu(cmd.requested_song_context_menu))
+    elif which == "requested_playlist_context_menu":
+        response.requested_playlist_context_menu.CopyFrom(instance.get_playlist_context_menu(cmd.requested_playlist_context_menu))
+    elif which == "context_menu_action":
+        response.context_menu_action.CopyFrom(instance.on_context_menu_action(cmd.context_menu_action))
+    elif which == "get_accounts":
+        response.get_accounts.CopyFrom(instance.get_accounts(cmd.get_accounts))
+    elif which == "perform_account_login":
+        response.perform_account_login.CopyFrom(instance.perform_account_login(cmd.perform_account_login))
+        
+    
+    extism.output_bytes(response.SerializeToString())
 
+# Import extension module at the end to avoid circular dependency issues
+# and ensure SDK classes are defined before extension tries to use them.
+# The extension module is expected to be named 'main' (main.py).
+extension_module = None
+try:
+    import main as extension_module
+except ImportError as e:
+    print(f"WARNING: Could not import 'main' module: {e}")
 
 @extism.plugin_fn
-def get_provider_scopes_wrapper():
-    instance = ensure_extension_instance()
-    extism.output_str(json.dumps(instance.get_provider_scopes(), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_playlists_wrapper():
-    instance = ensure_extension_instance()
-    extism.output_str(json.dumps(instance.get_playlists(), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_playlist_content_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    playlist_id = str(data[0])
-    token = str(data[1]) if len(data) > 1 and data[1] is not None else None
-    extism.output_str(json.dumps(instance.get_playlist_content(playlist_id, token), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_playlist_from_url_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    url = str(data)
-    extism.output_str(json.dumps(instance.get_playlist_from_url(url), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_playback_details_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    song = build_object(Song, data)
-    extism.output_str(json.dumps(instance.get_playback_details(song), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_search_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    term = str(data)
-    extism.output_str(json.dumps(instance.get_search(term), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_recommendations_wrapper():
-    instance = ensure_extension_instance()
-    extism.output_str(json.dumps(instance.get_recommendations(), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_song_from_url_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    url = str(data)
-    extism.output_str(json.dumps(instance.get_song_from_url(url), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def handle_custom_request_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    url = str(data)
-    extism.output_str(json.dumps(instance.handle_custom_request(url), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_artist_songs_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    artist = build_object(Artist, data[0])
-    token = str(data[1]) if len(data) > 1 and data[1] is not None else None
-    extism.output_str(json.dumps(instance.get_artist_songs(artist, token), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_album_songs_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    album = build_object(Album, data[0])
-    token = str(data[1]) if len(data) > 1 and data[1] is not None else None
-    extism.output_str(json.dumps(instance.get_album_songs(album, token), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_song_from_id_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    song_id = str(data)
-    extism.output_str(json.dumps(instance.get_song_from_id(song_id), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def on_queue_changed_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    queue = data
-    extism.output_str(json.dumps(instance.on_queue_changed(queue), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def on_volume_changed_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    volume = float(data)
-    extism.output_str(json.dumps(instance.on_volume_changed(volume), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def on_player_state_changed_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    state = cast(PlayerState, str(data))
-    extism.output_str(json.dumps(instance.on_player_state_changed(state), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def on_song_changed_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    song = build_object(Song, data[0]) if data[0] is not None else None
-    extism.output_str(json.dumps(instance.on_song_changed(song), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def on_seeked_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    time = float(data)
-    extism.output_str(json.dumps(instance.on_seeked(time), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def on_preferences_changed_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    args = build_object(PreferenceArgs, data)
-    extism.output_str(json.dumps(instance.on_preferences_changed(args), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def on_song_added_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    song = build_object(Song, data)
-    extism.output_str(json.dumps(instance.on_song_added(song), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def on_song_removed_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    song = build_object(Song, data)
-    extism.output_str(json.dumps(instance.on_song_removed(song), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def on_playlist_added_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    playlist = build_object(Playlist, data)
-    extism.output_str(json.dumps(instance.on_playlist_added(playlist), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def on_playlist_removed_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    playlist = build_object(Playlist, data)
-    extism.output_str(json.dumps(instance.on_playlist_removed(playlist), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_accounts_wrapper():
-    instance = ensure_extension_instance()
-    extism.output_str(json.dumps(instance.get_accounts(), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def perform_account_login_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    args = build_object(AccountLoginArgs, data)
-    extism.output_str(json.dumps(instance.perform_account_login(args), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def scrobble_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    song = build_object(Song, data)
-    extism.output_str(json.dumps(instance.scrobble(song), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def oauth_callback_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    args = str(data)
-    extism.output_str(json.dumps(instance.oauth_callback(args), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_song_context_menu_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    song = [Song.from_dict(item) for item in data]
-    extism.output_str(json.dumps(instance.get_song_context_menu(song), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_playlist_context_menu_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    playlist = build_object(Playlist, data)
-    extism.output_str(json.dumps(instance.get_playlist_context_menu(playlist), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def on_context_menu_action_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    code = str(data)
-    extism.output_str(json.dumps(instance.on_context_menu_action(code), cls=EnhancedJSONEncoder))
-
-@extism.plugin_fn
-def get_lyrics_wrapper():
-    instance = ensure_extension_instance()
-    data = extism.input_json()
-    song = build_object(Song, data)
-    extism.output_str(json.dumps(instance.get_lyrics(song), cls=EnhancedJSONEncoder))
-
-# from extension import init
-# @extism.plugin_fn
-# def entry():
-#     init()
+def entry():
+    sys.stdout = CustomPrint()
+    print("PYTHON: entry() called")
+    if extension_module:
+        if hasattr(extension_module, "entry"):
+             print("PYTHON: Calling extension_module.entry()")
+             extension_module.entry()
+        else:
+             print("WARNING: 'main' module does not have an 'entry' function")
+    else:
+         raise Exception("Extension module not loaded")

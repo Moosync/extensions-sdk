@@ -10,11 +10,61 @@ go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(version = "1.25.0")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
-go_deps.from_file(go_mod = "//wasm-extension-go:go.mod")
+go_deps.module(
+    path = "github.com/extism/go-pdk",
+    sum = "h1:DNP/9ugbNiXyBiMrNdMl/TF9J85uh0DC7sFnMuNZ/Ls=",
+    version = "v1.1.2",
+)
+go_deps.module(
+    path = "google.golang.org/protobuf",
+    sum = "h1:yBPeRvTftaleIgM3PZ/WBIZ7XM/eEYAaEyCwvyjq/gk=",
+    version = "v1.36.1",
+)
 use_repo(
     go_deps,
     "com_github_extism_go_pdk",
     "org_golang_google_protobuf",
+)
+
+bazel_dep(name = "rules_python", version = "1.7.0")
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    python_version = "3.11",
+)
+use_repo(python, "python_3_11")
+
+bazel_dep(name = "aspect_rules_py", version = "1.6.6")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "extism_py_tool",
+    build_file_content = """
+exports_files(["bin/extism-py"])
+filegroup(
+    name = "share_files",
+    srcs = glob(["share/extism-py/**"]),
+    visibility = ["//visibility:public"],
+)
+""",
+    sha256 = "24fa8a4a2f2fe25e3a95a4dc1dbd10a4c30e97697102fec45c59bfc743b2d9d4",
+    strip_prefix = "extism-py",
+    urls = ["https://github.com/extism/python-pdk/releases/download/v0.1.5/extism-py-x86_64-linux-v0.1.5.tar.gz"],
+)
+
+http_archive(
+    name = "binaryen_tool",
+    build_file_content = """
+filegroup(
+    name = "bin_files",
+    srcs = glob(["bin/**"]),
+    visibility = ["//visibility:public"],
+)
+""",
+    sha256 = "c55b74f3109cdae97490faf089b0286d3bba926bb6ea5ed00c8c784fc53718fd",
+    strip_prefix = "binaryen-version_116",
+    urls = ["https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz"],
 )
 
 bazel_dep(name = "rules_rust", version = "0.68.1")
