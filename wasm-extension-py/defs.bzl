@@ -1,3 +1,7 @@
+"""
+Wasm extension rules for Python.
+"""
+
 def _py_wasm_extension_impl(ctx):
     extism_py = ctx.executable._extism_py
     share_dir = ctx.files._share_dir
@@ -153,7 +157,7 @@ def _py_wasm_extension_impl(ctx):
 
     return [DefaultInfo(files = depset([out]))]
 
-py_wasm_extension = rule(
+_py_wasm_extension = rule(
     implementation = _py_wasm_extension_impl,
     attrs = {
         "srcs": attr.label_list(allow_files = [".py"]),
@@ -173,3 +177,20 @@ py_wasm_extension = rule(
         ),
     },
 )
+
+def py_extension(name, srcs, deps = [], **kwargs):
+    """
+    Builds a Wasm extension from Python sources.
+
+    Args:
+        name: The name of the target.
+        srcs: Source files.
+        deps: Dependencies.
+        **kwargs: Additional arguments to pass to the rule.
+    """
+    _py_wasm_extension(
+        name = name,
+        srcs = srcs,
+        deps = deps + ["//wasm-extension-py:moosync_edk"],
+        **kwargs
+    )

@@ -1,3 +1,7 @@
+"""
+Wasm extension rules for TypeScript/JavaScript.
+"""
+
 load("@aspect_rules_rollup//rollup:defs.bzl", "rollup")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 
