@@ -172,7 +172,7 @@ class Api:
 class Extension:
     api = Api()
 
-    def get_provider_scopes(self, req: extensions_pb2.GetProviderScopesRequest) -> extensions_pb2.GetProviderScopesResponse:
+    def get_provider_scopes(self, _: extensions_pb2.GetProviderScopesRequest) -> extensions_pb2.GetProviderScopesResponse:
         return extensions_pb2.GetProviderScopesResponse()
 
     def get_playlists(self, req: extensions_pb2.RequestedPlaylistsRequest) -> extensions_pb2.RequestedPlaylistsResponse:
@@ -264,7 +264,6 @@ class Extension:
 
 extension_instance: Optional[Extension] = None
 def register_extension(extension: Extension):
-    print("Registering extension")
     global extension_instance
     extension_instance = extension
 
@@ -276,81 +275,79 @@ def ensure_extension_instance() -> Extension:
 
 @extism.plugin_fn
 def handle_extension_command():
-    print("PYTHON: handle_extension_command called")
-    print("Extism dir: " + str(dir(extism)))
-    
-    print("Extism dir: " + str(dir(extism)))
     input_data = extism.input_bytes()
-    print("Got input bytes: " + str(len(input_data)))
     cmd = extensions_pb2.ExtensionCommand()
     cmd.ParseFromString(input_data)
-    print("Parsed command: " + str(cmd.WhichOneof("event")))
     
     instance = ensure_extension_instance()
     response = extensions_pb2.ExtensionCommandResponse()
     
     which = cmd.WhichOneof("event")
-    print("Dispatching...")
+    if which is None:
+        return 0
+
+    field_descriptor = cmd.DESCRIPTOR.fields_by_name[which]
+    number = field_descriptor.number
     
-    if which == "get_provider_scopes":
+    if number == extensions_pb2.ExtensionCommand.GET_PROVIDER_SCOPES_FIELD_NUMBER:
         response.get_provider_scopes.CopyFrom(instance.get_provider_scopes(cmd.get_provider_scopes))
-    elif which == "requested_playlists":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_PLAYLISTS_FIELD_NUMBER:
         response.requested_playlists.CopyFrom(instance.get_playlists(cmd.requested_playlists))
-    elif which == "requested_playlist_songs":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_PLAYLIST_SONGS_FIELD_NUMBER:
         response.requested_playlist_songs.CopyFrom(instance.get_playlist_content(cmd.requested_playlist_songs))
-    elif which == "oauth_callback":
+    elif number == extensions_pb2.ExtensionCommand.OAUTH_CALLBACK_FIELD_NUMBER:
         response.oauth_callback.CopyFrom(instance.oauth_callback(cmd.oauth_callback))
-    elif which == "song_queue_changed":
+    elif number == extensions_pb2.ExtensionCommand.SONG_QUEUE_CHANGED_FIELD_NUMBER:
         response.song_queue_changed.CopyFrom(instance.on_queue_changed(cmd.song_queue_changed))
-    elif which == "seeked":
+    elif number == extensions_pb2.ExtensionCommand.SEEKED_FIELD_NUMBER:
         response.seeked.CopyFrom(instance.on_seeked(cmd.seeked))
-    elif which == "volume_changed":
+    elif number == extensions_pb2.ExtensionCommand.VOLUME_CHANGED_FIELD_NUMBER:
         response.volume_changed.CopyFrom(instance.on_volume_changed(cmd.volume_changed))
-    elif which == "player_state_changed":
+    elif number == extensions_pb2.ExtensionCommand.PLAYER_STATE_CHANGED_FIELD_NUMBER:
         response.player_state_changed.CopyFrom(instance.on_player_state_changed(cmd.player_state_changed))
-    elif which == "song_changed":
+    elif number == extensions_pb2.ExtensionCommand.SONG_CHANGED_FIELD_NUMBER:
         response.song_changed.CopyFrom(instance.on_song_changed(cmd.song_changed))
-    elif which == "preference_changed":
+    elif number == extensions_pb2.ExtensionCommand.PREFERENCE_CHANGED_FIELD_NUMBER:
         response.preference_changed.CopyFrom(instance.on_preferences_changed(cmd.preference_changed))
-    elif which == "playback_details_requested":
+    elif number == extensions_pb2.ExtensionCommand.PLAYBACK_DETAILS_REQUESTED_FIELD_NUMBER:
         response.playback_details_requested.CopyFrom(instance.get_playback_details(cmd.playback_details_requested))
-    elif which == "custom_request":
+    elif number == extensions_pb2.ExtensionCommand.CUSTOM_REQUEST_FIELD_NUMBER:
         response.custom_request.CopyFrom(instance.handle_custom_request(cmd.custom_request))
-    elif which == "requested_song_from_url":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_SONG_FROM_URL_FIELD_NUMBER:
         response.requested_song_from_url.CopyFrom(instance.get_song_from_url(cmd.requested_song_from_url))
-    elif which == "requested_playlist_from_url":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_PLAYLIST_FROM_URL_FIELD_NUMBER:
         response.requested_playlist_from_url.CopyFrom(instance.get_playlist_from_url(cmd.requested_playlist_from_url))
-    elif which == "requested_search_result":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_SEARCH_RESULT_FIELD_NUMBER:
         response.requested_search_result.CopyFrom(instance.get_search(cmd.requested_search_result))
-    elif which == "requested_recommendations":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_RECOMMENDATIONS_FIELD_NUMBER:
         response.requested_recommendations.CopyFrom(instance.get_recommendations(cmd.requested_recommendations))
-    elif which == "requested_lyrics":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_LYRICS_FIELD_NUMBER:
         response.requested_lyrics.CopyFrom(instance.get_lyrics(cmd.requested_lyrics))
-    elif which == "requested_artist_songs":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_ARTIST_SONGS_FIELD_NUMBER:
         response.requested_artist_songs.CopyFrom(instance.get_artist_songs(cmd.requested_artist_songs))
-    elif which == "requested_album_songs":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_ALBUM_SONGS_FIELD_NUMBER:
         response.requested_album_songs.CopyFrom(instance.get_album_songs(cmd.requested_album_songs))
-    elif which == "song_added":
+    elif number == extensions_pb2.ExtensionCommand.SONG_ADDED_FIELD_NUMBER:
         response.song_added.CopyFrom(instance.on_song_added(cmd.song_added))
-    elif which == "song_removed":
+    elif number == extensions_pb2.ExtensionCommand.SONG_REMOVED_FIELD_NUMBER:
         response.song_removed.CopyFrom(instance.on_song_removed(cmd.song_removed))
-    elif which == "playlist_added":
+    elif number == extensions_pb2.ExtensionCommand.PLAYLIST_ADDED_FIELD_NUMBER:
         response.playlist_added.CopyFrom(instance.on_playlist_added(cmd.playlist_added))
-    elif which == "playlist_removed":
+    elif number == extensions_pb2.ExtensionCommand.PLAYLIST_REMOVED_FIELD_NUMBER:
         response.playlist_removed.CopyFrom(instance.on_playlist_removed(cmd.playlist_removed))
-    elif which == "requested_song_from_id":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_SONG_FROM_ID_FIELD_NUMBER:
         response.requested_song_from_id.CopyFrom(instance.get_song_from_id(cmd.requested_song_from_id))
-    elif which == "scrobble":
+    elif number == extensions_pb2.ExtensionCommand.SCROBBLE_FIELD_NUMBER:
         response.scrobble.CopyFrom(instance.scrobble(cmd.scrobble))
-    elif which == "requested_song_context_menu":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_SONG_CONTEXT_MENU_FIELD_NUMBER:
         response.requested_song_context_menu.CopyFrom(instance.get_song_context_menu(cmd.requested_song_context_menu))
-    elif which == "requested_playlist_context_menu":
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_PLAYLIST_CONTEXT_MENU_FIELD_NUMBER:
         response.requested_playlist_context_menu.CopyFrom(instance.get_playlist_context_menu(cmd.requested_playlist_context_menu))
-    elif which == "context_menu_action":
+    elif number == extensions_pb2.ExtensionCommand.CONTEXT_MENU_ACTION_FIELD_NUMBER:
         response.context_menu_action.CopyFrom(instance.on_context_menu_action(cmd.context_menu_action))
-    elif which == "get_accounts":
+    elif number == extensions_pb2.ExtensionCommand.GET_ACCOUNTS_FIELD_NUMBER:
         response.get_accounts.CopyFrom(instance.get_accounts(cmd.get_accounts))
-    elif which == "perform_account_login":
+    elif number == extensions_pb2.ExtensionCommand.PERFORM_ACCOUNT_LOGIN_FIELD_NUMBER:
         response.perform_account_login.CopyFrom(instance.perform_account_login(cmd.perform_account_login))
         
     
