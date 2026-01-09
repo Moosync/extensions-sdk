@@ -49,6 +49,16 @@ impl From<&str> for MoosyncError {
     }
 }
 
+impl std::fmt::Display for MoosyncError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MoosyncError::String(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+impl std::error::Error for MoosyncError {}
+
 // Using a macro for dispatch significantly simplifies the repetitive match arms.
 macro_rules! dispatch_command {
     ($ext:expr, $event:expr, {

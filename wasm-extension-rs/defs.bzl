@@ -66,7 +66,7 @@ def rust_extension(name, srcs, deps = [], edition = "2021", visibility = None, *
     rust_shared_library(
         name = internal_name,
         srcs = srcs,
-        deps = deps + ["//wasm-extension-rs:wasm_extension_rs"],
+        deps = deps + [Label("//wasm-extension-rs:wasm_extension_rs")],
         target_compatible_with = ["@platforms//os:wasi"],
         edition = edition,
         # Hide the internal target and prevent wildcard expansion from building it on host

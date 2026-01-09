@@ -30,8 +30,8 @@ def js_wasm_extension(name, srcs, deps = [], tsconfig = "tsconfig.json", rollup_
         out_dir = out_dir,
         tsconfig = tsconfig,
         deps = deps + [
-            "//wasm-extension-js:node_modules/@extism/js-pdk",
-            "//wasm-extension-js:wasm_extension_js_lib",
+            Label("//wasm-extension-js:node_modules/@extism/js-pdk"),
+            Label("//wasm-extension-js:wasm_extension_js_lib"),
         ],
         visibility = visibility,
     )
@@ -41,15 +41,15 @@ def js_wasm_extension(name, srcs, deps = [], tsconfig = "tsconfig.json", rollup_
         name = bundle_name,
         entry_point = out_dir + "/src/index.js",
         format = "cjs",
-        node_modules = "//wasm-extension-js:node_modules",
+        node_modules = Label("//wasm-extension-js:node_modules"),
         sourcemap = "false",
         config_file = rollup_config,
         deps = [
             ":" + ts_lib_name,
-            "//wasm-extension-js:node_modules/@rollup/plugin-alias",
-            "//wasm-extension-js:node_modules/@rollup/plugin-commonjs",
-            "//wasm-extension-js:node_modules/@rollup/plugin-node-resolve",
-            "//wasm-extension-js:wasm_extension_js_lib",
+            Label("//wasm-extension-js:node_modules/@rollup/plugin-alias"),
+            Label("//wasm-extension-js:node_modules/@rollup/plugin-commonjs"),
+            Label("//wasm-extension-js:node_modules/@rollup/plugin-node-resolve"),
+            Label("//wasm-extension-js:wasm_extension_js_lib"),
         ] + deps,
         visibility = visibility,
     )
@@ -59,12 +59,12 @@ def js_wasm_extension(name, srcs, deps = [], tsconfig = "tsconfig.json", rollup_
         name = name,
         srcs = [
             bundle_name + ".js",
-            "//wasm-extension-js:src/plugin.d.ts",
+            Label("//wasm-extension-js:src/plugin.d.ts"),
         ],
         outs = [name + ".wasm"],
         cmd = """
-            $(location //wasm-extension-js:extism_js_cli) $(location {bundle}.js) -i $(location //wasm-extension-js:src/plugin.d.ts) -o $@
-        """.format(bundle = bundle_name),
-        tools = ["//wasm-extension-js:extism_js_cli"],
+            $(location {}) $(location {bundle}.js) -i $(location {}) -o $@
+        """.format(Label("//wasm-extension-js:extism_js_cli"), Label("//wasm-extension-js:src/plugin.d.ts"), bundle = bundle_name),
+        tools = [Label("//wasm-extension-js:extism_js_cli")],
         visibility = visibility,
     )

@@ -2,6 +2,8 @@
 Wasm extension rules for Python.
 """
 
+load("@aspect_rules_py//py:defs.bzl", "py_binary")
+
 def _py_wasm_extension_impl(ctx):
     extism_py = ctx.executable._extism_py
     share_dir = ctx.files._share_dir
@@ -62,6 +64,10 @@ def _py_wasm_extension_impl(ctx):
         path = f.short_path
         if path.startswith("../"):
             path = path[3:]
+
+        if f == ctx.file.main:
+            # Rename main file to main.py
+            path = "main.py"
 
         out_link = ctx.actions.declare_file(runfiles_root_name + "/" + path)
         ctx.actions.symlink(output = out_link, target_file = f)
@@ -132,6 +138,26 @@ def _py_wasm_extension_impl(ctx):
     # Update PYTHONPATH to use the materialized directory
     python_path = python_path.replace(runfiles_root_path, materialized_dir.path)
 
+    # Find moosync_edk/__init__.py in transitive sources
+    sdk_entry = None
+    sdk_entry_path = None
+
+    for f in transitive_srcs.to_list():
+        if f.path.endswith("moosync_edk/__init__.py"):
+            sdk_entry = f
+
+            # Calculate where it ended up in the runfiles/materialized dir
+            # Logic must match the loop above
+            path = f.short_path
+            if path.startswith("../"):
+                path = path[3:]
+
+            sdk_entry_path = materialized_dir.path + "/" + path
+            break
+
+    if not sdk_entry:
+        fail("Could not find moosync_edk/__init__.py in dependencies. Ensure wasm-extension-py:moosync_edk is a dependency.")
+
     main_file = ctx.file.main
     inputs = depset([materialized_dir, main_file], transitive = [depset(share_dir), depset(binaryen_files)])
 
@@ -149,7 +175,7 @@ def _py_wasm_extension_impl(ctx):
         },
         execution_requirements = {"no-sandbox": "1"},
         arguments = [
-            main_file.path,
+            sdk_entry_path,
             "-o",
             out.path,
         ],
@@ -178,6 +204,26 @@ _py_wasm_extension = rule(
     },
 )
 
+def _expose_pyi_impl(ctx):
+    pyi_files = []
+    for dep in ctx.attr.deps:
+        if PyInfo in dep:
+            pyi_files.append(dep[PyInfo].transitive_pyi_files)
+
+    all_pyi = depset(transitive = pyi_files)
+
+    return [
+        DefaultInfo(files = all_pyi),
+        PyInfo(
+            transitive_sources = all_pyi,
+        ),
+    ]
+
+_expose_pyi = rule(
+    implementation = _expose_pyi_impl,
+    attrs = {"deps": attr.label_list(providers = [PyInfo])},
+)
+
 def py_extension(name, srcs, deps = [], **kwargs):
     """
     Builds a Wasm extension from Python sources.
@@ -188,9 +234,34 @@ def py_extension(name, srcs, deps = [], **kwargs):
         deps: Dependencies.
         **kwargs: Additional arguments to pass to the rule.
     """
+
+    _expose_pyi(
+        name = name + "_pyi",
+        deps = [
+            "@moosync//core/types/protos:extensions_py_proto",
+            "@moosync//core/types/protos:songs_py_proto",
+            "@moosync//core/types/protos:themes_py_proto",
+            "@moosync//core/types/protos:ui_py_proto",
+        ],
+    )
+
+    py_binary(
+        name = name + "_bin",
+        srcs = srcs,
+        deps = deps + [
+            Label("//wasm-extension-py:moosync_edk"),
+            "@moosync//:moosync_python_root",
+            ":" + name + "_pyi",
+        ],
+        data = [
+            ":" + name + "_pyi",
+        ],
+        **kwargs
+    )
+
     _py_wasm_extension(
         name = name,
         srcs = srcs,
-        deps = deps + ["//wasm-extension-py:moosync_edk"],
+        deps = deps + [Label("//wasm-extension-py:moosync_edk")],
         **kwargs
     )

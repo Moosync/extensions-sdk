@@ -3,16 +3,12 @@ load("@rules_rust_prost//:defs.bzl", "rust_prost_toolchain")
 
 package(default_visibility = ["//visibility:public"])
 
-PROST_OPTS = [
-    "type_attribute=.=#[derive(serde::Serialize\\,serde::Deserialize)]",
-    "type_attribute=.=#[serde(rename_all=\"camelCase\")]",
-]
+PROST_OPTS = []
 
 rust_library_group(
     name = "prost_runtime_wasi",
     deps = [
         "@sdk_wasm_crates//:prost",
-        "@sdk_wasm_crates//:serde",
     ],
 )
 

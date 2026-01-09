@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use extism_pdk::{Prost, host_fn};
-use serde::{Deserialize, Serialize};
+use extensions_proto::struct_proto::google::protobuf::Struct as ProtoStruct;
+use extism_pdk::{host_fn, Prost};
 
-use extensions_proto::moosync::types::{
+pub use extensions_proto::moosync::types::{
     AddPlaylistRequest, AddSongsRequest, AddToPlaylistRequest, ContextMenuActionRequest,
     ContextMenuReturnType, CustomRequest, ExtensionAccountDetail, ExtensionProviderScope,
     GetCurrentSongRequest, GetEntityRequest, GetPlayerStateRequest, GetPreferenceRequest,
@@ -35,6 +35,7 @@ use extensions_proto::moosync::types::{
     SongRemovedRequest, UnregisterUserPreferenceRequest, UpdateAccountsRequest, UpdateSongRequest,
     VolumeChangedRequest,
 };
+use extensions_proto::struct_proto::google::protobuf::Value as ProtoValue;
 use songs_proto::moosync::types::{Playlist, SearchResult, Song};
 use ui_proto::moosync::types::PreferenceUiData;
 
@@ -233,22 +234,22 @@ pub trait Extension:
 {
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct PlaybackDetailsReturnType {
     pub duration: u32,
     pub url: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct SongsWithPageTokenReturnType {
     pub songs: Vec<Song>,
     pub next_page_token: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct ContextMenuReturnTypeWrapper(pub ContextMenuReturnType);
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct CustomRequestReturnType {
     pub mime_type: Option<String>,
     pub data: Option<Vec<u8>>,
@@ -271,7 +272,6 @@ pub mod extension_api {
     use crate::response_utils::Extract;
     use extensions_proto::moosync::types::main_command::Command as MainCommandEnum;
     use extensions_proto::moosync::types::main_command_response::Response as MainCommandResponseEnum;
-    use serde_json::Value;
     use songs_proto::moosync::types::{GetEntityOptions, GetSongOptions}; // Needed
 
     use super::{
@@ -397,7 +397,7 @@ pub mod extension_api {
         /// Retrieves the current song being played.
         get_current_song(GetCurrentSong, GetCurrentSongRequest, GetCurrentSongResponse) -> Option<Song>;
 
-        get_entity(GetEntity, GetEntityRequest, GetEntityResponse, options: GetEntityOptions) -> Value;
+        get_entity(GetEntity, GetEntityRequest, GetEntityResponse, options: GetEntityOptions) -> Option<ProtoStruct>;
 
         /// Retrieves the current state of the player.
         get_player_state(GetPlayerState, GetPlayerStateRequest, GetPlayerStateResponse) -> PlayerState;
@@ -409,7 +409,7 @@ pub mod extension_api {
         get_time(GetTime, GetTimeRequest, GetTimeResponse) -> f64;
 
         /// Retrieves the current playback queue.
-        get_queue(GetQueue, GetQueueRequest, GetQueueResponse) -> Value;
+        get_queue(GetQueue, GetQueueRequest, GetQueueResponse) -> Option<ProtoStruct>;
 
         /// Retrieves a preference value based on the provided data.
         get_preference(GetPreference, GetPreferenceRequest, GetPreferenceResponse, data: PreferenceData) -> PreferenceData;

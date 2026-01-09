@@ -14,18 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use extism_pdk::{FnResult, Prost, plugin_fn};
-pub use extism_pdk::{HttpRequest, HttpResponse, config, error, http, info, log, warn};
+pub use extism_pdk::{config, error, http, info, log, warn, HttpRequest, HttpResponse};
+use extism_pdk::{plugin_fn, FnResult, Prost};
 
 // Re-export generated types
+pub use extensions_proto;
 pub use extensions_proto::moosync::types::*;
 pub use songs_proto::moosync::types::*;
 pub use themes_proto::moosync::types::*;
 pub use ui_proto::moosync::types::*;
 
+pub use ui_proto::moosync::types::*;
+
 pub mod api;
 pub mod handler;
 pub mod response_utils;
+
+pub use api::MoosyncResult;
+pub use handler::MoosyncError;
 
 unsafe extern "C" {
     fn init();

@@ -10,7 +10,6 @@ from core.types.protos import themes_pb2
 from core.types.protos.extensions_pb2 import *
 from core.types.protos.songs_pb2 import *
 from core.types.protos.ui_pb2 import *
-from core.types.protos.themes_pb2 import *
 
 # Fix module split issue when running as entry point
 if "moosync_edk" not in sys.modules:

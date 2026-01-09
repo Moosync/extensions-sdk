@@ -19,8 +19,6 @@ rust_library(
         "@sdk_wasm_crates//:extism-pdk",
         "@sdk_wasm_crates//:lazy_static",
         "@sdk_wasm_crates//:prost-types",
-        "@sdk_wasm_crates//:serde",
-        "@sdk_wasm_crates//:serde_json",
         "@sdk_wasm_crates//:tokio",
         "@sdk_wasm_crates//:tracing",
     ],
