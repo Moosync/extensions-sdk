@@ -1,37 +1,39 @@
 {
-  "name": "@moosync/edk",
-  "version": "0.0.8",
-  "main": "/lib/index.js",
-  "exports": {
-    ".": "./lib/index.js",
-    "./api": "./lib/api.js"
-  },
-  "scripts": {
-    "build": "node esbuild && tsc"
-  },
-  "devDependencies": {
-    "@extism/js-pdk": "^1.1.1",
-    "esbuild": "^0.24.0",
-    "typedoc": "^0.27.9",
-    "typescript": "^5.6.3"
-  },
-  "description": "Extension development kit for Moosync",
-  "directories": {
-    "lib": "lib"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Moosync/wasm-extension-runner.git"
-  },
-  "keywords": [
-    "Moosync"
-  ],
-  "author": "Sahil Gupte",
+  "name": "wasm-extension-js",
+  "version": "0.1.0",
+  "description": "Javascript PDK for writing moosync extensions",
+  "keywords": [],
+  "author": "",
   "license": "ISC",
-  "types": "./lib/index.d.ts",
+  "main": "lib/src/index.js",
+  "types": "lib/src/index.d.ts",
+  "devDependencies": {
+    "@bufbuild/protobuf": "^1.10.0",
+    "@bufbuild/protoc-gen-es": "^1.10.0",
+    "@extism/js-pdk": "^1.0.0",
+    "@rollup/plugin-alias": "^6.0.0",
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "rollup": "^4.55.1",
+    "ts-proto": "^1.112.0",
+    "typescript": "5.4.5"
+  },
+  "dependencies": {
+    "@types/node": "^25.0.3",
+    "esbuild": "^0.20.2",
+    "long": "^5.2.3",
+    "typedoc": "^0.25.13"
+  },
   "bugs": {
     "url": "https://github.com/Moosync/wasm-extension-runner/issues"
   },
   "homepage": "https://github.com/Moosync/wasm-extension-runner#readme",
-  "packageManager": "npm@10.9.2+sha512.8ab88f10f224a0c614cb717a7f7c30499014f77134120e9c1f0211ea3cf3397592cbe483feb38e0c4b3be1c54e347292c76a1b5edb94a3289d5448484ab8ac81"
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "ts-proto",
+      "@bufbuild/protoc-gen-es"
+    ]
+  },
+  "packageManager": "pnpm@9.1.1"
 }
