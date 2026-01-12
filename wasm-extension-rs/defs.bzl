@@ -2,81 +2,72 @@
 Wasm extension rules for Rust.
 """
 
-load("@rules_rust//rust:defs.bzl", "rust_shared_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("//:package_json.bzl", "generate_package_json")
 
-def _wasi_transition_impl(_settings, _attr):
-    return {
-        "//command_line_option:platforms": "@rules_rust//rust/platform:wasi",
-    }
-
-wasi_transition = transition(
-    implementation = _wasi_transition_impl,
-    inputs = [],
-    outputs = ["//command_line_option:platforms"],
-)
-
-def _wasm_transition_rule_impl(ctx):
-    # transition is 1:1, so actual_target is a list containing a single Target
-    target = ctx.attr.actual_target[0]
-
-    wasm_file = None
-    for f in target.files.to_list():
-        if f.extension == "wasm":
-            wasm_file = f
-            break
-
-    if not wasm_file:
-        files = [f.path for f in target.files.to_list()]
-        fail("No .wasm file found in output of rust_shared_library. Found: {}".format(files))
-
-    out = ctx.actions.declare_file(ctx.label.name + ".wasm")
-    ctx.actions.run_shell(
-        inputs = [wasm_file],
-        outputs = [out],
-        command = "cp '{}' '{}'".format(wasm_file.path, out.path),
-        mnemonic = "CopyWasm",
-    )
-
-    return [DefaultInfo(files = depset([out]))]
-
-_wasm_platform_transition_rule = rule(
-    implementation = _wasm_transition_rule_impl,
-    attrs = {
-        "actual_target": attr.label(cfg = wasi_transition),
-        "_allowlist_function_transition": attr.label(
-            default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
-        ),
-    },
-)
-
-def rust_extension(name, srcs, deps = [], edition = "2021", visibility = None, **kwargs):
+def rust_extension(
+        name,
+        srcs,
+        deps = [],
+        data = [],
+        edition = "2024",
+        display_name = None,
+        package_name = None,
+        version = None,
+        icon = None,
+        allowed_hosts = None,
+        allowed_paths = None,
+        **kwargs):
     """
     Builds a Wasm extension from Rust sources.
 
-    Args:
-        name: The name of the target.
         srcs: Source files.
         deps: Dependencies.
-        edition: Rust edition. Defaults to "2021".
-        visibility: Target visibility.
-        **kwargs: Additional arguments to pass to rust_shared_library.
+        data: Data dependencies.
+        edition: Rust edition. Defaults to "2024".
+        display_name: Display name of the extension.
+        package_name: Package name of the extension (mapped to name in json).
+        version: Version of the extension.
+        icon: Icon of the extension. Can be file path or label.
+        allowed_hosts: List of allowed hosts.
+        allowed_paths: Dict of allowed paths.
+        **kwargs: Additional arguments to pass to rust_binary.
     """
-    internal_name = name + "_internal"
 
-    rust_shared_library(
-        name = internal_name,
+    pkg_json_targets = generate_package_json(
+        name = name,
+        display_name = display_name,
+        package_name = package_name,
+        version = version,
+        icon = icon,
+        allowed_hosts = allowed_hosts,
+        allowed_paths = allowed_paths,
+        data = data,
+        visibility = kwargs.get("visibility"),
+        wasm_target = ":" + name + "_wasm_file",
+    )
+
+    rust_binary(
+        name = name + "_wasm",
         srcs = srcs,
         deps = deps + [Label("//wasm-extension-rs:wasm_extension_rs")],
-        target_compatible_with = ["@platforms//os:wasi"],
+        data = data,
+        platform = "@rules_rust//rust/platform:wasi",
         edition = edition,
-        # Hide the internal target and prevent wildcard expansion from building it on host
-        visibility = ["//visibility:private"],
         tags = ["manual"],
         **kwargs
     )
 
-    _wasm_platform_transition_rule(
+    native.genrule(
+        name = name + "_wasm_file",
+        srcs = [":" + name + "_wasm"],
+        outs = [name + ".wasm"],
+        cmd = "cp $< $@",
+        visibility = kwargs.get("visibility"),
+    )
+
+    native.filegroup(
         name = name,
-        actual_target = internal_name,
-        visibility = visibility,
+        srcs = [":" + name + "_wasm_file"] + pkg_json_targets,
+        **kwargs
     )

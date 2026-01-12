@@ -1,0 +1,8 @@
+[MESSAGES CONTROL]
+disable=
+    no-name-in-module,
+    redefined-outer-name,
+    missing-function-docstring,
+    missing-class-docstring,
+    unnecessary-pass,
+    missing-module-docstring

@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use extensions_proto::struct_proto::google::protobuf::Struct as ProtoStruct;
-use extism_pdk::{host_fn, Prost};
+use extism_pdk::{Prost, host_fn};
 
 pub use extensions_proto::moosync::types::{
     AddPlaylistRequest, AddSongsRequest, AddToPlaylistRequest, ContextMenuActionRequest,
@@ -138,7 +138,9 @@ pub trait Provider {
     fn get_playlist_content(
         &self,
         req: RequestedPlaylistSongsRequest,
-    ) -> MoosyncResult<SongsWithPageTokenReturnType>;
+    ) -> MoosyncResult<SongsWithPageTokenReturnType> {
+        Err("Not implemented".into())
+    }
 
     /// Called when the main app requests a playlist from a URL.
     fn get_playlist_from_url(
@@ -166,26 +168,34 @@ pub trait Provider {
         &self,
         req: RequestedRecommendationsRequest,
     ) -> MoosyncResult<Vec<Song>> {
-        Err("MoosyncError::String(\"Not implemented\".into())".into())
+        Err("Not implemented".into())
     }
 
     /// Called when the main app requests a song from a URL.
-    fn get_song_from_url(&self, req: RequestedSongFromUrlRequest) -> MoosyncResult<Option<Song>>;
+    fn get_song_from_url(&self, req: RequestedSongFromUrlRequest) -> MoosyncResult<Option<Song>> {
+        Err("Not implemented".into())
+    }
 
     /// Called when the main app handles a custom request.
-    fn handle_custom_request(&self, req: CustomRequest) -> MoosyncResult<CustomRequestReturnType>;
+    fn handle_custom_request(&self, req: CustomRequest) -> MoosyncResult<CustomRequestReturnType> {
+        Err("Not implemented".into())
+    }
 
     /// Called when the main app requests songs of a specific artist.
     fn get_artist_songs(
         &self,
         req: RequestedArtistSongsRequest,
-    ) -> MoosyncResult<SongsWithPageTokenReturnType>;
+    ) -> MoosyncResult<SongsWithPageTokenReturnType> {
+        Err("Not implemented".into())
+    }
 
     /// Called when the main app requests songs of a specific album.
     fn get_album_songs(
         &self,
         req: RequestedAlbumSongsRequest,
-    ) -> MoosyncResult<SongsWithPageTokenReturnType>;
+    ) -> MoosyncResult<SongsWithPageTokenReturnType> {
+        Err("Not implemented".into())
+    }
 
     /// Called when the main app requests a song from an ID.
     fn get_song_from_id(&self, req: RequestedSongFromIdRequest) -> MoosyncResult<Option<Song>> {

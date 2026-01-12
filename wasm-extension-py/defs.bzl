@@ -3,6 +3,7 @@ Wasm extension rules for Python.
 """
 
 load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("//:package_json.bzl", "generate_package_json")
 
 def _py_wasm_extension_impl(ctx):
     extism_py = ctx.executable._extism_py
@@ -31,7 +32,7 @@ def _py_wasm_extension_impl(ctx):
 
     # Collect sources and deps
     transitive_srcs = depset(
-        ctx.files.srcs,
+        ctx.files.srcs + ctx.files.data,
         transitive = [dep[PyInfo].transitive_sources for dep in ctx.attr.deps],
     )
 
@@ -201,6 +202,7 @@ _py_wasm_extension = rule(
         "_binaryen": attr.label(
             default = Label("@binaryen_tool//:bin_files"),
         ),
+        "data": attr.label_list(allow_files = True),
     },
 )
 
@@ -219,12 +221,24 @@ def _expose_pyi_impl(ctx):
         ),
     ]
 
-_expose_pyi = rule(
+expose_pyi = rule(
     implementation = _expose_pyi_impl,
     attrs = {"deps": attr.label_list(providers = [PyInfo])},
 )
 
-def py_extension(name, srcs, deps = [], **kwargs):
+def py_extension(
+        name,
+        srcs,
+        deps = [],
+        data = [],
+        display_name = None,
+        package_name = None,
+        version = None,
+        icon = None,
+        allowed_hosts = None,
+        allowed_paths = None,
+        main = None,
+        **kwargs):
     """
     Builds a Wasm extension from Python sources.
 
@@ -232,10 +246,31 @@ def py_extension(name, srcs, deps = [], **kwargs):
         name: The name of the target.
         srcs: Source files.
         deps: Dependencies.
+        data: Data dependencies.
+        display_name: Display name of the extension.
+        package_name: Package name of the extension (mapped to name in json).
+        version: Version of the extension.
+        icon: Icon of the extension. Can be file path or label.
+        allowed_hosts: List of allowed hosts.
+        allowed_paths: Dict of allowed paths.
+        main: Entry point file. Defaults to name + ".py".
         **kwargs: Additional arguments to pass to the rule.
     """
 
-    _expose_pyi(
+    pkg_json_targets = generate_package_json(
+        name = name,
+        display_name = display_name,
+        package_name = package_name,
+        version = version,
+        icon = icon,
+        allowed_hosts = allowed_hosts,
+        allowed_paths = allowed_paths,
+        data = data,
+        visibility = kwargs.get("visibility"),
+        wasm_target = ":" + name + "_wasm",
+    )
+
+    expose_pyi(
         name = name + "_pyi",
         deps = [
             "@moosync//core/types/protos:extensions_py_proto",
@@ -248,20 +283,29 @@ def py_extension(name, srcs, deps = [], **kwargs):
     py_binary(
         name = name + "_bin",
         srcs = srcs,
+        main = main,
         deps = deps + [
             Label("//wasm-extension-py:moosync_edk"),
-            "@moosync//:moosync_python_root",
+            "@moosync//core/types/protos:moosync_python_root",
             ":" + name + "_pyi",
         ],
         data = [
             ":" + name + "_pyi",
-        ],
+        ] + data,
         **kwargs
     )
 
     _py_wasm_extension(
-        name = name,
+        name = name + "_wasm",
         srcs = srcs,
+        main = main,
         deps = deps + [Label("//wasm-extension-py:moosync_edk")],
+        data = data,
+        **kwargs
+    )
+
+    native.filegroup(
+        name = name,
+        srcs = [":" + name + "_wasm"] + pkg_json_targets,
         **kwargs
     )

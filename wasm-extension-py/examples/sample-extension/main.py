@@ -1,26 +1,26 @@
 from moosync_edk import Extension, register_extension
 from core.types.protos import extensions_pb2, songs_pb2
-import extism
+
 
 def entry():
     print("calling entry")
     register_extension(SampleExtension())
+
 
 class SampleExtension(Extension):
     def get_provider_scopes(self, req):
         return extensions_pb2.GetProviderScopesResponse(
             scopes=[extensions_pb2.ExtensionProviderScope.ACCOUNTS]
         )
-    
+
     def get_accounts(self, req):
         self.api.update_accounts("sample.pkg")
         return extensions_pb2.GetAccountsResponse(
             accounts=[
                 extensions_pb2.ExtensionAccountDetail(
-                     id="test_account",
-                     name="Test Account",
-                     logged_in=True,
-                     package_name="sample.pkg"
+                    id="test_account",
+                    name="Test Account",
+                    logged_in=True,
                 )
             ]
         )
@@ -31,13 +31,13 @@ class SampleExtension(Extension):
 
     def handle_custom_request(self, req):
         if req.request_id == "hash_test":
-             return extensions_pb2.CustomRequestResponse()
-        
+            return extensions_pb2.CustomRequestResponse()
+
         if req.request_id == "preferences_test":
             self.api.register_user_preferences([])
             self.api.unregister_user_preferences([])
             return extensions_pb2.CustomRequestResponse()
-            
+
         return extensions_pb2.CustomRequestResponse()
 
     def get_search(self, req):
@@ -46,11 +46,11 @@ class SampleExtension(Extension):
 
     def on_context_menu_action(self, req):
         if req.action_id == "add_test":
-             self.api.add_playlist(songs_pb2.Playlist())
-             self.api.add_songs([])
-             self.api.add_to_playlist("id", [])
+            self.api.add_playlist(songs_pb2.Playlist())
+            self.api.add_songs([])
+            self.api.add_to_playlist("id", [])
         return extensions_pb2.ContextMenuActionResponse()
-        
+
     def on_preferences_changed(self, req):
         self.api.get_preference(extensions_pb2.PreferenceData(key="test"))
         self.api.get_secure(extensions_pb2.PreferenceData(key="test"))
@@ -75,4 +75,3 @@ class SampleExtension(Extension):
     def on_seeked(self, req):
         self.api.get_time()
         return extensions_pb2.SeekedResponse()
-

@@ -204,3 +204,11 @@ use_repo(sdk_wasm_crates, "sdk_wasm_crates")
 register_toolchains("//prost_toolchain:prost_toolchain_wasi")
 
 register_toolchains("@rules_rust//rust/private/dummy_cc_toolchain:dummy_cc_wasm32_toolchain")
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "pypi_moounit",
+    python_version = "3.11",
+    requirements_lock = "//moounit:requirements_lock.txt",
+)
+use_repo(pip, "pypi_moounit")
