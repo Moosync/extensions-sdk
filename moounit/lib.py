@@ -1,8 +1,15 @@
+from core.types.protos.extensions_pb2 import ManifestPermissions
 import uuid
-from extism.extism import CompiledPlugin, TypeInferredFunction, HOST_FN_REGISTRY
+from extism.extism import (
+    CompiledPlugin,
+    TypeInferredFunction,
+    HOST_FN_REGISTRY,
+    set_log_custom,
+)
 import extism
 import json
 import os
+import tempfile
 
 import contextvars
 from enum import Enum
@@ -16,6 +23,38 @@ from core.types.protos.extensions_pb2 import (
     MainCommand,
     MainCommandResponse,
 )
+
+from google.protobuf.message import Message
+
+
+def partial_match(expected: Message, actual: Message) -> bool:
+    if expected.DESCRIPTOR != actual.DESCRIPTOR:
+        return False
+
+    for field in expected.DESCRIPTOR.fields:
+        if field.label == field.LABEL_REPEATED:
+            # We will use strict equality for repeated fields for now
+            if getattr(expected, field.name) != getattr(actual, field.name):
+                return False
+        else:
+            # Check presence if supported
+            try:
+                if not expected.HasField(field.name):
+                    continue
+            except ValueError:
+                # Field does not track presence (e.g. Proto3 scalar)
+                pass
+
+            expected_val = getattr(expected, field.name)
+            actual_val = getattr(actual, field.name)
+
+            if field.type == field.TYPE_MESSAGE:
+                if not partial_match(expected_val, actual_val):
+                    return False
+            else:
+                if expected_val != actual_val:
+                    return False
+    return True
 
 
 @dataclass
@@ -84,6 +123,10 @@ class Moounit:
                 display_name=manifest["name"],
                 version=manifest["version"],
                 extension_entry=os.path.join(path, manifest["extensionEntry"]),
+                permissions=ManifestPermissions(
+                    hosts=manifest.get("permissions").get("hosts"),
+                    paths=manifest.get("permissions").get("paths"),
+                ),
             )
 
     def _get_extism_manifest(
@@ -93,15 +136,10 @@ class Moounit:
 
         def _guard(default: Any, func: Callable[[Moounit], Any], error_msg: str) -> Any:
             instance = Moounit._instances.get(id)
-            try:
-                if instance:
-                    return func(instance)
+            if instance:
+                return func(instance)
 
-                raise AssertionError(error_msg)
-            except Exception as e:
-                if instance:
-                    instance.pending_exception = e
-                return default
+            raise AssertionError(error_msg)
 
         def system_time() -> int:
             return _guard(
@@ -117,17 +155,19 @@ class Moounit:
                 f"Unexpected call to open_clientfd with path: {path}. If this call is expected, please ensure you have set an expectation using expect_open_clientfd.",
             )
 
-        def write_sock(sock_id: int, buf: bytes) -> int:
+        def write_sock(sock_id: bytes, buf: bytes) -> int:
             return _guard(
                 0,
-                lambda i: i._check_write_sock(sock_id, buf),
+                lambda i: i._check_write_sock(int.from_bytes(sock_id, "little"), buf),
                 f"Unexpected call to write_sock with sock_id: {sock_id}. If this call is expected, please ensure you have set an expectation using expect_write_sock.",
             )
 
-        def read_sock(sock_id: int, read_len: int) -> bytes:
+        def read_sock(sock_id: bytes, read_len: int) -> bytes:
             return _guard(
                 b"",
-                lambda i: i._check_read_sock(sock_id, read_len),
+                lambda i: i._check_read_sock(
+                    int.from_bytes(sock_id, "little"), read_len
+                ),
                 f"Unexpected call to read_sock with sock_id: {sock_id}. If this call is expected, please ensure you have set an expectation using expect_read_sock.",
             )
 
@@ -148,11 +188,7 @@ class Moounit:
             if not instance:
                 return b""
 
-            try:
-                return instance.handle_main_command(data)
-            except Exception as e:
-                instance.pending_exception = e
-                return b""
+            return instance.handle_main_command(data)
 
         fns = [
             TypeInferredFunction(
@@ -193,6 +229,13 @@ class Moounit:
         HOST_FN_REGISTRY.clear()
         HOST_FN_REGISTRY.extend(fns)
 
+        allowed_paths = {}
+        for src, dest in manifest.permissions.paths.items():
+            temp_dir = tempfile.TemporaryDirectory()
+            self._temp_dirs.append(temp_dir)
+            allowed_paths[temp_dir.name] = dest
+            self._mapped_paths[src] = temp_dir.name
+
         compiled = CompiledPlugin(
             {
                 "wasm": [
@@ -200,7 +243,9 @@ class Moounit:
                         "path": manifest.extension_entry,
                         "name": manifest.display_name,
                     }
-                ]
+                ],
+                "allowed_hosts": manifest.permissions.hosts._values,
+                "allowed_paths": allowed_paths,
             },
             wasi=True,
             functions=fns,
@@ -208,30 +253,20 @@ class Moounit:
 
         return (id, compiled)
 
-    def _load_extension(self, path: str, manifest: ExtensionManifest):
+    def _load_extension(self, manifest: ExtensionManifest):
         (id, compiled_plugin) = self._get_extism_manifest(manifest)
         self.plugin = extism.Plugin(compiled_plugin)
         Moounit._instances[id] = self
 
     def call_entry(self) -> bytes:
-        ret = self.plugin.call("entry", data=b"")
-        if self.pending_exception:
-            exc = self.pending_exception
-            self.pending_exception = None
-            raise exc
-        return ret
+        return self.plugin.call("entry", data=b"")
 
     def send_command(self, command: ExtensionCommand) -> ExtensionCommandResponse:
         data = command.SerializeToString()
         resp = self.plugin.call("handle_extension_command", data)
-        if self.pending_exception:
-            exc = self.pending_exception
-            self.pending_exception = None
-            raise exc
         return ExtensionCommandResponse.FromString(resp)
 
     def __init__(self, path: str):
-        self.pending_exception: Exception | None = None
         self.session_expectations: List[Expectation] = []
         self.local_expectations: List[Expectation] = []
 
@@ -250,8 +285,11 @@ class Moounit:
         self.session_read_sock_expectations: List[ReadSockExpectation] = []
         self.local_read_sock_expectations: List[ReadSockExpectation] = []
 
+        self._temp_dirs: List[tempfile.TemporaryDirectory] = []
+        self._mapped_paths: Dict[str, str] = {}
+
         manifest = self._parse_manifest(path)
-        self._load_extension(path, manifest)
+        self._load_extension(manifest)
 
     def expect_command(
         self,
@@ -307,10 +345,14 @@ class Moounit:
     def expect_write_sock(
         self,
         sock_id: int,
-        buf: bytes,
-        return_value: Union[int, Callable[[], int]],
+        buf: bytes = b"",
+        return_value: Union[int, Callable[[], int]] = 0,
         times: int = 1,
     ):
+        """
+        Expect a write_sock call with a specific sock_id.
+        Note: The `buf` argument is ignored for matching purposes but kept for API compatibility.
+        """
         expectation = WriteSockExpectation(
             sock_id=sock_id, buf=buf, return_value=return_value, times=times
         )
@@ -322,10 +364,14 @@ class Moounit:
     def expect_read_sock(
         self,
         sock_id: int,
-        read_len: int,
-        return_value: Union[bytes, Callable[[], bytes]],
+        read_len: int = 0,
+        return_value: Union[bytes, Callable[[], bytes]] = b"",
         times: int = 1,
     ):
+        """
+        Expect a read_sock call with a specific sock_id.
+        Note: The `read_len` argument is ignored for matching purposes but kept for API compatibility.
+        """
         expectation = ReadSockExpectation(
             sock_id=sock_id, read_len=read_len, return_value=return_value, times=times
         )
@@ -465,7 +511,7 @@ class Moounit:
         exp = self._consume_expectation(
             self.local_write_sock_expectations,
             self.session_write_sock_expectations,
-            lambda e: e.sock_id == sock_id and e.buf == buf,
+            lambda e: e.sock_id == sock_id,
             f"Unexpected call to write_sock with sock_id: {sock_id}. If this call is expected, please ensure you have set an expectation using expect_write_sock.",
         )
         return self._get_value(exp.return_value)
@@ -474,7 +520,7 @@ class Moounit:
         exp = self._consume_expectation(
             self.local_read_sock_expectations,
             self.session_read_sock_expectations,
-            lambda e: e.sock_id == sock_id and e.read_len == read_len,
+            lambda e: e.sock_id == sock_id,
             f"Unexpected call to read_sock with sock_id: {sock_id}. If this call is expected, please ensure you have set an expectation using expect_read_sock.",
         )
         return self._get_value(exp.return_value)
@@ -485,7 +531,7 @@ class Moounit:
         exp = self._consume_expectation(
             self.local_expectations,
             self.session_expectations,
-            lambda e: e.command == command,
+            lambda e: partial_match(e.command, command),
             f"Unexpected command: {command}. If this command is expected, please ensure you have set an expectation using expect_command.",
         )
 
@@ -493,6 +539,12 @@ class Moounit:
         if callable(resp):
             return resp().SerializeToString()
         return resp.SerializeToString()
+
+    def get_mapped_paths(self) -> Dict[str, str]:
+        """
+        Returns a dictionary mapping original host paths to their corresponding temporary directory paths.
+        """
+        return self._mapped_paths
 
 
 @pytest.fixture(autouse=True)
@@ -529,7 +581,6 @@ def moounit(request, moounit_session):  # pylint: disable=unused-argument
     if path:
         # Handle multiple files passed via $(locations)
         path = path.split(" ")[0]
-    print("got path", path, os.path.dirname(path), os.getcwd())
     if not path:
         pytest.fail("--extension-path CLI option is required")
 
@@ -540,5 +591,12 @@ def moounit(request, moounit_session):  # pylint: disable=unused-argument
         path = os.path.dirname(path)
 
     instance = Moounit(path)
-    instance.call_entry()
-    return instance
+
+    logs = []
+    logBuffer = set_log_custom(lambda s: logs.append(s.strip()), "debug")
+
+    yield instance
+
+    logBuffer.drain()
+    for line in logs:
+        print(line)

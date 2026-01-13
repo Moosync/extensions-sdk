@@ -42,12 +42,10 @@ def _py_wasm_extension_impl(ctx):
     # Add directories of srcs to allow importing them (e.g. main.py)
     src_dirs = []
     for f in ctx.files.srcs:
-        # Use short_path to match runfiles structure
         path = f.short_path
         if path.startswith("../"):
             path = path[3:]
 
-        # Get directory
         if "/" in path:
             d = path.rsplit("/", 1)[0]
         else:
@@ -67,7 +65,7 @@ def _py_wasm_extension_impl(ctx):
             path = path[3:]
 
         if f == ctx.file.main:
-            # Rename main file to main.py
+            # Rename main file to main.py cause thats how we load our sdk
             path = "main.py"
 
         out_link = ctx.actions.declare_file(runfiles_root_name + "/" + path)
@@ -76,17 +74,11 @@ def _py_wasm_extension_impl(ctx):
 
         if runfiles_root_path == None:
             # Calculate the concrete path to runfiles root relative to execroot
-            # out_link.path is bazel-out/.../pkg/name.runfiles/path/to/file
-            # we want bazel-out/.../pkg/name.runfiles
             runfiles_root_path = out_link.path[:-len(path) - 1]
 
     # Reconstruct PYTHONPATH relative to the merged directory
-    # We start with the root of the runfiles
     python_path_entries = [runfiles_root_path]
 
-    # Add dep imports, adjusted for runfiles structure
-    # Most deps provide imports as simple paths. We prepend the runfiles root.
-    # Note: simple string concatenation assumes paths are relative.
     dep_imports = depset(transitive = [dep[PyInfo].imports for dep in ctx.attr.deps]).to_list()
     for imp in dep_imports:
         python_path_entries.append(runfiles_root_path + "/" + imp)
@@ -119,16 +111,8 @@ def _py_wasm_extension_impl(ctx):
         python_path_entries.append(runfiles_root_path + "/" + d)
 
     python_path = ":".join(python_path_entries)
-
-    # Materialize the runfiles tree to a directory to allow WASI access (dereference symlinks)
-    # WASI sandbox often cannot follow symlinks pointing outside the mapped directories.
     materialized_dir = ctx.actions.declare_directory(ctx.label.name + "_materialized_runfiles")
 
-    # Copy runfiles tree to materialized dir.
-    # We attempt Copy-on-Write (--reflink=auto) to save space, but fall back to copy (-rL)
-    # because:
-    # 1. Hardlinks (-l) fail due to cross-device link errors in Bazel sandbox.
-    # 2. Symlinks fail because WASI sandbox cannot follow them outside mapped dirs.
     ctx.actions.run_shell(
         inputs = depset(symlinked_inputs, transitive = [transitive_srcs]),
         outputs = [materialized_dir],
