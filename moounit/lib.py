@@ -246,6 +246,7 @@ class Moounit:
                 ],
                 "allowed_hosts": manifest.permissions.hosts._values,
                 "allowed_paths": allowed_paths,
+                "config": {"pid": str(os.getpid())},
             },
             wasi=True,
             functions=fns,
@@ -390,25 +391,25 @@ class Moounit:
 
     def verify_and_clear_local_expectations(self):
         errors = []
-        if self.local_expectations:
-            errors.append(f"Unused command expectations: {self.local_expectations}")
-        if self.local_system_time_expectations:
+        if any(e.times > 0 for e in self.local_expectations):
+            errors.append(f"Unused command expectations: {[e for e in self.local_expectations if e.times > 0]}")
+        if any(e.times > 0 for e in self.local_system_time_expectations):
             errors.append(
-                f"Unused system_time expectations: {self.local_system_time_expectations}"
+                f"Unused system_time expectations: {[e for e in self.local_system_time_expectations if e.times > 0]}"
             )
-        if self.local_hash_expectations:
-            errors.append(f"Unused hash expectations: {self.local_hash_expectations}")
-        if self.local_open_clientfd_expectations:
+        if any(e.times > 0 for e in self.local_hash_expectations):
+            errors.append(f"Unused hash expectations: {[e for e in self.local_hash_expectations if e.times > 0]}")
+        if any(e.times > 0 for e in self.local_open_clientfd_expectations):
             errors.append(
-                f"Unused open_clientfd expectations: {self.local_open_clientfd_expectations}"
+                f"Unused open_clientfd expectations: {[e for e in self.local_open_clientfd_expectations if e.times > 0]}"
             )
-        if self.local_write_sock_expectations:
+        if any(e.times > 0 for e in self.local_write_sock_expectations):
             errors.append(
-                f"Unused write_sock expectations: {self.local_write_sock_expectations}"
+                f"Unused write_sock expectations: {[e for e in self.local_write_sock_expectations if e.times > 0]}"
             )
-        if self.local_read_sock_expectations:
+        if any(e.times > 0 for e in self.local_read_sock_expectations):
             errors.append(
-                f"Unused read_sock expectations: {self.local_read_sock_expectations}"
+                f"Unused read_sock expectations: {[e for e in self.local_read_sock_expectations if e.times > 0]}"
             )
 
         self.clear_local_expectations()
@@ -426,29 +427,29 @@ class Moounit:
 
     def verify_and_clear_session_expectations(self):
         errors = []
-        if self.session_expectations:
+        if any(e.times > 0 for e in self.session_expectations):
             errors.append(
-                f"Unused session command expectations: {self.session_expectations}"
+                f"Unused session command expectations: {[e for e in self.session_expectations if e.times > 0]}"
             )
-        if self.session_system_time_expectations:
+        if any(e.times > 0 for e in self.session_system_time_expectations):
             errors.append(
-                f"Unused session system_time expectations: {self.session_system_time_expectations}"
+                f"Unused session system_time expectations: {[e for e in self.session_system_time_expectations if e.times > 0]}"
             )
-        if self.session_hash_expectations:
+        if any(e.times > 0 for e in self.session_hash_expectations):
             errors.append(
-                f"Unused session hash expectations: {self.session_hash_expectations}"
+                f"Unused session hash expectations: {[e for e in self.session_hash_expectations if e.times > 0]}"
             )
-        if self.session_open_clientfd_expectations:
+        if any(e.times > 0 for e in self.session_open_clientfd_expectations):
             errors.append(
-                f"Unused session open_clientfd expectations: {self.session_open_clientfd_expectations}"
+                f"Unused session open_clientfd expectations: {[e for e in self.session_open_clientfd_expectations if e.times > 0]}"
             )
-        if self.session_write_sock_expectations:
+        if any(e.times > 0 for e in self.session_write_sock_expectations):
             errors.append(
-                f"Unused session write_sock expectations: {self.session_write_sock_expectations}"
+                f"Unused session write_sock expectations: {[e for e in self.session_write_sock_expectations if e.times > 0]}"
             )
-        if self.session_read_sock_expectations:
+        if any(e.times > 0 for e in self.session_read_sock_expectations):
             errors.append(
-                f"Unused session read_sock expectations: {self.session_read_sock_expectations}"
+                f"Unused session read_sock expectations: {[e for e in self.session_read_sock_expectations if e.times > 0]}"
             )
 
         self.clear_session_expectations()
@@ -471,12 +472,13 @@ class Moounit:
         expectations = local_list + session_list
         for exp in expectations:
             if matcher(exp):
-                exp.times -= 1
-                if exp.times <= 0:
-                    if exp in local_list:
-                        local_list.remove(exp)
-                    else:
-                        session_list.remove(exp)
+                if exp.times >= 0:
+                    exp.times -= 1
+                    if exp.times <= 0:
+                        if exp in local_list:
+                            local_list.remove(exp)
+                        else:
+                            session_list.remove(exp)
                 return exp
         raise AssertionError(error_msg)
 
