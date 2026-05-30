@@ -13,7 +13,7 @@ def pytest_test(name, srcs, deps = [], args = [], data = [], **kwargs):
         srcs = [
             Label("//tools:pytest_wrapper.py"),
         ] + srcs,
-        main = "pytest_wrapper.py",
+        main = Label("//tools:pytest_wrapper.py"),
         args = [
             "--black",
             "--pylint",
