@@ -3,6 +3,7 @@ Wasm extension rules for Python.
 """
 
 load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("@rules_python//python:defs.bzl", "PyInfo")
 load("//:package_json.bzl", "generate_package_json")
 
 def _py_wasm_extension_impl(ctx):
@@ -92,8 +93,8 @@ def _py_wasm_extension_impl(ctx):
 
         # Calculate root within the merged tree
         root = None
-        if path.endswith("core/types/protos/extensions_pb2.py"):
-            root = path.rsplit("core/types/protos/extensions_pb2.py", 1)[0].rstrip("/")
+        if "core/types/protos/" in path and path.endswith("_pb2.py"):
+            root = path.rsplit("core/types/protos/", 1)[0].rstrip("/")
         elif "google/protobuf" in path:
             root = path.split("google/protobuf", 1)[0].rstrip("/")
 
@@ -136,6 +137,9 @@ def _py_wasm_extension_impl(ctx):
             path = f.short_path
             if path.startswith("../"):
                 path = path[3:]
+
+            if f == ctx.file.main:
+                path = "main.py"
 
             sdk_entry_path = materialized_dir.path + "/" + path
             break
@@ -257,10 +261,10 @@ def py_extension(
     expose_pyi(
         name = name + "_pyi",
         deps = [
-            "@moosync//core/types/protos:extensions_py_proto",
-            "@moosync//core/types/protos:songs_py_proto",
-            "@moosync//core/types/protos:themes_py_proto",
-            "@moosync//core/types/protos:ui_py_proto",
+            Label("//protos:extensions_py_proto"),
+            Label("//protos:songs_py_proto"),
+            Label("//protos:themes_py_proto"),
+            Label("//protos:ui_py_proto"),
         ],
     )
 
@@ -270,7 +274,7 @@ def py_extension(
         main = main,
         deps = deps + [
             Label("//wasm-extension-py:moosync_edk"),
-            "@moosync//core/types/protos:moosync_python_root",
+            Label("//protos:moosync_python_root"),
             ":" + name + "_pyi",
         ],
         data = [

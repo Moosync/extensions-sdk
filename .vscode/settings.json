@@ -38,4 +38,9 @@
     "go.buildOnSave": "off",
     "go.lintOnSave": "off",
     "go.vetOnSave": "off",
+    "rust-analyzer.check.overrideCommand": [
+        "${workspaceFolder}/tools/rust_analyzer.sh",
+        "${saved_file}",
+        "${workspaceFolder}"
+    ]
 }

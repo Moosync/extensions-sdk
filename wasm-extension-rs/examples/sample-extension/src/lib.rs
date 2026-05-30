@@ -1,3 +1,5 @@
+#![no_main]
+
 use moosync_edk::{
     AddToPlaylistRequest, ContextMenuActionRequest, ContextMenuReturnType, CustomRequest,
     ExtensionAccountDetail, ExtensionProviderScope, OauthCallbackRequest,
@@ -323,7 +325,7 @@ impl ContextMenu for SampleExtension {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn init() {
     moosync_edk::handler::register_extension(Box::new(SampleExtension)).unwrap();
 }

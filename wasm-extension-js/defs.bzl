@@ -95,11 +95,21 @@ def js_wasm_extension(
         srcs = [
             bundle_name + ".js",
             Label("//wasm-extension-js:src/plugin.d.ts"),
+            Label("@binaryen_tool//:bin_files"),
         ],
         outs = [name + ".wasm"],
         cmd = """
+            BINS="$(locations {})"
+            FIRST_BIN=$${{BINS%% *}}
+            BIN_DIR=$$(dirname $$FIRST_BIN)
+            export PATH=$$PATH:$$BIN_DIR
             $(location {}) $(location {bundle}.js) -i $(location {}) -o $@
-        """.format(Label("//wasm-extension-js:extism_js_cli"), Label("//wasm-extension-js:src/plugin.d.ts"), bundle = bundle_name),
+        """.format(
+            Label("@binaryen_tool//:bin_files"),
+            Label("//wasm-extension-js:extism_js_cli"),
+            Label("//wasm-extension-js:src/plugin.d.ts"),
+            bundle = bundle_name
+        ),
         tools = [Label("//wasm-extension-js:extism_js_cli")],
         visibility = visibility,
     )

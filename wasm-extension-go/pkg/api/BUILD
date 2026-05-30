@@ -11,10 +11,10 @@ go_library(
     deps = [
         "@com_github_extism_go_pdk//:go_default_library",
         "@com_github_extism_go_pdk//http:go_default_library",
-        "@moosync//core/types/protos:extensions_go_proto",
-        "@moosync//core/types/protos:songs_go_proto",
-        "@moosync//core/types/protos:themes_go_proto",
-        "@moosync//core/types/protos:ui_go_proto",
+        "//protos:extensions_go_proto",
+        "//protos:songs_go_proto",
+        "//protos:themes_go_proto",
+        "//protos:ui_go_proto",
         "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )

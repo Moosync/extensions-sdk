@@ -53,9 +53,9 @@ def go_extension(
         deps = deps + [
             Label("//wasm-extension-go/pkg/api"),
             "@com_github_extism_go_pdk//:go_default_library",
-            "@moosync//core/types/protos:extensions_go_proto",
-            "@moosync//core/types/protos:songs_go_proto",
-            "@moosync//core/types/protos:ui_go_proto",
+            "//protos:extensions_go_proto",
+            "//protos:songs_go_proto",
+            "//protos:ui_go_proto",
         ],
         data = data,
         goos = "wasip1",

@@ -23,20 +23,20 @@ py_library(
         requirement("extism"),
         requirement("pytest"),
         "@com_google_protobuf//:protobuf_python",
-        "@moosync//:moosync_python_root",
-        "@moosync//core/types/protos:extensions_py_proto",
-        "@moosync//core/types/protos:songs_py_proto",
-        "@moosync//core/types/protos:ui_py_proto",
+        "//protos:moosync_python_root",
+        "//protos:extensions_py_proto",
+        "//protos:songs_py_proto",
+        "//protos:ui_py_proto",
     ],
 )
 
 expose_pyi(
     name = "moounit_pyi",
     deps = [
-        "@moosync//core/types/protos:extensions_py_proto",
-        "@moosync//core/types/protos:songs_py_proto",
-        "@moosync//core/types/protos:themes_py_proto",
-        "@moosync//core/types/protos:ui_py_proto",
+        "//protos:extensions_py_proto",
+        "//protos:songs_py_proto",
+        "//protos:themes_py_proto",
+        "//protos:ui_py_proto",
     ],
 )
 
@@ -56,6 +56,6 @@ py_binary(
         requirement("extism"),
         ":moounit_pyi",
         "//wasm-extension-py:moosync_edk",
-        "@moosync//:moosync_python_root",
+        "//protos:moosync_python_root",
     ],
 )

@@ -8,9 +8,9 @@ py_library(
     imports = ["."],
     deps = [
         "@com_google_protobuf//:protobuf_python",
-        "@moosync//core/types/protos:extensions_py_proto",
-        "@moosync//core/types/protos:songs_py_proto",
-        "@moosync//core/types/protos:themes_py_proto",
-        "@moosync//core/types/protos:ui_py_proto",
+        "//protos:extensions_py_proto",
+        "//protos:songs_py_proto",
+        "//protos:themes_py_proto",
+        "//protos:ui_py_proto",
     ],
 )

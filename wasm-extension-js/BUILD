@@ -49,10 +49,10 @@ ts_project(
 filegroup(
     name = "proto_types",
     srcs = [
-        "@moosync//core/types/protos:extensions_ts_proto",
-        "@moosync//core/types/protos:songs_ts_proto",
-        "@moosync//core/types/protos:themes_ts_proto",
-        "@moosync//core/types/protos:ui_ts_proto",
+        "//protos:extensions_ts_proto",
+        "//protos:songs_ts_proto",
+        "//protos:themes_ts_proto",
+        "//protos:ui_ts_proto",
     ],
     output_group = "types",
 )
@@ -60,10 +60,10 @@ filegroup(
 genrule(
     name = "copy_protos",
     srcs = [
-        "@moosync//core/types/protos:extensions_ts_proto",
-        "@moosync//core/types/protos:songs_ts_proto",
-        "@moosync//core/types/protos:ui_ts_proto",
-        "@moosync//core/types/protos:themes_ts_proto",
+        "//protos:extensions_ts_proto",
+        "//protos:songs_ts_proto",
+        "//protos:ui_ts_proto",
+        "//protos:themes_ts_proto",
         ":proto_types",
     ],
     outs = [
@@ -82,10 +82,10 @@ genrule(
 genrule(
     name = "copy_protos_to_lib",
     srcs = [
-        "@moosync//core/types/protos:extensions_ts_proto",
-        "@moosync//core/types/protos:songs_ts_proto",
-        "@moosync//core/types/protos:ui_ts_proto",
-        "@moosync//core/types/protos:themes_ts_proto",
+        "//protos:extensions_ts_proto",
+        "//protos:songs_ts_proto",
+        "//protos:ui_ts_proto",
+        "//protos:themes_ts_proto",
         ":proto_types",
     ],
     outs = [
