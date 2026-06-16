@@ -36,7 +36,7 @@ pub use extensions_proto::moosync::types::{
     VolumeChangedRequest,
 };
 use extensions_proto::struct_proto::google::protobuf::Value as ProtoValue;
-use songs_proto::moosync::types::{Playlist, SearchResult, Song};
+use songs_proto::moosync::types::{Playlist, SearchResult, Song, EntityResult};
 use ui_proto::moosync::types::PreferenceUiData;
 
 pub type MoosyncResult<T> = Result<T, crate::handler::MoosyncError>;
@@ -266,6 +266,9 @@ pub struct CustomRequestReturnType {
     pub redirect_url: Option<String>,
 }
 
+#[derive(Debug)]
+pub struct EntityInfo {} // Dummy definition just in case, wait, not needed.
+
 #[host_fn]
 extern "ExtismHost" {
     fn send_main_command(command: Prost<MainCommand>) -> Prost<MainCommandResponse>;
@@ -407,7 +410,7 @@ pub mod extension_api {
         /// Retrieves the current song being played.
         get_current_song(GetCurrentSong, GetCurrentSongRequest, GetCurrentSongResponse) -> Option<Song>;
 
-        get_entity(GetEntity, GetEntityRequest, GetEntityResponse, options: GetEntityOptions) -> Option<ProtoStruct>;
+        get_entity(GetEntity, GetEntityRequest, GetEntityResponse, options: GetEntityOptions) -> Option<EntityResult>;
 
         /// Retrieves the current state of the player.
         get_player_state(GetPlayerState, GetPlayerStateRequest, GetPlayerStateResponse) -> PlayerState;

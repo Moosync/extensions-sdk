@@ -8,7 +8,33 @@
     ],
     "types": [
       "@extism/js-pdk"
-    ], // while this makes the IDE aware of the ones that are
+    ],
+    "typeRoots": [
+      "node_modules",
+      "../../external/extensions_sdk/wasm-extension-js/node_modules",
+      "../../external/extensions_sdk+/wasm-extension-js/node_modules",
+      "../../../external/extensions_sdk/wasm-extension-js/node_modules",
+      "../../../external/extensions_sdk+/wasm-extension-js/node_modules",
+      "../../../../external/extensions_sdk/wasm-extension-js/node_modules",
+      "../../../../external/extensions_sdk+/wasm-extension-js/node_modules",
+      "node_modules/@types"
+    ],
+    "paths": {
+      "wasm-extension-js": [
+        "../../external/extensions_sdk/wasm-extension-js/lib/src/index.d.ts",
+        "../../external/extensions_sdk+/wasm-extension-js/lib/src/index.d.ts",
+        "../../external/extensions_sdk/wasm-extension-js/src/index.d.ts",
+        "../../external/extensions_sdk+/wasm-extension-js/src/index.d.ts",
+        "../../../external/extensions_sdk/wasm-extension-js/lib/src/index.d.ts",
+        "../../../external/extensions_sdk+/wasm-extension-js/lib/src/index.d.ts",
+        "../../../external/extensions_sdk/wasm-extension-js/src/index.d.ts",
+        "../../../external/extensions_sdk+/wasm-extension-js/src/index.d.ts",
+        "../../../../external/extensions_sdk/wasm-extension-js/lib/src/index.d.ts",
+        "../../../../external/extensions_sdk+/wasm-extension-js/lib/src/index.d.ts",
+        "../../../../external/extensions_sdk/wasm-extension-js/src/index.d.ts",
+        "../../../../external/extensions_sdk+/wasm-extension-js/src/index.d.ts"
+      ]
+    },
     "moduleResolution": "Node",
     "emitDeclarationOnly": false,
     "isolatedModules": false,

@@ -66,8 +66,8 @@ def _py_wasm_extension_impl(ctx):
             path = path[3:]
 
         if f == ctx.file.main:
-            # Rename main file to main.py cause thats how we load our sdk
-            path = "main.py"
+            # Rename main file to sdk_main.py cause thats how we load our sdk
+            path = "sdk_main.py"
 
         out_link = ctx.actions.declare_file(runfiles_root_name + "/" + path)
         ctx.actions.symlink(output = out_link, target_file = f)
@@ -139,7 +139,7 @@ def _py_wasm_extension_impl(ctx):
                 path = path[3:]
 
             if f == ctx.file.main:
-                path = "main.py"
+                path = "sdk_main.py"
 
             sdk_entry_path = materialized_dir.path + "/" + path
             break

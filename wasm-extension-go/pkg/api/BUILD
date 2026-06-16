@@ -16,5 +16,6 @@ go_library(
         "//protos:themes_go_proto",
         "//protos:ui_go_proto",
         "@org_golang_google_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//types/known/durationpb:go_default_library",
     ],
 )

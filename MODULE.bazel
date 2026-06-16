@@ -113,6 +113,12 @@ local_path_override(
     path = "../Moosync",
 )
 
+bazel_dep(name = "moosync_ext", version = "0.0.1")
+local_path_override(
+    module_name = "moosync_ext",
+    path = "../moosync-exts",
+)
+
 bazel_dep(name = "rules_rust_prost", version = "0.68.1")
 bazel_dep(name = "protobuf", version = "29.1", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_proto", version = "7.1.0")

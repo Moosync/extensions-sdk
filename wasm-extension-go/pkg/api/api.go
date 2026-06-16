@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	pdk "github.com/extism/go-pdk"
 	pdkhttp "github.com/extism/go-pdk/http"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	extensions "github.com/moosync/moosync/types/extensions"
 	songs "github.com/moosync/moosync/types/songs"
@@ -507,4 +509,9 @@ func EnableHttp() {
 func init() {
 	// Force export of handle_extension_command to prevent dead code elimination
 	_ = handle_extension_command
+}
+
+// DurationToProto converts a native time.Duration to a protobuf duration.
+func DurationToProto(d time.Duration) *durationpb.Duration {
+	return durationpb.New(d)
 }

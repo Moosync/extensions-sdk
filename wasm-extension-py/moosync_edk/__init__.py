@@ -1,5 +1,7 @@
 import sys
 import extism
+from datetime import timedelta
+from google.protobuf.duration_pb2 import Duration
 from typing import Optional, List, Union, Any, cast
 from core.types.protos import extensions_pb2
 from core.types.protos import songs_pb2
@@ -556,3 +558,10 @@ def entry():
             print("WARNING: 'main' module does not have an 'entry' function")
     else:
         raise Exception("Extension module not loaded")
+
+def duration_to_proto(td: timedelta) -> Duration:
+    """Convert datetime.timedelta to google.protobuf.Duration."""
+    duration = Duration()
+    duration.seconds = int(td.total_seconds())
+    duration.nanos = int((td.microseconds % 1000000) * 1000)
+    return duration

@@ -68,6 +68,9 @@ proto_library(
     srcs = ["songs.proto"],
     strip_import_prefix = "/protos",
     import_prefix = "core/types/protos",
+    deps = [
+        "@com_google_protobuf//:duration_proto",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -88,6 +91,7 @@ proto_library(
     deps = [
         ":songs_proto",
         ":ui_proto",
+        "@com_google_protobuf//:duration_proto",
         "@com_google_protobuf//:empty_proto",
         "@com_google_protobuf//:struct_proto",
     ],
@@ -113,6 +117,12 @@ rust_prost_library(
 rust_prost_library(
     name = "songs_rs",
     proto = ":songs_proto",
+    visibility = ["//visibility:public"],
+)
+
+rust_prost_library(
+    name = "duration_rs",
+    proto = "@com_google_protobuf//:duration_proto",
     visibility = ["//visibility:public"],
 )
 

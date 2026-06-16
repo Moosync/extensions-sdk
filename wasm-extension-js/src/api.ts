@@ -11,7 +11,7 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-import { Message } from "@bufbuild/protobuf";
+import { Message, Duration } from "@bufbuild/protobuf";
 import {
   ExtensionAccountDetail,
   ExtensionProviderScope,
@@ -444,4 +444,16 @@ export function hash(hash_type: "SHA1" | "SHA256" | "SHA512", data: string) {
   // @ts-ignore
   const response = Memory.find(offset).readBytes();
   return response;
+}
+
+/**
+ * Converts a native duration (in milliseconds) into a protobuf Duration.
+ * @param ms Duration in milliseconds.
+ * @returns Protobuf Duration object.
+ */
+export function durationToProto(ms: number): Duration {
+  return new Duration({
+    seconds: BigInt(Math.floor(ms / 1000)),
+    nanos: (ms % 1000) * 1000000,
+  });
 }

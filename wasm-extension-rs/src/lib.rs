@@ -19,11 +19,14 @@ use extism_pdk::{plugin_fn, FnResult, Prost};
 
 // Re-export generated types
 pub use extensions_proto;
+pub use songs_proto;
+pub use themes_proto;
+pub use ui_proto;
+pub use duration_proto;
+pub use prost_types;
 pub use extensions_proto::moosync::types::*;
 pub use songs_proto::moosync::types::*;
 pub use themes_proto::moosync::types::*;
-pub use ui_proto::moosync::types::*;
-
 pub use ui_proto::moosync::types::*;
 
 pub mod api;
@@ -53,4 +56,12 @@ pub fn handle_extension_command(
 ) -> FnResult<Prost<ExtensionCommandResponse>> {
     let res = handler::handle_command(cmd)?;
     Ok(Prost(res))
+}
+
+/// Converts a standard Rust `Duration` into a protobuf `Duration`.
+pub fn duration_to_proto(d: std::time::Duration) -> duration_proto::google::protobuf::Duration {
+    duration_proto::google::protobuf::Duration {
+        seconds: d.as_secs() as i64,
+        nanos: d.subsec_nanos() as i32,
+    }
 }

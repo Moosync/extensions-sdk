@@ -11,8 +11,8 @@ def js_wasm_extension(
         srcs,
         deps = [],
         data = [],
-        tsconfig = "tsconfig.json",
-        rollup_config = "rollup.config.mjs",
+        tsconfig = Label("//wasm-extension-js:tsconfig.json"),
+        rollup_config = Label("//wasm-extension-js:rollup.config.mjs"),
         visibility = None,
         display_name = None,
         package_name = None,
@@ -56,13 +56,31 @@ def js_wasm_extension(
     bundle_name = name + "_bundle"
     out_dir = name + "_lib"
 
+    # Copy config files to the local package output tree to avoid copy_to_bin external repository issues
+    tsconfig_local = name + "_tsconfig.json"
+    native.genrule(
+        name = name + "_copy_tsconfig",
+        srcs = [tsconfig],
+        outs = [tsconfig_local],
+        cmd = 'sed \'s#"outDir": "./lib"#"outDir": "./{out_dir}"#g\' $< > $@'.format(out_dir = out_dir),
+    )
+
+    rollup_config_local = name + "_rollup.config.mjs"
+    native.genrule(
+        name = name + "_copy_rollup_config",
+        srcs = [rollup_config],
+        outs = [rollup_config_local],
+        cmd = "cp $< $@",
+    )
+
     # Compilation
     ts_project(
         name = ts_lib_name,
         srcs = srcs,
         declaration = True,
+        declaration_map = True,
         out_dir = out_dir,
-        tsconfig = tsconfig,
+        tsconfig = ":" + tsconfig_local,
         deps = deps + [
             Label("//wasm-extension-js:node_modules/@extism/js-pdk"),
             Label("//wasm-extension-js:wasm_extension_js_lib"),
@@ -70,7 +88,6 @@ def js_wasm_extension(
         data = data,
         visibility = visibility,
     )
-
     # Bundling
     rollup(
         name = bundle_name,
@@ -78,7 +95,7 @@ def js_wasm_extension(
         format = "cjs",
         node_modules = Label("//wasm-extension-js:node_modules"),
         sourcemap = "false",
-        config_file = rollup_config,
+        config_file = ":" + rollup_config_local,
         deps = [
             ":" + ts_lib_name,
             Label("//wasm-extension-js:node_modules/@rollup/plugin-alias"),

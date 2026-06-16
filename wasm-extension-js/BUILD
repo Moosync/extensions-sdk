@@ -117,7 +117,11 @@ js_library(
 
 js_library(
     name = "wasm_extension_js_lib",
-    srcs = ["package.json"],
+    srcs = [
+        "package.json",
+        "tsconfig.json",
+        "rollup.config.mjs",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         ":protos_js_lib",

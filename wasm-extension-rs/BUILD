@@ -15,6 +15,7 @@ rust_library(
         "//protos:songs_rs",
         "//protos:themes_rs",
         "//protos:ui_rs",
+        "//protos:duration_rs",
         "@sdk_wasm_crates//:extism-convert",
         "@sdk_wasm_crates//:extism-pdk",
         "@sdk_wasm_crates//:lazy_static",
