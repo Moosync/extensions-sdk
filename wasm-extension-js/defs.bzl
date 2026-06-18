@@ -5,6 +5,7 @@ Wasm extension rules for TypeScript/JavaScript.
 load("@aspect_rules_rollup//rollup:defs.bzl", "rollup")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("//:package_json.bzl", "generate_package_json")
+load("//:package_extension.bzl", "package_extension")
 
 def js_wasm_extension(
         name,
@@ -132,7 +133,22 @@ def js_wasm_extension(
     )
 
     native.filegroup(
-        name = name,
+        name = name + "_unpacked",
         srcs = [":" + name + "_wasm"] + pkg_json_targets,
+        visibility = visibility,
+    )
+
+    package_extension(
+        name = name,
+        extension_target = ":" + name + "_unpacked",
+        visibility = visibility,
+    )
+
+    native.filegroup(
+        name = name,
+        srcs = [
+            ":" + name + "_unpacked",
+            ":" + name + "_msxt",
+        ],
         visibility = visibility,
     )

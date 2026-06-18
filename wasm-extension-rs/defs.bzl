@@ -4,6 +4,7 @@ Wasm extension rules for Rust.
 
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("//:package_json.bzl", "generate_package_json")
+load("//:package_extension.bzl", "package_extension")
 
 def rust_extension(
         name,
@@ -44,11 +45,11 @@ def rust_extension(
         allowed_paths = allowed_paths,
         data = data,
         visibility = kwargs.get("visibility"),
-        wasm_target = ":" + name + "_wasm_file",
+        wasm_target = ":" + name + "_wasm",
     )
 
     rust_binary(
-        name = name + "_wasm",
+        name = name + "_wasm_bin",
         srcs = srcs,
         deps = deps + [Label("//wasm-extension-rs:wasm_extension_rs")],
         data = data,
@@ -59,15 +60,30 @@ def rust_extension(
     )
 
     native.genrule(
-        name = name + "_wasm_file",
-        srcs = [":" + name + "_wasm"],
+        name = name + "_wasm",
+        srcs = [":" + name + "_wasm_bin"],
         outs = [name + ".wasm"],
         cmd = "cp $< $@",
         visibility = kwargs.get("visibility"),
     )
 
     native.filegroup(
+        name = name + "_unpacked",
+        srcs = [":" + name + "_wasm"] + pkg_json_targets,
+        visibility = kwargs.get("visibility"),
+    )
+
+    package_extension(
         name = name,
-        srcs = [":" + name + "_wasm_file"] + pkg_json_targets,
+        extension_target = ":" + name + "_unpacked",
+        visibility = kwargs.get("visibility"),
+    )
+
+    native.filegroup(
+        name = name,
+        srcs = [
+            ":" + name + "_unpacked",
+            ":" + name + "_msxt",
+        ],
         **kwargs
     )

@@ -4,6 +4,7 @@ Wasm extension rules for Go.
 
 load("@rules_go//go:def.bzl", "go_binary")
 load("//:package_json.bzl", "generate_package_json")
+load("//:package_extension.bzl", "package_extension")
 
 def go_extension(
         name,
@@ -44,18 +45,18 @@ def go_extension(
         allowed_paths = allowed_paths,
         data = data,
         visibility = visibility,
-        wasm_target = ":" + name + "_wasm_file",
+        wasm_target = ":" + name + "_wasm",
     )
 
     go_binary(
-        name = name + "_wasm",
+        name = name + "_wasm_bin",
         srcs = srcs,
         deps = deps + [
             Label("//wasm-extension-go/pkg/api"),
-            "@com_github_extism_go_pdk//:go_default_library",
-            "//protos:extensions_go_proto",
-            "//protos:songs_go_proto",
-            "//protos:ui_go_proto",
+            Label("@com_github_extism_go_pdk//:go_default_library"),
+            Label("//protos:extensions_go_proto"),
+            Label("//protos:songs_go_proto"),
+            Label("//protos:ui_go_proto"),
         ],
         data = data,
         goos = "wasip1",
@@ -68,16 +69,30 @@ def go_extension(
     )
 
     native.genrule(
-        name = name + "_wasm_file",
-        srcs = [":" + name + "_wasm"],
+        name = name + "_wasm",
+        srcs = [":" + name + "_wasm_bin"],
         outs = [name + ".wasm"],
         cmd = "cp $< $@",
         visibility = visibility,
     )
 
     native.filegroup(
-        name = name,
-        srcs = [":" + name + "_wasm_file"] + pkg_json_targets,
+        name = name + "_unpacked",
+        srcs = [":" + name + "_wasm"] + pkg_json_targets,
         visibility = visibility,
-        **kwargs
+    )
+
+    package_extension(
+        name = name,
+        extension_target = ":" + name + "_unpacked",
+        visibility = visibility,
+    )
+
+    native.filegroup(
+        name = name,
+        srcs = [
+            ":" + name + "_unpacked",
+            ":" + name + "_msxt",
+        ],
+        visibility = visibility,
     )

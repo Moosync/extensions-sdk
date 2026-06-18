@@ -1,10 +1,10 @@
-load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@aspect_rules_ts//ts:proto.bzl", "ts_proto_library")
 load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 load("@proto_npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_go//proto:def.bzl", "go_proto_library")
-load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_python//python:defs.bzl", "py_library")
+load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -55,39 +55,40 @@ genrule(
 proto_library(
     name = "ui_proto",
     srcs = ["ui.proto"],
-    strip_import_prefix = "/protos",
     import_prefix = "core/types/protos",
+    strip_import_prefix = "/protos",
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_protobuf//:struct_proto",
     ],
-    visibility = ["//visibility:public"],
 )
 
 proto_library(
     name = "songs_proto",
     srcs = ["songs.proto"],
-    strip_import_prefix = "/protos",
     import_prefix = "core/types/protos",
+    strip_import_prefix = "/protos",
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_protobuf//:duration_proto",
     ],
-    visibility = ["//visibility:public"],
 )
 
 proto_library(
     name = "themes_proto",
     srcs = ["themes.proto"],
-    strip_import_prefix = "/protos",
     import_prefix = "core/types/protos",
-    deps = [":songs_proto"],
+    strip_import_prefix = "/protos",
     visibility = ["//visibility:public"],
+    deps = [":songs_proto"],
 )
 
 proto_library(
     name = "extensions_proto",
     srcs = ["extensions.proto"],
-    strip_import_prefix = "/protos",
     import_prefix = "core/types/protos",
+    strip_import_prefix = "/protos",
+    visibility = ["//visibility:public"],
     deps = [
         ":songs_proto",
         ":ui_proto",
@@ -95,7 +96,6 @@ proto_library(
         "@com_google_protobuf//:empty_proto",
         "@com_google_protobuf//:struct_proto",
     ],
-    visibility = ["//visibility:public"],
 )
 
 # -------------------------------------------------------------

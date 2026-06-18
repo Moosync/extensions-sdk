@@ -5,6 +5,7 @@ Wasm extension rules for Python.
 load("@aspect_rules_py//py:defs.bzl", "py_binary")
 load("@rules_python//python:defs.bzl", "PyInfo")
 load("//:package_json.bzl", "generate_package_json")
+load("//:package_extension.bzl", "package_extension")
 
 def _py_wasm_extension_impl(ctx):
     extism_py = ctx.executable._extism_py
@@ -293,7 +294,22 @@ def py_extension(
     )
 
     native.filegroup(
-        name = name,
+        name = name + "_unpacked",
         srcs = [":" + name + "_wasm"] + pkg_json_targets,
+        visibility = kwargs.get("visibility"),
+    )
+
+    package_extension(
+        name = name,
+        extension_target = ":" + name + "_unpacked",
+        visibility = kwargs.get("visibility"),
+    )
+
+    native.filegroup(
+        name = name,
+        srcs = [
+            ":" + name + "_unpacked",
+            ":" + name + "_msxt",
+        ],
         **kwargs
     )
