@@ -108,15 +108,17 @@ filegroup(
 
 bazel_dep(name = "rules_rust", version = "0.68.1")
 bazel_dep(name = "moosync")
-local_path_override(
+git_override(
     module_name = "moosync",
-    path = "../Moosync",
+    remote = "/home/ovenoboyo/projects/Moosync",
+    branch = "slint",
 )
 
 bazel_dep(name = "moosync_ext", version = "0.0.1")
-local_path_override(
+git_override(
     module_name = "moosync_ext",
-    path = "../moosync-exts",
+    remote = "/home/ovenoboyo/projects/moosync-exts",
+    branch = "bazel",
 )
 
 bazel_dep(name = "rules_rust_prost", version = "0.68.1")
