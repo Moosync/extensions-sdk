@@ -1,2 +1,7 @@
 wasm-extension-js/node_modules
 protos/node_modules
+bazel-out
+bazel-bin
+bazel-testlogs
+bazel-extensions-sdk
+
