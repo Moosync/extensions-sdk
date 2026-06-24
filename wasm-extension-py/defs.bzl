@@ -4,8 +4,8 @@ Wasm extension rules for Python.
 
 load("@aspect_rules_py//py:defs.bzl", "py_binary")
 load("@rules_python//python:defs.bzl", "PyInfo")
-load("//:package_json.bzl", "generate_package_json")
 load("//:package_extension.bzl", "package_extension")
+load("//:package_json.bzl", "generate_package_json")
 
 def _py_wasm_extension_impl(ctx):
     extism_py = ctx.executable._extism_py

@@ -1,17 +1,15 @@
 import sys
-import extism
 from datetime import timedelta
-from google.protobuf.duration_pb2 import Duration
-from typing import Optional, List, Union, Any, cast
-from core.types.protos import extensions_pb2
-from core.types.protos import songs_pb2
-from core.types.protos import ui_pb2
-from core.types.protos import themes_pb2
+from typing import Any, List, Optional, Union, cast
+
+import extism
+from core.types.protos import extensions_pb2, songs_pb2, themes_pb2, ui_pb2
 
 # Re-export protos
 from core.types.protos.extensions_pb2 import *
 from core.types.protos.songs_pb2 import *
 from core.types.protos.ui_pb2 import *
+from google.protobuf.duration_pb2 import Duration
 
 # Fix module split issue when running as entry point
 if "moosync_edk" not in sys.modules:
@@ -541,7 +539,7 @@ def handle_extension_command():
 # The extension module is expected to be named 'main' (main.py).
 extension_module = None
 try:
-    import main as extension_module
+    import sdk_main as extension_module
 except ImportError as e:
     print(f"WARNING: Could not import 'main' module: {e}")
 
@@ -558,6 +556,7 @@ def entry():
             print("WARNING: 'main' module does not have an 'entry' function")
     else:
         raise Exception("Extension module not loaded")
+
 
 def duration_to_proto(td: timedelta) -> Duration:
     """Convert datetime.timedelta to google.protobuf.Duration."""
