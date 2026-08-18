@@ -107,6 +107,12 @@ filegroup(
 )
 
 bazel_dep(name = "rules_rust", version = "0.68.1")
+single_version_override(
+    module_name = "rules_rust",
+    patch_strip = 1,
+    patches = ["//patches:rules_rust_gnu_windows.patch"],
+    version = "0.68.1",
+)
 bazel_dep(name = "moosync")
 git_override(
     module_name = "moosync",
