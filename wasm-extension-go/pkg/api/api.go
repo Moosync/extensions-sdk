@@ -530,11 +530,10 @@ type HttpResponse struct {
 	StatusText string
 	Headers    map[string]string
 	Body       []byte
-	Error      string
 }
 
 func (r *HttpResponse) OK() bool {
-	return r.StatusCode >= 200 && r.StatusCode < 300 && r.Error == ""
+	return r.StatusCode >= 200 && r.StatusCode < 300
 }
 
 func (r *HttpResponse) Text() string {
@@ -545,7 +544,7 @@ func (r *HttpResponse) JSON(v any) error {
 	return json.Unmarshal(r.Body, v)
 }
 
-func BatchHttpRequest(requests []HttpRequest) ([]HttpResponse, error) {
+func BatchHttpRequest(requests []HttpRequest) ([]HttpResponse, []error) {
 	if len(requests) == 0 {
 		return nil, nil
 	}
@@ -575,7 +574,7 @@ func BatchHttpRequest(requests []HttpRequest) ([]HttpResponse, error) {
 
 	batchBytes, err := proto.Marshal(batch)
 	if err != nil {
-		return nil, err
+		return nil, []error{err}
 	}
 
 	mem := pdk.AllocateBytes(batchBytes)
@@ -585,28 +584,40 @@ func BatchHttpRequest(requests []HttpRequest) ([]HttpResponse, error) {
 
 	respBatch := &extensions.BatchHttpResponse{}
 	if err := proto.Unmarshal(rBytes, respBatch); err != nil {
-		return nil, err
+		return nil, []error{err}
 	}
 
-	results := make([]HttpResponse, len(respBatch.Responses))
-	for i, resp := range respBatch.Responses {
-		errMsg := ""
-		if resp.Error != nil {
-			errMsg = *resp.Error
-		}
-		results[i] = HttpResponse{
-			StatusCode: resp.StatusCode,
-			StatusText: resp.StatusText,
-			Headers:    resp.Headers,
-			Body:       resp.Body,
-			Error:      errMsg,
+	if respBatch.Error != nil && *respBatch.Error != "" {
+		return nil, []error{errors.New(*respBatch.Error)}
+	}
+
+	responses := make([]HttpResponse, 0, len(respBatch.Responses))
+	var errs []error
+	for i, res := range respBatch.Responses {
+		switch r := res.Result.(type) {
+		case *extensions.HttpResult_Response:
+			if r.Response != nil {
+				responses = append(responses, HttpResponse{
+					StatusCode: r.Response.StatusCode,
+					StatusText: r.Response.StatusText,
+					Headers:    r.Response.Headers,
+					Body:       r.Response.Body,
+				})
+			}
+		case *extensions.HttpResult_Error:
+			errs = append(errs, fmt.Errorf("request #%d failed: %s", i, r.Error))
+		default:
+			errs = append(errs, fmt.Errorf("request #%d returned empty result", i))
 		}
 	}
 
-	return results, nil
+	if len(errs) > 0 {
+		return responses, errs
+	}
+	return responses, nil
 }
 
-func BatchHttpGet(urls []string, headers map[string]string) ([]HttpResponse, error) {
+func BatchHttpGet(urls []string, headers map[string]string) ([]HttpResponse, []error) {
 	reqs := make([]HttpRequest, len(urls))
 	for i, u := range urls {
 		reqs[i] = HttpRequest{
@@ -619,9 +630,9 @@ func BatchHttpGet(urls []string, headers map[string]string) ([]HttpResponse, err
 }
 
 func SendHttpRequest(req HttpRequest) (HttpResponse, error) {
-	resps, err := BatchHttpRequest([]HttpRequest{req})
-	if err != nil {
-		return HttpResponse{}, err
+	resps, errs := BatchHttpRequest([]HttpRequest{req})
+	if len(errs) > 0 {
+		return HttpResponse{}, errs[0]
 	}
 	if len(resps) == 0 {
 		return HttpResponse{}, errors.New("host runner returned empty response")

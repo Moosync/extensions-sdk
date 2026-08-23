@@ -2,7 +2,38 @@ import sys
 from datetime import timedelta
 from typing import Any, List, Optional, Union, cast
 
-import extism
+try:
+    import extism
+    if not hasattr(extism, "import_fn"):
+        raise ImportError()
+except (ImportError, AttributeError):
+    class _MockExtism:
+        def import_fn(self, *args, **kwargs):
+            return lambda fn: fn
+        def plugin_fn(self, fn):
+            return fn
+        class memory:
+            @staticmethod
+            def alloc(*args): return None
+            @staticmethod
+            def find(*args): return None
+            @staticmethod
+            def bytes(*args): return b""
+            @staticmethod
+            def free(*args): pass
+        class LogLevel:
+            Debug = 0
+            Info = 1
+            Warn = 2
+            Error = 3
+        @staticmethod
+        def log(*args): pass
+        @staticmethod
+        def input_bytes(): return b""
+        @staticmethod
+        def output_bytes(*args): pass
+    extism = _MockExtism()
+
 from core.types.protos import extensions_pb2, songs_pb2, themes_pb2, ui_pb2
 
 # Re-export protos
@@ -90,11 +121,10 @@ class HttpResponse:
         self.status_text: str = proto.status_text
         self.headers: dict = dict(proto.headers)
         self.body: bytes = proto.body
-        self.error: Optional[str] = proto.error if proto.HasField("error") else None
 
     @property
     def ok(self) -> bool:
-        return 200 <= self.status_code < 300 and self.error is None
+        return 200 <= self.status_code < 300
 
     @property
     def text(self) -> str:
@@ -103,6 +133,20 @@ class HttpResponse:
     def json(self) -> Any:
         import json
         return json.loads(self.text)
+
+
+class HttpResult:
+    def __init__(self, proto: extensions_pb2.HttpResult):
+        which = proto.WhichOneof("result")
+        if which == "response":
+            self.response: Optional[HttpResponse] = HttpResponse(proto.response)
+            self.error: Optional[str] = None
+        elif which == "error":
+            self.response = None
+            self.error = proto.error
+        else:
+            self.response = None
+            self.error = "Empty HTTP result"
 
 
 def http_batch_request(requests: List[Union[HttpRequest, dict]]) -> List[HttpResponse]:
@@ -132,7 +176,20 @@ def http_batch_request(requests: List[Union[HttpRequest, dict]]) -> List[HttpRes
 
     batch_resp = extensions_pb2.BatchHttpResponse()
     batch_resp.ParseFromString(res_bytes)
-    return [HttpResponse(p) for p in batch_resp.responses]
+
+    if batch_resp.HasField("error") and batch_resp.error:
+        raise Exception(batch_resp.error)
+
+    responses = []
+    for idx, item in enumerate(batch_resp.responses):
+        which = item.WhichOneof("result")
+        if which == "response":
+            responses.append(HttpResponse(item.response))
+        elif which == "error":
+            raise Exception(f"Request #{idx} failed: {item.error}")
+        else:
+            raise Exception(f"Request #{idx} returned empty HTTP result")
+    return responses
 
 
 def http_batch_get(

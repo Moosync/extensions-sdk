@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::collections::HashMap;
-use extism_pdk::{host_fn, Prost};
-pub use extensions_proto::moosync::types::{
-    BatchHttpRequest, BatchHttpResponse, HttpRequest as ProtoHttpRequest,
-    HttpResponse as ProtoHttpResponse,
-};
 use crate::handler::MoosyncError;
+pub use extensions_proto::moosync::types::{
+    http_result, BatchHttpRequest, BatchHttpResponse, HttpRequest as ProtoHttpRequest,
+    HttpResponse as ProtoHttpResponse, HttpResult,
+};
+use extism_pdk::{host_fn, Prost};
+use std::collections::HashMap;
 
 #[host_fn]
 extern "ExtismHost" {
@@ -125,12 +125,11 @@ pub struct HttpResponse {
     pub status_text: String,
     pub headers: HashMap<String, String>,
     pub body: Vec<u8>,
-    pub error: Option<String>,
 }
 
 impl HttpResponse {
     pub fn is_success(&self) -> bool {
-        self.status_code >= 200 && self.status_code < 300 && self.error.is_none()
+        self.status_code >= 200 && self.status_code < 300
     }
 
     pub fn text(&self) -> Result<String, std::string::FromUtf8Error> {
@@ -149,7 +148,6 @@ impl From<ProtoHttpResponse> for HttpResponse {
             status_text: resp.status_text,
             headers: resp.headers,
             body: resp.body,
-            error: resp.error,
         }
     }
 }
@@ -178,6 +176,9 @@ pub fn get<S: AsRef<str>>(
 }
 
 /// Executes multiple HTTP requests concurrently in parallel on the host.
+/// Returns Ok only if all requests succeed; returns Err if even one request fails.
+/// Failure and Success is in terms of Moosync's validation
+/// and not HTTP status codes
 pub fn batch_request(requests: &[HttpRequest]) -> Result<Vec<HttpResponse>, MoosyncError> {
     if requests.is_empty() {
         return Ok(Vec::new());
@@ -188,7 +189,30 @@ pub fn batch_request(requests: &[HttpRequest]) -> Result<Vec<HttpResponse>, Moos
     };
     let res = unsafe { batch_http_request(Prost(batch)) }
         .map_err(|e| MoosyncError::String(format!("batch_http_request failed: {e:?}")))?;
-    Ok(res.0.responses.into_iter().map(Into::into).collect())
+
+    if let Some(err) = res.0.error {
+        return Err(MoosyncError::String(err));
+    }
+
+    let mut results = Vec::new();
+    for (idx, item) in res.0.responses.into_iter().enumerate() {
+        match item.result {
+            Some(http_result::Result::Response(r)) => {
+                results.push(r.into());
+            }
+            Some(http_result::Result::Error(err)) => {
+                return Err(MoosyncError::String(format!(
+                    "Request #{idx} failed: {err}"
+                )));
+            }
+            None => {
+                return Err(MoosyncError::String(format!(
+                    "Request #{idx} returned empty HTTP result"
+                )));
+            }
+        }
+    }
+    Ok(results)
 }
 
 /// Convenience helper to perform parallel GET requests for a list of URLs.

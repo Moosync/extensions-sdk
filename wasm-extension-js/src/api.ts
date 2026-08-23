@@ -32,7 +32,6 @@ import {
   ExtensionCommand,
   ExtensionCommandResponse,
   UpdateAccountsRequest,
-
   RequestedPlaylistsRequest,
   RequestedPlaylistSongsRequest,
   RequestedPlaylistFromUrlRequest,
@@ -78,7 +77,6 @@ import {
   SongQueueChangedResponse,
   VolumeChangedResponse,
   ContextMenuActionResponse,
-
   RegisterOauthRequest,
   MainCommandResponse,
   RegisterUserPreferenceRequest,
@@ -122,10 +120,8 @@ export {
   PreferenceArgs,
 };
 
-
-
 // Define ExtensionContext locally if not in protos
-export class ExtensionContext { }
+export class ExtensionContext {}
 
 export interface AccountLoginArgs {
   packageName: string;
@@ -134,18 +130,28 @@ export interface AccountLoginArgs {
 }
 
 type ExtensionEventOneOf = ExtensionCommand["event"];
-export type ExtensionEventCase = Exclude<ExtensionEventOneOf["case"], undefined>;
-export type EventPayload<K extends ExtensionEventCase> = Extract<ExtensionEventOneOf, { case: K }>["value"];
+export type ExtensionEventCase = Exclude<
+  ExtensionEventOneOf["case"],
+  undefined
+>;
+export type EventPayload<K extends ExtensionEventCase> = Extract<
+  ExtensionEventOneOf,
+  { case: K }
+>["value"];
 
 type ExtensionResponseOneOf = ExtensionCommandResponse["response"];
-export type ResponsePayload<K extends ExtensionEventCase> = Extract<ExtensionResponseOneOf, { case: K }>["value"];
+export type ResponsePayload<K extends ExtensionEventCase> = Extract<
+  ExtensionResponseOneOf,
+  { case: K }
+>["value"];
 
 export interface ExtensionAPI {
   on<K extends ExtensionEventCase>(
     event: K,
-    cb: (req: EventPayload<K>) => ResponsePayload<K> | Promise<ResponsePayload<K>> | void
+    cb: (
+      req: EventPayload<K>,
+    ) => ResponsePayload<K> | Promise<ResponsePayload<K>> | void,
   ): void;
-
 
   getSong(options: GetSongOptions): Song[];
   getCurrentSong(): Song | undefined;
@@ -167,11 +173,11 @@ export interface ExtensionAPI {
   getSecure(data: PreferenceData): PreferenceData;
   fetch(
     request: string | BatchFetchRequest,
-    options?: BatchFetchOptions
+    options?: BatchFetchOptions,
   ): Promise<BatchFetchResponse>;
   batchFetch(
     requests: (string | BatchFetchRequest)[],
-    options?: BatchFetchOptions
+    options?: BatchFetchOptions,
   ): Promise<BatchFetchResponse[]>;
 }
 
@@ -199,7 +205,12 @@ function sendMainCommand(cmd: MainCommand): MainCommandResponse {
 }
 
 class Api implements ExtensionAPI {
-  on<K extends ExtensionEventCase>(event: K, cb: (req: EventPayload<K>) => ResponsePayload<K> | Promise<ResponsePayload<K>> | void): void {
+  on<K extends ExtensionEventCase>(
+    event: K,
+    cb: (
+      req: EventPayload<K>,
+    ) => ResponsePayload<K> | Promise<ResponsePayload<K>> | void,
+  ): void {
     if (!LISTENERS) {
       LISTENERS = {};
     }
@@ -214,8 +225,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "updateAccounts",
-        value: new UpdateAccountsRequest({ account: accountId })
-      }
+        value: new UpdateAccountsRequest({ account: accountId }),
+      },
     });
     sendMainCommand(cmd);
   }
@@ -224,8 +235,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "registerOauth",
-        value: new RegisterOauthRequest({ url })
-      }
+        value: new RegisterOauthRequest({ url }),
+      },
     });
     const res = sendMainCommand(cmd);
     if (res.response.case === "registerOauth") {
@@ -238,8 +249,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "registerUserPreference",
-        value: new RegisterUserPreferenceRequest({ prefs: preferences })
-      }
+        value: new RegisterUserPreferenceRequest({ prefs: preferences }),
+      },
     });
     sendMainCommand(cmd);
   }
@@ -248,8 +259,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "unregisterUserPreference",
-        value: new UnregisterUserPreferenceRequest({ keys: preferenceIds })
-      }
+        value: new UnregisterUserPreferenceRequest({ keys: preferenceIds }),
+      },
     });
     sendMainCommand(cmd);
   }
@@ -258,8 +269,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "openExternalUrl",
-        value: new OpenExternalUrlRequest({ url })
-      }
+        value: new OpenExternalUrlRequest({ url }),
+      },
     });
     sendMainCommand(cmd);
   }
@@ -268,8 +279,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "addPlaylist",
-        value: new AddPlaylistRequest({ playlist })
-      }
+        value: new AddPlaylistRequest({ playlist }),
+      },
     });
     sendMainCommand(cmd);
   }
@@ -278,8 +289,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "addSongs",
-        value: new AddSongsRequest({ songs })
-      }
+        value: new AddSongsRequest({ songs }),
+      },
     });
     sendMainCommand(cmd);
   }
@@ -288,8 +299,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "addToPlaylist",
-        value: req
-      }
+        value: req,
+      },
     });
     sendMainCommand(cmd);
   }
@@ -298,8 +309,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "getPreference",
-        value: new GetPreferenceRequest({ data })
-      }
+        value: new GetPreferenceRequest({ data }),
+      },
     });
     const res = sendMainCommand(cmd);
     if (res.response.case === "getPreference") {
@@ -312,8 +323,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "getSecure",
-        value: new GetSecureRequest({ data })
-      }
+        value: new GetSecureRequest({ data }),
+      },
     });
     const res = sendMainCommand(cmd);
     if (res.response.case === "getSecure") {
@@ -326,8 +337,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "getSong",
-        value: new GetSongRequest({ options })
-      }
+        value: new GetSongRequest({ options }),
+      },
     });
     const res = sendMainCommand(cmd);
     if (res.response.case === "getSong") {
@@ -340,8 +351,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "getCurrentSong",
-        value: new GetCurrentSongRequest()
-      }
+        value: new GetCurrentSongRequest(),
+      },
     });
     const res = sendMainCommand(cmd);
     if (res.response.case === "getCurrentSong") {
@@ -354,8 +365,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "getPlayerState",
-        value: new GetPlayerStateRequest()
-      }
+        value: new GetPlayerStateRequest(),
+      },
     });
     const res = sendMainCommand(cmd);
     if (res.response.case === "getPlayerState") {
@@ -368,8 +379,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "getVolume",
-        value: new GetVolumeRequest()
-      }
+        value: new GetVolumeRequest(),
+      },
     });
     const res = sendMainCommand(cmd);
     if (res.response.case === "getVolume") {
@@ -382,8 +393,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "getTime",
-        value: new GetTimeRequest()
-      }
+        value: new GetTimeRequest(),
+      },
     });
     const res = sendMainCommand(cmd);
     if (res.response.case === "getTime") {
@@ -396,8 +407,8 @@ class Api implements ExtensionAPI {
     const cmd = new MainCommand({
       command: {
         case: "getQueue",
-        value: new GetQueueRequest()
-      }
+        value: new GetQueueRequest(),
+      },
     });
     sendMainCommand(cmd);
     return [];
@@ -405,14 +416,14 @@ class Api implements ExtensionAPI {
 
   fetch(
     request: string | BatchFetchRequest,
-    options?: BatchFetchOptions
+    options?: BatchFetchOptions,
   ): Promise<BatchFetchResponse> {
     return fetch(request, options);
   }
 
   batchFetch(
     requests: (string | BatchFetchRequest)[],
-    options?: BatchFetchOptions
+    options?: BatchFetchOptions,
   ): Promise<BatchFetchResponse[]> {
     return batchFetch(requests, options);
   }
@@ -436,18 +447,16 @@ export class BatchFetchResponse {
   readonly statusText: string;
   readonly headers: Record<string, string>;
   readonly body: Uint8Array;
-  readonly error?: string;
 
   constructor(resp: HttpResponse) {
     this.status = resp.statusCode;
     this.statusText = resp.statusText;
     this.headers = resp.headers;
     this.body = resp.body;
-    this.error = resp.error;
   }
 
   get ok(): boolean {
-    return this.status >= 200 && this.status < 300 && !this.error;
+    return this.status >= 200 && this.status < 300;
   }
 
   async text(): Promise<string> {
@@ -459,17 +468,17 @@ export class BatchFetchResponse {
     return JSON.parse(txt);
   }
 
-  async arrayBuffer(): Promise<ArrayBuffer> {
+  async arrayBuffer(): Promise<ArrayBufferLike> {
     return this.body.buffer.slice(
       this.body.byteOffset,
-      this.body.byteOffset + this.body.byteLength
+      this.body.byteOffset + this.body.byteLength,
     );
   }
 }
 
 export function batchFetch(
   requests: (string | BatchFetchRequest)[],
-  options?: BatchFetchOptions
+  options?: BatchFetchOptions,
 ): Promise<BatchFetchResponse[]> {
   const fns = Host.getFunctions() as any;
   const { batch_http_request } = fns;
@@ -490,8 +499,8 @@ export function batchFetch(
       req.body instanceof Uint8Array
         ? req.body
         : typeof req.body === "string"
-        ? new TextEncoder().encode(req.body)
-        : undefined;
+          ? new TextEncoder().encode(req.body)
+          : undefined;
 
     return new HttpRequest({
       url: req.url,
@@ -504,8 +513,8 @@ export function batchFetch(
       timeoutMs: req.timeoutMs
         ? BigInt(req.timeoutMs)
         : options?.timeoutMs
-        ? BigInt(options.timeoutMs)
-        : undefined,
+          ? BigInt(options.timeoutMs)
+          : undefined,
     });
   });
 
@@ -524,14 +533,28 @@ export function batchFetch(
   const res_bytes = new Uint8Array(res_bytes_buffer);
 
   const batchResp = BatchHttpResponse.fromBinary(res_bytes);
-  return Promise.resolve(
-    batchResp.responses.map((r) => new BatchFetchResponse(r))
-  );
+  if (batchResp.error) {
+    throw new Error(batchResp.error);
+  }
+
+  const responses: BatchFetchResponse[] = [];
+  for (let i = 0; i < batchResp.responses.length; i++) {
+    const item = batchResp.responses[i];
+    if (item.result.case === "response" && item.result.value) {
+      responses.push(new BatchFetchResponse(item.result.value));
+    } else if (item.result.case === "error") {
+      throw new Error(`Request #${i} failed: ${item.result.value}`);
+    } else {
+      throw new Error(`Request #${i} returned empty HTTP result`);
+    }
+  }
+
+  return Promise.resolve(responses);
 }
 
 export function fetch(
   req: string | BatchFetchRequest,
-  options?: BatchFetchOptions
+  options?: BatchFetchOptions,
 ): Promise<BatchFetchResponse> {
   return batchFetch([req], options).then((resps) => {
     if (!resps || resps.length === 0) {
