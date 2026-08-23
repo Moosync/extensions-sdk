@@ -9,3 +9,5 @@ wasm-extension-rs/docs/.rustdoc_fingerprint.json
 bazel-*
 *.log
 rust-project.json
+.bazelrc.user
+.bazelrc.local

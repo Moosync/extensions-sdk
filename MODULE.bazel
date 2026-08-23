@@ -182,6 +182,10 @@ sdk_wasm_crates.spec(
     version = "1.5.0",
 )
 sdk_wasm_crates.spec(
+    package = "serde",
+    version = "1.0.219",
+)
+sdk_wasm_crates.spec(
     package = "serde_json",
     version = "1.0.145",
 )

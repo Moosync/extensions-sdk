@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub use extism_pdk::{config, error, http, info, log, warn, HttpRequest, HttpResponse};
+pub use extism_pdk::{config, error, info, log, warn};
 use extism_pdk::{plugin_fn, FnResult, Prost};
 
 // Re-export generated types
@@ -31,6 +31,7 @@ pub use ui_proto::moosync::types::*;
 
 pub mod api;
 pub mod handler;
+pub mod http;
 pub mod response_utils;
 
 pub use api::MoosyncResult;

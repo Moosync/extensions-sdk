@@ -35,7 +35,6 @@ pub use extensions_proto::moosync::types::{
     SongRemovedRequest, UnregisterUserPreferenceRequest, UpdateAccountsRequest, UpdateSongRequest,
     VolumeChangedRequest,
 };
-use extensions_proto::struct_proto::google::protobuf::Value as ProtoValue;
 use songs_proto::moosync::types::{Playlist, SearchResult, Song, EntityResult};
 use ui_proto::moosync::types::PreferenceUiData;
 

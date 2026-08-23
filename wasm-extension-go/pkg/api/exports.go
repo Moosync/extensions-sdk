@@ -417,3 +417,6 @@ func read_sock(int64, uint64) uint64
 
 //go:wasmimport extism:host/user hash
 func hash(uint64, uint64) uint64
+
+//go:wasmimport extism:host/user batch_http_request
+func batch_http_request(uint64) uint64

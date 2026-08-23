@@ -96,6 +96,10 @@ import {
   GetTimeRequest,
   GetQueueRequest,
   PreferenceData,
+  HttpRequest,
+  HttpResponse,
+  BatchHttpRequest,
+  BatchHttpResponse,
 } from "./protos/extensions_pb";
 import {
   Album,
@@ -161,6 +165,14 @@ export interface ExtensionAPI {
   addToPlaylist(req: AddToPlaylistRequest): void;
   getPreference(data: PreferenceData): PreferenceData;
   getSecure(data: PreferenceData): PreferenceData;
+  fetch(
+    request: string | BatchFetchRequest,
+    options?: BatchFetchOptions
+  ): Promise<BatchFetchResponse>;
+  batchFetch(
+    requests: (string | BatchFetchRequest)[],
+    options?: BatchFetchOptions
+  ): Promise<BatchFetchResponse[]>;
 }
 
 var LISTENERS: Record<string, Function>;
@@ -390,6 +402,143 @@ class Api implements ExtensionAPI {
     sendMainCommand(cmd);
     return [];
   }
+
+  fetch(
+    request: string | BatchFetchRequest,
+    options?: BatchFetchOptions
+  ): Promise<BatchFetchResponse> {
+    return fetch(request, options);
+  }
+
+  batchFetch(
+    requests: (string | BatchFetchRequest)[],
+    options?: BatchFetchOptions
+  ): Promise<BatchFetchResponse[]> {
+    return batchFetch(requests, options);
+  }
+}
+
+export interface BatchFetchRequest {
+  url: string;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: Uint8Array | string;
+  timeoutMs?: number;
+}
+
+export interface BatchFetchOptions {
+  headers?: Record<string, string>;
+  timeoutMs?: number;
+}
+
+export class BatchFetchResponse {
+  readonly status: number;
+  readonly statusText: string;
+  readonly headers: Record<string, string>;
+  readonly body: Uint8Array;
+  readonly error?: string;
+
+  constructor(resp: HttpResponse) {
+    this.status = resp.statusCode;
+    this.statusText = resp.statusText;
+    this.headers = resp.headers;
+    this.body = resp.body;
+    this.error = resp.error;
+  }
+
+  get ok(): boolean {
+    return this.status >= 200 && this.status < 300 && !this.error;
+  }
+
+  async text(): Promise<string> {
+    return new TextDecoder().decode(this.body);
+  }
+
+  async json<T = any>(): Promise<T> {
+    const txt = await this.text();
+    return JSON.parse(txt);
+  }
+
+  async arrayBuffer(): Promise<ArrayBuffer> {
+    return this.body.buffer.slice(
+      this.body.byteOffset,
+      this.body.byteOffset + this.body.byteLength
+    );
+  }
+}
+
+export function batchFetch(
+  requests: (string | BatchFetchRequest)[],
+  options?: BatchFetchOptions
+): Promise<BatchFetchResponse[]> {
+  const fns = Host.getFunctions() as any;
+  const { batch_http_request } = fns;
+  if (!batch_http_request) {
+    throw new Error("batch_http_request host function is not available");
+  }
+
+  const protoRequests: HttpRequest[] = requests.map((req) => {
+    if (typeof req === "string") {
+      return new HttpRequest({
+        url: req,
+        method: "GET",
+        headers: options?.headers ?? {},
+        timeoutMs: options?.timeoutMs ? BigInt(options.timeoutMs) : undefined,
+      });
+    }
+    const bodyBytes =
+      req.body instanceof Uint8Array
+        ? req.body
+        : typeof req.body === "string"
+        ? new TextEncoder().encode(req.body)
+        : undefined;
+
+    return new HttpRequest({
+      url: req.url,
+      method: (req.method ?? "GET").toUpperCase(),
+      headers: {
+        ...(options?.headers ?? {}),
+        ...(req.headers ?? {}),
+      },
+      body: bodyBytes,
+      timeoutMs: req.timeoutMs
+        ? BigInt(req.timeoutMs)
+        : options?.timeoutMs
+        ? BigInt(options.timeoutMs)
+        : undefined,
+    });
+  });
+
+  const batchReq = new BatchHttpRequest({
+    requests: protoRequests,
+  });
+
+  const bytes = batchReq.toBinary();
+  // @ts-ignore
+  const mem = Memory.fromBuffer(bytes.buffer);
+  const res_offset = batch_http_request(mem.offset);
+
+  // @ts-ignore
+  const res_mem = Memory.find(res_offset);
+  const res_bytes_buffer = res_mem.readBytes();
+  const res_bytes = new Uint8Array(res_bytes_buffer);
+
+  const batchResp = BatchHttpResponse.fromBinary(res_bytes);
+  return Promise.resolve(
+    batchResp.responses.map((r) => new BatchFetchResponse(r))
+  );
+}
+
+export function fetch(
+  req: string | BatchFetchRequest,
+  options?: BatchFetchOptions
+): Promise<BatchFetchResponse> {
+  return batchFetch([req], options).then((resps) => {
+    if (!resps || resps.length === 0) {
+      throw new Error("Host runner returned empty response");
+    }
+    return resps[0];
+  });
 }
 
 let apiInstance: ExtensionAPI;

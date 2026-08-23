@@ -40,6 +40,10 @@ def hash(hash_type: str, data: bytes) -> bytes: ...
 def send_main_command(data: int) -> int: ...
 
 
+@extism.import_fn("extism:host/user", "batch_http_request")
+def batch_http_request_host(data: int) -> int: ...
+
+
 class CustomPrint:
     buf = ""
 
@@ -52,13 +56,120 @@ class CustomPrint:
         self.buf = ""
 
 
+class HttpRequest:
+    def __init__(
+        self,
+        url: str,
+        method: str = "GET",
+        headers: Optional[dict] = None,
+        body: Optional[Union[bytes, str]] = None,
+        timeout_ms: Optional[int] = None,
+    ):
+        self.url = url
+        self.method = method
+        self.headers = headers or {}
+        if isinstance(body, str):
+            self.body = body.encode("utf-8")
+        else:
+            self.body = body
+        self.timeout_ms = timeout_ms
+
+    def to_proto(self) -> extensions_pb2.HttpRequest:
+        return extensions_pb2.HttpRequest(
+            url=self.url,
+            method=self.method.upper(),
+            headers=self.headers,
+            body=self.body,
+            timeout_ms=self.timeout_ms,
+        )
+
+
+class HttpResponse:
+    def __init__(self, proto: extensions_pb2.HttpResponse):
+        self.status_code: int = proto.status_code
+        self.status_text: str = proto.status_text
+        self.headers: dict = dict(proto.headers)
+        self.body: bytes = proto.body
+        self.error: Optional[str] = proto.error if proto.HasField("error") else None
+
+    @property
+    def ok(self) -> bool:
+        return 200 <= self.status_code < 300 and self.error is None
+
+    @property
+    def text(self) -> str:
+        return self.body.decode("utf-8", errors="replace")
+
+    def json(self) -> Any:
+        import json
+        return json.loads(self.text)
+
+
+def http_batch_request(requests: List[Union[HttpRequest, dict]]) -> List[HttpResponse]:
+    if not requests:
+        return []
+    proto_reqs = []
+    for r in requests:
+        if isinstance(r, HttpRequest):
+            proto_reqs.append(r.to_proto())
+        elif isinstance(r, dict):
+            req_obj = HttpRequest(**r)
+            proto_reqs.append(req_obj.to_proto())
+        else:
+            raise ValueError(f"Invalid request type: {type(r)}")
+
+    batch = extensions_pb2.BatchHttpRequest(requests=proto_reqs)
+    data = batch.SerializeToString()
+    mem = extism.memory.alloc(data)
+    res_offset = batch_http_request_host(mem.offset)
+
+    res_mem_handle = extism.memory.find(res_offset)
+    if res_mem_handle is None:
+        raise Exception(f"Failed to find memory for batch HTTP response at offset {res_offset}")
+
+    res_bytes = extism.memory.bytes(res_mem_handle)
+    extism.memory.free(mem)
+
+    batch_resp = extensions_pb2.BatchHttpResponse()
+    batch_resp.ParseFromString(res_bytes)
+    return [HttpResponse(p) for p in batch_resp.responses]
+
+
+def http_batch_get(
+    urls: List[str],
+    headers: Optional[dict] = None,
+    timeout_ms: Optional[int] = None,
+) -> List[HttpResponse]:
+    reqs = [HttpRequest(url=u, method="GET", headers=headers, timeout_ms=timeout_ms) for u in urls]
+    return http_batch_request(reqs)
+
+
 def http_request(
     url: str,
     method: str = "GET",
     body: Optional[Union[bytes, str]] = None,
     headers: Optional[dict] = None,
-) -> Any:
-    return extism.Http.request(url, method, body, headers)
+    timeout_ms: Optional[int] = None,
+) -> HttpResponse:
+    req = HttpRequest(
+        url=url,
+        method=method,
+        headers=headers,
+        body=body,
+        timeout_ms=timeout_ms,
+    )
+    resps = http_batch_request([req])
+    if not resps:
+        raise Exception("Host runner returned empty response")
+    return resps[0]
+
+
+def http_get(
+    url: str,
+    headers: Optional[dict] = None,
+    timeout_ms: Optional[int] = None,
+) -> HttpResponse:
+    return http_request(url=url, method="GET", headers=headers, timeout_ms=timeout_ms)
 
 
 def send_main_command_(

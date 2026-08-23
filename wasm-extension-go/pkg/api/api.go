@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -515,3 +516,124 @@ func init() {
 func DurationToProto(d time.Duration) *durationpb.Duration {
 	return durationpb.New(d)
 }
+
+type HttpRequest struct {
+	URL       string
+	Method    string
+	Headers   map[string]string
+	Body      []byte
+	TimeoutMs uint64
+}
+
+type HttpResponse struct {
+	StatusCode uint32
+	StatusText string
+	Headers    map[string]string
+	Body       []byte
+	Error      string
+}
+
+func (r *HttpResponse) OK() bool {
+	return r.StatusCode >= 200 && r.StatusCode < 300 && r.Error == ""
+}
+
+func (r *HttpResponse) Text() string {
+	return string(r.Body)
+}
+
+func (r *HttpResponse) JSON(v any) error {
+	return json.Unmarshal(r.Body, v)
+}
+
+func BatchHttpRequest(requests []HttpRequest) ([]HttpResponse, error) {
+	if len(requests) == 0 {
+		return nil, nil
+	}
+
+	protoReqs := make([]*extensions.HttpRequest, len(requests))
+	for i, r := range requests {
+		method := r.Method
+		if method == "" {
+			method = "GET"
+		}
+		var timeout *uint64
+		if r.TimeoutMs > 0 {
+			timeout = &r.TimeoutMs
+		}
+		protoReqs[i] = &extensions.HttpRequest{
+			Url:       r.URL,
+			Method:    method,
+			Headers:   r.Headers,
+			Body:      r.Body,
+			TimeoutMs: timeout,
+		}
+	}
+
+	batch := &extensions.BatchHttpRequest{
+		Requests: protoReqs,
+	}
+
+	batchBytes, err := proto.Marshal(batch)
+	if err != nil {
+		return nil, err
+	}
+
+	mem := pdk.AllocateBytes(batchBytes)
+	rPtr := batch_http_request(mem.Offset())
+	rMem := pdk.FindMemory(rPtr)
+	rBytes := rMem.ReadBytes()
+
+	respBatch := &extensions.BatchHttpResponse{}
+	if err := proto.Unmarshal(rBytes, respBatch); err != nil {
+		return nil, err
+	}
+
+	results := make([]HttpResponse, len(respBatch.Responses))
+	for i, resp := range respBatch.Responses {
+		errMsg := ""
+		if resp.Error != nil {
+			errMsg = *resp.Error
+		}
+		results[i] = HttpResponse{
+			StatusCode: resp.StatusCode,
+			StatusText: resp.StatusText,
+			Headers:    resp.Headers,
+			Body:       resp.Body,
+			Error:      errMsg,
+		}
+	}
+
+	return results, nil
+}
+
+func BatchHttpGet(urls []string, headers map[string]string) ([]HttpResponse, error) {
+	reqs := make([]HttpRequest, len(urls))
+	for i, u := range urls {
+		reqs[i] = HttpRequest{
+			URL:     u,
+			Method:  "GET",
+			Headers: headers,
+		}
+	}
+	return BatchHttpRequest(reqs)
+}
+
+func SendHttpRequest(req HttpRequest) (HttpResponse, error) {
+	resps, err := BatchHttpRequest([]HttpRequest{req})
+	if err != nil {
+		return HttpResponse{}, err
+	}
+	if len(resps) == 0 {
+		return HttpResponse{}, errors.New("host runner returned empty response")
+	}
+	return resps[0], nil
+}
+
+func HttpGet(url string, headers map[string]string) (HttpResponse, error) {
+	return SendHttpRequest(HttpRequest{
+		URL:     url,
+		Method:  "GET",
+		Headers: headers,
+	})
+}
+
