@@ -135,7 +135,7 @@ bazel_dep(name = "moosync")
 git_override(
     module_name = "moosync",
     remote = "https://github.com/Moosync/Moosync",
-    branch = "slint",
+    branch = "main",
 )
 
 bazel_dep(name = "moosync_ext", version = "0.0.1")
