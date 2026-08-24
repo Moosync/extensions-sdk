@@ -141,34 +141,3 @@ bazel build //my_js_ext:my_js_ext
 {{#endtab }}
 {{#endtabs }}
 
----
-
-## 4. Making HTTP Requests
-
-Extensions can make outgoing HTTP requests through the host runner using the SDK's HTTP APIs. Both single requests and batch/parallel requests are supported.
-
-> **Permissions**: To communicate with external servers, specify allowed hosts in your extension manifest (`package.json`) under `"allowed_hosts"` (for example, `["api.spotify.com", "*.last.fm"]`).
-
-{{#tabs }}
-{{#tab name="Rust" }}
-```rust
-{{#include ../../wasm-extension-rs/examples/src/lib.rs:http_usage}}
-```
-{{#endtab }}
-{{#tab name="Golang" }}
-```go
-{{#include ../../wasm-extension-go/examples/main.go:http_usage}}
-```
-{{#endtab }}
-{{#tab name="Python" }}
-```python
-{{#include ../../wasm-extension-py/examples/main.py:http_usage}}
-```
-{{#endtab }}
-{{#tab name="Javascript" }}
-```typescript
-{{#include ../../wasm-extension-js/examples/src/index.ts:http_usage}}
-```
-{{#endtab }}
-{{#endtabs }}
-
