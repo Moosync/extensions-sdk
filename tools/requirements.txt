@@ -1,0 +1,10 @@
+pdoc==15.0.4
+jinja2==3.1.5
+markupsafe==3.0.2
+pygments==2.19.1
+astunparse==1.6.3
+extism==1.1.1
+extism-sys==1.11.1
+cffi==1.17.1
+pycparser==2.22
+protobuf==6.33.2

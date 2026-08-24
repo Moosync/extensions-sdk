@@ -11,6 +11,8 @@
     ],
     "typeRoots": [
       "node_modules",
+      "../../wasm-extension-js/node_modules",
+      "../../../wasm-extension-js/node_modules",
       "../../external/extensions_sdk/wasm-extension-js/node_modules",
       "../../external/extensions_sdk+/wasm-extension-js/node_modules",
       "../../../external/extensions_sdk/wasm-extension-js/node_modules",
@@ -21,6 +23,10 @@
     ],
     "paths": {
       "wasm-extension-js": [
+        "../../wasm-extension-js/lib/src/index.d.ts",
+        "../../wasm-extension-js/src/index.d.ts",
+        "../../../wasm-extension-js/lib/src/index.d.ts",
+        "../../../wasm-extension-js/src/index.d.ts",
         "../../external/extensions_sdk/wasm-extension-js/lib/src/index.d.ts",
         "../../external/extensions_sdk+/wasm-extension-js/lib/src/index.d.ts",
         "../../external/extensions_sdk/wasm-extension-js/src/index.d.ts",

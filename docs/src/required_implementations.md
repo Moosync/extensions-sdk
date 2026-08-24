@@ -6,57 +6,25 @@ Lets consider the `search` scope for this example. Adding the search scope would
 
 {{#tabs }}
 {{#tab name="Rust" }}
-  ```rust
-  impl Provider for SampleExtension {
-    fn get_provider_scopes(&self) -> Result<Vec<ExtensionProviderScope>> {
-        Ok(vec![ExtensionProviderScope::Search])
-    }
-
-    fn search(&self, term: String) -> MoosyncResult<SearchResult> {
-        SearchResult {
-            songs: vec![],
-            artists: vec![],
-            playlists: vec![],
-            albums: vec![],
-            genres: vec![]
-        }
-    }
-  }
-  ```
-
+```rust
+impl Provider for SampleExtension {
+{{#include ../../wasm-extension-rs/examples/src/lib.rs:provider}}
+}
+```
+{{#endtab }}
+{{#tab name="Golang" }}
+```go
+{{#include ../../wasm-extension-go/examples/main.go:provider}}
+```
 {{#endtab }}
 {{#tab name="Python" }}
-  ```python
-  class SampleExtension(Extension):
-    def __init__(self):
-        super().__init__()
-
-    def get_provider_scopes(self) -> List[ProviderScopes]:
-        return ["search"]
-
-     def get_search(self, term: str) -> SearchReturnType:
-        return SearchReturnType(songs=[], artists=[], playlists=[], albums=[], genres=[])
-  ```
+```python
+{{#include ../../wasm-extension-py/examples/main.py:provider}}
+```
 {{#endtab }}
 {{#tab name="Javascript" }}
-```javascript
-export function entry() {
-  api.on('getProviderScopes', () => {
-    return ['search']
-  });
-
-  api.on('getSearch', async (term) => {
-    return {
-      songs: [],
-      artists: [],
-      albums: [],
-      playlists: [],
-      genres: []
-    }
-  })
-
-  console.log('Initialized ext');
-}
+```typescript
+{{#include ../../wasm-extension-js/examples/src/index.ts:provider}}
 ```
 {{#endtab }}
 {{#endtabs }}

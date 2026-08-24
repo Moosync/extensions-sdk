@@ -1,5 +1,5 @@
 """
-Rule for generating package.json for Moosync extensions.
+Rule for generating package.json for Moosync extensions natively in Starlark.
 """
 
 def _moosync_extension_package_impl(ctx):
@@ -10,7 +10,7 @@ def _moosync_extension_package_impl(ctx):
             return val
         return ctx.expand_location(val, targets = ctx.attr.data)
 
-    icon_basename = None
+    icon_val = None
     if ctx.file.icon_file:
         icon_out = ctx.actions.declare_file(ctx.file.icon_file.basename)
         ctx.actions.run_shell(
@@ -20,55 +20,36 @@ def _moosync_extension_package_impl(ctx):
             mnemonic = "CopyIcon",
         )
         out_files.append(icon_out)
-        icon_basename = ctx.file.icon_file.basename
+        icon_val = ctx.file.icon_file.basename
+    elif ctx.attr.icon_val:
+        icon_val = expand(ctx.attr.icon_val)
 
     out_json = ctx.actions.declare_file("package.json")
     out_files.append(out_json)
 
-    args = ctx.actions.args()
-    args.add("--output", out_json)
+    data = {
+        "name": expand(ctx.attr.package_name_val) if ctx.attr.package_name_val else "",
+        "displayName": expand(ctx.attr.display_name_val) if ctx.attr.display_name_val else "",
+        "version": expand(ctx.attr.version_val) if ctx.attr.version_val else "0.0.0",
+        "extensionEntry": ctx.file.extension_entry.basename,
+        "moosyncExtension": True,
+    }
 
-    args.add("--extension_entry", ctx.file.extension_entry.basename)
+    if icon_val:
+        data["icon"] = icon_val
 
-    inputs = []
+    perms = {}
+    if ctx.attr.allowed_hosts_val:
+        perms["hosts"] = [expand(v) for v in ctx.attr.allowed_hosts_val]
+    if ctx.attr.allowed_paths_val:
+        perms["paths"] = {expand(k): expand(v) for k, v in ctx.attr.allowed_paths_val.items()}
 
-    def add_arg(name):
-        val = getattr(ctx.attr, name + "_val")
-        f = getattr(ctx.file, name + "_file")
-        if val:
-            if name == "allowed_hosts":
-                expanded_list = [expand(v) for v in val]
-                args.add("--" + name, json.encode(expanded_list))
-            elif name == "allowed_paths":
-                expanded_dict = {expand(k): expand(v) for k, v in val.items()}
-                args.add("--" + name, json.encode(expanded_dict))
-            else:
-                args.add("--" + name, expand(val))
-        elif f:
-            inputs.append(f)
-            args.add("--" + name + "_file", f)
+    if perms:
+        data["permissions"] = perms
 
-    add_arg("package_name")
-    add_arg("display_name")
-    add_arg("version")
-
-    if ctx.attr.icon_val:
-        args.add("--icon", expand(ctx.attr.icon_val))
-    elif icon_basename:
-        args.add("--icon", icon_basename)
-
-    add_arg("allowed_hosts")
-    add_arg("allowed_paths")
-
-    script = ctx.file._gen_script
-    inputs.append(script)
-
-    ctx.actions.run(
-        executable = "python3",
-        arguments = [script.path, args],
-        inputs = inputs,
-        outputs = [out_json],
-        mnemonic = "GenPackageJson",
+    ctx.actions.write(
+        output = out_json,
+        content = json.encode_indent(data, indent = "    ") + "\n",
     )
 
     return [DefaultInfo(files = depset(out_files))]
@@ -90,10 +71,6 @@ moosync_extension_package = rule(
         "allowed_hosts_file": attr.label(allow_single_file = True),
         "allowed_paths_val": attr.string_dict(),
         "allowed_paths_file": attr.label(allow_single_file = True),
-        "_gen_script": attr.label(
-            default = Label("//:gen_package_json.py"),
-            allow_single_file = True,
-        ),
     },
 )
 
@@ -127,12 +104,11 @@ def generate_package_json(
         List of targets generated (e.g. [":name_pkg_json"]), or empty list.
     """
 
-    # Helper to determine if arg is a Label or file-like string
     def is_file_like(arg):
         if not arg:
             return False
         if type(arg) != "string":
-            return True  # Assume Label
+            return True
         return arg.startswith("//") or arg.startswith(":") or arg.startswith("@")
 
     pkg_args = {}

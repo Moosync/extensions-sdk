@@ -1,6 +1,11 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_doc", "rust_library")
 
 package(default_visibility = ["//visibility:public"])
+
+rust_doc(
+    name = "doc",
+    crate = ":wasm_extension_rs",
+)
 
 rust_library(
     name = "wasm_extension_rs",

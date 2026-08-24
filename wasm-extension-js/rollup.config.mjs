@@ -14,8 +14,10 @@ function findPluginDir(pluginName) {
         dir = parent;
     }
     dir = process.cwd();
+    candidates.push(path.join(dir, 'wasm-extension-js', 'node_modules'));
     while (true) {
         candidates.push(path.join(dir, 'node_modules'));
+        candidates.push(path.join(dir, 'wasm-extension-js', 'node_modules'));
         const parent = path.dirname(dir);
         if (parent === dir) break;
         dir = parent;

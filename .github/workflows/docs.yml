@@ -1,0 +1,60 @@
+name: Build and Deploy Documentation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Mount Bazel cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-docs-${{ runner.os }}-${{ hashFiles('MODULE.bazel', '**/*.bzl', '**/BUILD*') }}
+          restore-keys: |
+            bazel-docs-${{ runner.os }}-
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@v0.8.5
+        with:
+          bazelisk-version: true
+
+      - name: Build Documentation Site
+        run: |
+          bazel build //docs:site
+
+      - name: Prepare Site Directory
+        run: |
+          mkdir -p _site
+          cp -rL bazel-bin/docs/site/. _site/
+
+      - name: Upload Documentation Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy-pages:
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    needs: build-docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

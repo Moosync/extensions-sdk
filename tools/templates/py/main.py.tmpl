@@ -1,0 +1,27 @@
+from moosync_edk import Extension, register_extension
+from core.types.protos import extensions_pb2, songs_pb2
+
+
+class $struct_name(Extension):
+    def __init__(self):
+        super().__init__()
+
+    def get_provider_scopes(self, req):
+        return extensions_pb2.GetProviderScopesResponse(
+            scopes=[extensions_pb2.ExtensionProviderScope.SEARCH]
+        )
+
+    def search(self, req):
+        print(f"Search query: {req.query}")
+        return songs_pb2.SearchResult(
+            songs=[],
+            artists=[],
+            playlists=[],
+            albums=[],
+            genres=[]
+        )
+
+
+def entry():
+    print("Initializing $display_name")
+    register_extension($struct_name())

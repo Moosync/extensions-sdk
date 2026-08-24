@@ -106,23 +106,51 @@ filegroup(
     urls = ["https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz"],
 )
 
+http_archive(
+    name = "mdbook_tool",
+    build_file_content = """
+exports_files(["mdbook"])
+""",
+    sha256 = "9ef07fd288ba58ff3b99d1c94e6d414d431c9a61fdb20348e5beb74b823d546b",
+    urls = ["https://github.com/rust-lang/mdBook/releases/download/v0.4.40/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz"],
+)
+
+http_archive(
+    name = "mdbook_admonish_tool",
+    build_file_content = """
+exports_files(["mdbook-admonish"])
+""",
+    integrity = "sha256-XRnsY3bGRiBCNfGXyROYz5WHPpbmEAmCE3ESBW2pb+Q=",
+    urls = ["https://github.com/tommilligan/mdbook-admonish/releases/download/v1.18.0/mdbook-admonish-v1.18.0-x86_64-unknown-linux-gnu.tar.gz"],
+)
+
 bazel_dep(name = "rules_rust", version = "0.68.1")
+single_version_override(
+    module_name = "rules_rust",
+    patch_strip = 1,
+    patches = ["//patches:rules_rust_gnu_windows.patch"],
+    version = "0.68.1",
+)
 bazel_dep(name = "moosync")
 git_override(
     module_name = "moosync",
-    remote = "/home/ovenoboyo/projects/Moosync",
+    remote = "https://github.com/Moosync/Moosync",
     branch = "slint",
 )
 
 bazel_dep(name = "moosync_ext", version = "0.0.1")
 git_override(
     module_name = "moosync_ext",
-    remote = "/home/ovenoboyo/projects/moosync-exts",
+    remote = "https://github.com/Moosync/moosync-exts",
     branch = "bazel",
 )
 
 bazel_dep(name = "rules_rust_prost", version = "0.68.1")
-bazel_dep(name = "protobuf", version = "29.1", repo_name = "com_google_protobuf")
+bazel_dep(name = "protobuf", version = "33.2", repo_name = "com_google_protobuf")
+single_version_override(
+    module_name = "protobuf",
+    version = "33.2",
+)
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_cc", version = "0.2.16")
@@ -190,6 +218,7 @@ sdk_wasm_crates.spec(
     version = "1.0.145",
 )
 sdk_wasm_crates.spec(
+    default_features = False,
     features = [
         "rt",
         "time",
@@ -226,6 +255,27 @@ sdk_wasm_crates.from_specs(
 )
 use_repo(sdk_wasm_crates, "sdk_wasm_crates")
 
+host_crates = use_extension("@rules_rust//crate_universe:extension.bzl", "crate", isolate = True)
+host_crates.spec(
+    package = "mdbook-tabs",
+    version = "0.1.3",
+)
+host_crates.annotation(
+    crate = "mdbook-tabs",
+    gen_binaries = ["mdbook-tabs"],
+)
+host_crates.from_specs(
+    name = "host_crates",
+    host_tools = "@mooync_edk_host_tools",
+    supported_platform_triples = [
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "x86_64-apple-darwin",
+        "aarch64-apple-darwin",
+    ],
+)
+use_repo(host_crates, "host_crates")
+
 register_toolchains("//prost_toolchain:prost_toolchain_wasi")
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
@@ -234,4 +284,9 @@ pip.parse(
     python_version = "3.11",
     requirements_lock = "//moounit:requirements_lock.txt",
 )
-use_repo(pip, "pypi_moounit")
+pip.parse(
+    hub_name = "pip_deps",
+    python_version = "3.11",
+    requirements_lock = "//tools:requirements.txt",
+)
+use_repo(pip, "pypi_moounit", "pip_deps")

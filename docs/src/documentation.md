@@ -1,5 +1,8 @@
-# Documentation
+# Language API Documentation
 
-- [Rust](/extensions-sdk/wasm-extension-rs/docs/wasm32-wasip1/doc/moosync_edk/index.html)
-- [Python](/extensions-sdk/wasm-extension-py/html/moosync_edk/index.html)
-- [Javascript](/extensions-sdk/wasm-extension-js/docs/index.html)
+API reference documentation for each supported language:
+
+- [Rust API Documentation](../rust/moosync_edk/index.html)
+- [Golang API Documentation](../go/index.html).
+- [Python API Documentation](../py/index.html)
+- [JavaScript / TypeScript API Documentation](../js/index.html)

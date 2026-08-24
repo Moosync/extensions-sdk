@@ -16,6 +16,7 @@ It includes functionality for handling plugin I/O, HTTP requests, memory managem
 configuration, and host function interactions.
 """
 
+import builtins
 from typing import Any, TypeVar, Callable, Optional, Union, Dict, List, Type, TypeAlias, overload
 from enum import Enum
 
@@ -36,7 +37,7 @@ class memory:
     def find(offs: int) -> Optional[MemoryHandle]: ...
 
     @staticmethod
-    def bytes(mem: MemoryHandle) -> bytes: ...
+    def bytes(mem: MemoryHandle) -> builtins.bytes: ...
 
     @staticmethod
     def string(mem: MemoryHandle) -> str: ...
@@ -45,7 +46,7 @@ class memory:
     def free(mem: MemoryHandle) -> None: ...
 
     @staticmethod
-    def alloc(data: bytes) -> MemoryHandle: ...
+    def alloc(data: builtins.bytes) -> MemoryHandle: ...
 
 class HttpRequest:
     url: str
@@ -107,10 +108,9 @@ def output_str(result: str) -> None: ...
 
 def import_fn(module: str, name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Annotate an import function"""
-    def func(*args):
-        pass
-    return func
-    ...
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        return func
+    return decorator
 
 def plugin_fn(func: Callable[[], Any]) -> Callable[[], Any]:
     """Annotate a function that will be called by Extism"""

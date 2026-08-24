@@ -1,0 +1,12 @@
+load("@extensions_sdk//:defs.bzl", "py_extension")
+
+package(default_visibility = ["//visibility:public"])
+
+py_extension(
+    name = "$name",
+    srcs = ["main.py"],
+    main = "main.py",
+    package_name = "$package_name",
+    display_name = "$display_name",
+    version = "0.0.1",
+)

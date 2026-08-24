@@ -1,0 +1,37 @@
+package main
+
+import (
+	extensions "github.com/moosync/moosync/types/extensions"
+	songs "github.com/moosync/moosync/types/songs"
+
+	"github.com/Moosync/extensions-sdk/wasm-extension-go/pkg/api"
+)
+
+type $struct_name struct {
+	api.DefaultExtension
+}
+
+func (e *$struct_name) GetProviderScopes() ([]extensions.ExtensionProviderScope, error) {
+	return []extensions.ExtensionProviderScope{
+		extensions.ExtensionProviderScope_SEARCH,
+	}, nil
+}
+
+func (e *$struct_name) Search(req *extensions.RequestedSearchResultRequest) (*songs.SearchResult, error) {
+	api.LogInfo("Search query: %s", req.GetQuery())
+	return &songs.SearchResult{
+		Songs:     []*songs.Song{},
+		Playlists: []*songs.Playlist{},
+		Artists:   []*songs.Artist{},
+		Albums:    []*songs.Album{},
+		Genres:    []*songs.Genre{},
+	}, nil
+}
+
+//go:wasmexport entry
+func entry() {
+	ext := &$struct_name{}
+	api.RegisterExtension(ext)
+}
+
+func main() {}

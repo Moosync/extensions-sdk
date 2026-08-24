@@ -1,0 +1,29 @@
+import {
+  GetProviderScopesResponse,
+  RequestedSearchResultResponse,
+  getApi,
+} from "wasm-extension-js";
+
+export { handle_extension_command } from "wasm-extension-js";
+
+export function entry(): number {
+  const api = getApi();
+
+  api.on("getProviderScopes", () => {
+    return new GetProviderScopesResponse({
+      scopes: [
+        13 as any // ExtensionProviderScope.SEARCH
+      ]
+    });
+  });
+
+  api.on("requestedSearchResult", (req) => {
+    console.log("Search query:", req.query);
+    return new RequestedSearchResultResponse({
+      songs: []
+    });
+  });
+
+  console.log("Initialized $display_name");
+  return 0;
+}

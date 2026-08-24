@@ -1,1 +1,3 @@
-exports_files(["gen_package_json.py"])
+exports_files([
+    "index.html",
+])

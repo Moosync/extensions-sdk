@@ -1,39 +1,9 @@
+from enum import Enum
 import sys
 from datetime import timedelta
-from typing import Any, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
-try:
-    import extism
-    if not hasattr(extism, "import_fn"):
-        raise ImportError()
-except (ImportError, AttributeError):
-    class _MockExtism:
-        def import_fn(self, *args, **kwargs):
-            return lambda fn: fn
-        def plugin_fn(self, fn):
-            return fn
-        class memory:
-            @staticmethod
-            def alloc(*args): return None
-            @staticmethod
-            def find(*args): return None
-            @staticmethod
-            def bytes(*args): return b""
-            @staticmethod
-            def free(*args): pass
-        class LogLevel:
-            Debug = 0
-            Info = 1
-            Warn = 2
-            Error = 3
-        @staticmethod
-        def log(*args): pass
-        @staticmethod
-        def input_bytes(): return b""
-        @staticmethod
-        def output_bytes(*args): pass
-    extism = _MockExtism()
-
+import extism
 from core.types.protos import extensions_pb2, songs_pb2, themes_pb2, ui_pb2
 
 # Re-export protos
@@ -92,7 +62,7 @@ class HttpRequest:
         self,
         url: str,
         method: str = "GET",
-        headers: Optional[dict] = None,
+        headers: Optional[Dict[str, str]] = None,
         body: Optional[Union[bytes, str]] = None,
         timeout_ms: Optional[int] = None,
     ):
@@ -149,7 +119,7 @@ class HttpResult:
             self.error = "Empty HTTP result"
 
 
-def http_batch_request(requests: List[Union[HttpRequest, dict]]) -> List[HttpResponse]:
+def http_batch_request(requests: Sequence[Union[HttpRequest, Dict[str, Any]]]) -> List[HttpResponse]:
     if not requests:
         return []
     proto_reqs = []
@@ -165,6 +135,8 @@ def http_batch_request(requests: List[Union[HttpRequest, dict]]) -> List[HttpRes
     batch = extensions_pb2.BatchHttpRequest(requests=proto_reqs)
     data = batch.SerializeToString()
     mem = extism.memory.alloc(data)
+    if mem is None:
+        raise Exception("Failed to allocate memory for HTTP batch request")
     res_offset = batch_http_request_host(mem.offset)
 
     res_mem_handle = extism.memory.find(res_offset)
@@ -194,7 +166,7 @@ def http_batch_request(requests: List[Union[HttpRequest, dict]]) -> List[HttpRes
 
 def http_batch_get(
     urls: List[str],
-    headers: Optional[dict] = None,
+    headers: Optional[Dict[str, str]] = None,
     timeout_ms: Optional[int] = None,
 ) -> List[HttpResponse]:
     reqs = [HttpRequest(url=u, method="GET", headers=headers, timeout_ms=timeout_ms) for u in urls]
@@ -205,7 +177,7 @@ def http_request(
     url: str,
     method: str = "GET",
     body: Optional[Union[bytes, str]] = None,
-    headers: Optional[dict] = None,
+    headers: Optional[Dict[str, str]] = None,
     timeout_ms: Optional[int] = None,
 ) -> HttpResponse:
     req = HttpRequest(
@@ -223,7 +195,7 @@ def http_request(
 
 def http_get(
     url: str,
-    headers: Optional[dict] = None,
+    headers: Optional[Dict[str, str]] = None,
     timeout_ms: Optional[int] = None,
 ) -> HttpResponse:
     return http_request(url=url, method="GET", headers=headers, timeout_ms=timeout_ms)
@@ -234,6 +206,8 @@ def send_main_command_(
 ) -> extensions_pb2.MainCommandResponse:
     data = cmd.SerializeToString()
     mem = extism.memory.alloc(data)
+    if mem is None:
+        raise Exception("Failed to allocate memory for main command")
     res_offset = send_main_command(mem.offset)
 
     res_mem_handle = extism.memory.find(res_offset)

@@ -1,0 +1,11 @@
+load("@extensions_sdk//:defs.bzl", "go_extension")
+
+package(default_visibility = ["//visibility:public"])
+
+go_extension(
+    name = "$name",
+    srcs = ["main.go"],
+    package_name = "$package_name",
+    display_name = "$display_name",
+    version = "0.0.1",
+)

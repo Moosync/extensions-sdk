@@ -1,89 +1,174 @@
 # Writing your first extension
 
-{{#tabs }}
-{{#tab name="Rust" }}
-  Extensions are represented by the `Extension` trait.
+## 1. Workspace Setup
 
-  ```rust
-  use moosync_edk::{
-      api::{
-          Accounts, ContextMenu, DatabaseEvents, Extension, PlayerEvents, PreferenceEvents, Provider,
-      },
-      handler::register_extension, info
-  };
+In your workspace root, create or update `MODULE.bazel` to depend on `extensions_sdk`:
 
-  struct SampleExtension {}
+```starlark
+module(
+    name = "my_extensions",
+    version = "1.0.0",
+)
 
-  impl SampleExtension {
-      pub fn new() -> Self {
-          Self {}
-      }
-  }
-
-  impl PlayerEvents for SampleExtension {}
-  impl Provider for SampleExtension {}
-  impl DatabaseEvents for SampleExtension {}
-  impl PreferenceEvents for SampleExtension {}
-  impl ContextMenu for SampleExtension {}
-  impl Accounts for SampleExtension {}
-  impl Extension for SampleExtension {}
-  ```
-
-  You need to register your extension through the init function.
-  ```rust
-  #[no_mangle]
-  pub extern "C" fn init() {
-      info!("Initializing SampleExtension");
-
-      let extension = SampleExtension::new();
-      register_extension(Box::new(extension)).unwrap();
-
-      info!("Initialized SampleExtension");
-  }
-  ```
-{{#endtab }}
-{{#tab name="Python" }}
-  All extensions must start in a module called `extension`.
-  The simplest way to do this is to create a file called `extension.py` in the root of your project.
-
-  Extensions are represented by the `Extension` class.
-
-  ```python
-  from moosync_edk import Extension
-
-  class SampleExtension(Extension):
-      def __init__(self):
-          super().__init__()
-  ```
-
-  You need to register your extension through the init function.
-  ```python
-  from moosync_edk import register_extension
-
-  def init():
-      print("Initializing SampleExtension")
-
-      extension = SampleExtension()
-      register_extension(extension)
-
-      print("Initialized SampleExtension")
-  ```
-{{#endtab }}
-{{#tab name="Javascript" }}
-You need to re-export all methods provided by `@moosync/edk` package.
-
-```javascript
-module.exports = {
-  ...module.exports,
-  ...require('@moosync/edk').Exports
-}
+bazel_dep(name = "extensions_sdk", version = "1.0.0")
 ```
 
-The entrypoint of your extension is a function called `entry`
-  ```javascript
-  export function entry() {
-    console.log('Initialized ext')
-  }
-  ```
+---
+
+## 2. Generating Boilerplate
+
+The easiest way to get started is by using the built-in scaffolding tool. This generates both the Bazel `BUILD` file and the starter code for your extension:
+
+{{#tabs }}
+{{#tab name="Rust" }}
+```bash
+bazel run @extensions_sdk//tools:scaffold -- --lang rust --name my_rust_ext
+```
+{{#endtab }}
+{{#tab name="Golang" }}
+```bash
+bazel run @extensions_sdk//tools:scaffold -- --lang go --name my_go_ext
+```
+{{#endtab }}
+{{#tab name="Python" }}
+```bash
+bazel run @extensions_sdk//tools:scaffold -- --lang python --name my_py_ext
+```
+{{#endtab }}
+{{#tab name="Javascript" }}
+```bash
+bazel run @extensions_sdk//tools:scaffold -- --lang js --name my_js_ext
+```
 {{#endtab }}
 {{#endtabs }}
+
+---
+
+## 3. Extension Rules & Implementation
+
+{{#tabs }}
+{{#tab name="Rust" }}
+### Generated `BUILD` Rule
+
+The scaffolding tool generates a `BUILD` file using `rust_extension`:
+
+```starlark
+{{#include ../../wasm-extension-rs/examples/BUILD:build_rule}}
+```
+
+### Implementation
+
+Extensions are represented by the `Extension` trait. You need to register your extension through the `init` function:
+
+```rust
+{{#include ../../wasm-extension-rs/examples/src/lib.rs:first_extension}}
+```
+
+### Build
+
+```bash
+bazel build //my_rust_ext:my_rust_ext
+```
+{{#endtab }}
+{{#tab name="Golang" }}
+### Generated `BUILD` Rule
+
+The scaffolding tool generates a `BUILD` file using `go_extension`:
+
+```starlark
+{{#include ../../wasm-extension-go/examples/BUILD:build_rule}}
+```
+
+### Implementation
+
+Extensions are represented by embedding `api.DefaultExtension`. You need to register your extension through the `entry` function:
+
+```go
+{{#include ../../wasm-extension-go/examples/main.go:first_extension}}
+```
+
+### Build
+
+```bash
+bazel build //my_go_ext:my_go_ext
+```
+{{#endtab }}
+{{#tab name="Python" }}
+### Generated `BUILD` Rule
+
+The scaffolding tool generates a `BUILD` file using `py_extension`:
+
+```starlark
+{{#include ../../wasm-extension-py/examples/BUILD:build_rule}}
+```
+
+### Implementation
+
+All extensions must start in a module called `main`. Extensions are represented by the `Extension` class. You need to register your extension through the `entry` function:
+
+```python
+{{#include ../../wasm-extension-py/examples/main.py:first_extension}}
+```
+
+### Build
+
+```bash
+bazel build //my_py_ext:my_py_ext
+```
+{{#endtab }}
+{{#tab name="Javascript" }}
+### Generated `BUILD` Rule
+
+The scaffolding tool generates a `BUILD` file using `js_extension`:
+
+```starlark
+{{#include ../../wasm-extension-js/examples/BUILD:build_rule}}
+```
+
+### Implementation
+
+You need to re-export all methods provided by `wasm-extension-js` package. The entrypoint of your extension is a function called `entry`:
+
+```typescript
+{{#include ../../wasm-extension-js/examples/src/index.ts:first_extension}}
+```
+
+### Build
+
+```bash
+bazel build //my_js_ext:my_js_ext
+```
+{{#endtab }}
+{{#endtabs }}
+
+---
+
+## 4. Making HTTP Requests
+
+Extensions can make outgoing HTTP requests through the host runner using the SDK's HTTP APIs. Both single requests and batch/parallel requests are supported.
+
+> **Permissions**: To communicate with external servers, specify allowed hosts in your extension manifest (`package.json`) under `"allowed_hosts"` (for example, `["api.spotify.com", "*.last.fm"]`).
+
+{{#tabs }}
+{{#tab name="Rust" }}
+```rust
+{{#include ../../wasm-extension-rs/examples/src/lib.rs:http_usage}}
+```
+{{#endtab }}
+{{#tab name="Golang" }}
+```go
+{{#include ../../wasm-extension-go/examples/main.go:http_usage}}
+```
+{{#endtab }}
+{{#tab name="Python" }}
+```python
+{{#include ../../wasm-extension-py/examples/main.py:http_usage}}
+```
+{{#endtab }}
+{{#tab name="Javascript" }}
+```typescript
+{{#include ../../wasm-extension-js/examples/src/index.ts:http_usage}}
+```
+{{#endtab }}
+{{#endtabs }}
+

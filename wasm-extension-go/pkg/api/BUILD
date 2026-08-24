@@ -1,5 +1,7 @@
 load("@rules_go//go:def.bzl", "go_library")
 
+exports_files(["api.go", "exports.go"])
+
 go_library(
     name = "api",
     srcs = [

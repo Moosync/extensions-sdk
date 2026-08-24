@@ -14,5 +14,6 @@ Web assembly is platform independant and has a few restrictions:
 ## Development
 Moosync uses [extism](https://extism.org/) under the hood to load web assembly modules. Any host language supported by extism can be used to write extensions. Currently we only provide support for
 - Rust
+- Golang
 - Javascript / Typescript
 - Python

@@ -1,9 +1,30 @@
-load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@aspect_rules_js//js:defs.bzl", "js_library", "js_run_binary")
 load("@aspect_rules_js//npm:defs.bzl", "npm_package")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@sdk_npm//:defs.bzl", "npm_link_all_packages")
+load("@sdk_npm//wasm-extension-js:typedoc/package_json.bzl", typedoc_bin = "bin")
 
 package(default_visibility = ["//visibility:public"])
+
+typedoc_bin.typedoc(
+    name = "doc",
+    srcs = glob(["src/**/*.ts"]) + [
+        ":copy_protos",
+        "tsconfig.json",
+        ":node_modules/typescript",
+        ":node_modules/@extism/js-pdk",
+        ":node_modules/@bufbuild/protobuf",
+    ],
+    args = [
+        "--entryPoints",
+        "wasm-extension-js/src/index.ts",
+        "--out",
+        "wasm-extension-js/doc",
+        "--tsconfig",
+        "wasm-extension-js/tsconfig.json",
+    ],
+    out_dirs = ["doc"],
+)
 
 exports_files([
     "src/plugin.d.ts",
