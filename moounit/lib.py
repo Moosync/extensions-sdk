@@ -1,29 +1,31 @@
-from core.types.protos.extensions_pb2 import ManifestPermissions
-import uuid
-from extism.extism import (
-    CompiledPlugin,
-    TypeInferredFunction,
-    HOST_FN_REGISTRY,
-    set_log_custom,
-)
-import extism
+import contextvars
 import json
 import os
 import tempfile
-
-import contextvars
-from enum import Enum
-from typing import List, Dict, Callable, Union, Any
+import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
+from enum import Enum
+from typing import Any
+
+import extism
 import pytest
 from core.types.protos.extensions_pb2 import (
-    ExtensionCommandResponse,
+    BatchHttpRequest,
+    BatchHttpResponse,
     ExtensionCommand,
+    ExtensionCommandResponse,
     ExtensionManifest,
     MainCommand,
     MainCommandResponse,
+    ManifestPermissions,
 )
-
+from extism.extism import (
+    HOST_FN_REGISTRY,
+    CompiledPlugin,
+    TypeInferredFunction,
+    set_log_custom,
+)
 from google.protobuf.message import Message
 
 
@@ -32,9 +34,14 @@ def partial_match(expected: Message, actual: Message) -> bool:
         return False
 
     for field in expected.DESCRIPTOR.fields:
-        if field.label == field.LABEL_REPEATED:
-            # We will use strict equality for repeated fields for now
-            if getattr(expected, field.name) != getattr(actual, field.name):
+        expected_val = getattr(expected, field.name)
+        actual_val = getattr(actual, field.name)
+
+        if (
+            isinstance(expected_val, (list, tuple))
+            or "Repeated" in type(expected_val).__name__
+        ):
+            if expected_val != actual_val:
                 return False
         else:
             # Check presence if supported
@@ -45,10 +52,7 @@ def partial_match(expected: Message, actual: Message) -> bool:
                 # Field does not track presence (e.g. Proto3 scalar)
                 pass
 
-            expected_val = getattr(expected, field.name)
-            actual_val = getattr(actual, field.name)
-
-            if field.type == field.TYPE_MESSAGE:
+            if isinstance(expected_val, Message):
                 if not partial_match(expected_val, actual_val):
                     return False
             else:
@@ -60,13 +64,13 @@ def partial_match(expected: Message, actual: Message) -> bool:
 @dataclass
 class Expectation:
     command: MainCommand
-    response: Union[MainCommandResponse, Callable[[], MainCommandResponse]]
+    response: MainCommandResponse | Callable[[], MainCommandResponse]
     times: int
 
 
 @dataclass
 class SystemTimeExpectation:
-    return_value: Union[int, Callable[[], int]]
+    return_value: int | Callable[[], int]
     times: int
 
 
@@ -74,14 +78,14 @@ class SystemTimeExpectation:
 class HashExpectation:
     hash_type: str
     data: bytes
-    return_value: Union[bytes, Callable[[], bytes]]
+    return_value: bytes | Callable[[], bytes]
     times: int
 
 
 @dataclass
 class OpenClientFdExpectation:
     path: str
-    return_value: Union[int, Callable[[], int]]
+    return_value: int | Callable[[], int]
     times: int
 
 
@@ -89,7 +93,7 @@ class OpenClientFdExpectation:
 class WriteSockExpectation:
     sock_id: int
     buf: bytes
-    return_value: Union[int, Callable[[], int]]
+    return_value: int | Callable[[], int]
     times: int
 
 
@@ -97,11 +101,18 @@ class WriteSockExpectation:
 class ReadSockExpectation:
     sock_id: int
     read_len: int
-    return_value: Union[bytes, Callable[[], bytes]]
+    return_value: bytes | Callable[[], bytes]
     times: int
 
 
-received_commands: dict[list[MainCommand]] = []
+@dataclass
+class BatchHttpRequestExpectation:
+    requests: BatchHttpRequest
+    response: BatchHttpResponse | Callable[[], BatchHttpResponse]
+    times: int
+
+
+received_commands: list[MainCommand] = []
 
 
 class Scope(Enum):
@@ -113,7 +124,7 @@ current_scope = contextvars.ContextVar("current_scope", default=Scope.SESSION)
 
 
 class Moounit:
-    _instances: Dict[str, "Moounit"] = {}
+    _instances: dict[str, "Moounit"] = {}
 
     def _parse_manifest(self, path: str) -> ExtensionManifest:
         with open(os.path.join(path, "package.json"), "r") as f:
@@ -190,39 +201,52 @@ class Moounit:
 
             return instance.handle_main_command(data)
 
+        def batch_http_request(data: bytes) -> bytes:
+            return _guard(
+                b"",
+                lambda i: i._check_batch_http_request(data),
+                "Unexpected call to batch_http_request. If this call is expected, please ensure you have set an expectation using expect_batch_http_request.",
+            )
+
         fns = [
             TypeInferredFunction(
                 None,
                 system_time.__name__,
                 system_time,
-                [int(0).to_bytes(length=4, byteorder="big")],
+                [(0).to_bytes(length=4, byteorder="big")],
             ),
             TypeInferredFunction(
                 None,
                 open_clientfd.__name__,
                 open_clientfd,
-                [int(1).to_bytes(length=4, byteorder="big")],
+                [(1).to_bytes(length=4, byteorder="big")],
             ),
             TypeInferredFunction(
                 None,
                 write_sock.__name__,
                 write_sock,
-                [int(2).to_bytes(length=4, byteorder="big")],
+                [(2).to_bytes(length=4, byteorder="big")],
             ),
             TypeInferredFunction(
                 None,
                 read_sock.__name__,
                 read_sock,
-                [int(3).to_bytes(length=4, byteorder="big")],
+                [(3).to_bytes(length=4, byteorder="big")],
             ),
             TypeInferredFunction(
-                None, hash.__name__, hash, [int(4).to_bytes(length=4, byteorder="big")]
+                None, hash.__name__, hash, [(4).to_bytes(length=4, byteorder="big")]
             ),
             TypeInferredFunction(
                 None,
                 send_main_command.__name__,
                 send_main_command,
-                [int(5).to_bytes(length=4, byteorder="big")],
+                [(5).to_bytes(length=4, byteorder="big")],
+            ),
+            TypeInferredFunction(
+                None,
+                batch_http_request.__name__,
+                batch_http_request,
+                [(6).to_bytes(length=4, byteorder="big")],
             ),
         ]
 
@@ -268,26 +292,33 @@ class Moounit:
         return ExtensionCommandResponse.FromString(resp)
 
     def __init__(self, path: str):
-        self.session_expectations: List[Expectation] = []
-        self.local_expectations: List[Expectation] = []
+        self.session_expectations: list[Expectation] = []
+        self.local_expectations: list[Expectation] = []
 
-        self.session_system_time_expectations: List[SystemTimeExpectation] = []
-        self.local_system_time_expectations: List[SystemTimeExpectation] = []
+        self.session_system_time_expectations: list[SystemTimeExpectation] = []
+        self.local_system_time_expectations: list[SystemTimeExpectation] = []
 
-        self.session_hash_expectations: List[HashExpectation] = []
-        self.local_hash_expectations: List[HashExpectation] = []
+        self.session_hash_expectations: list[HashExpectation] = []
+        self.local_hash_expectations: list[HashExpectation] = []
 
-        self.session_open_clientfd_expectations: List[OpenClientFdExpectation] = []
-        self.local_open_clientfd_expectations: List[OpenClientFdExpectation] = []
+        self.session_open_clientfd_expectations: list[OpenClientFdExpectation] = []
+        self.local_open_clientfd_expectations: list[OpenClientFdExpectation] = []
 
-        self.session_write_sock_expectations: List[WriteSockExpectation] = []
-        self.local_write_sock_expectations: List[WriteSockExpectation] = []
+        self.session_write_sock_expectations: list[WriteSockExpectation] = []
+        self.local_write_sock_expectations: list[WriteSockExpectation] = []
 
-        self.session_read_sock_expectations: List[ReadSockExpectation] = []
-        self.local_read_sock_expectations: List[ReadSockExpectation] = []
+        self.session_read_sock_expectations: list[ReadSockExpectation] = []
+        self.local_read_sock_expectations: list[ReadSockExpectation] = []
 
-        self._temp_dirs: List[tempfile.TemporaryDirectory] = []
-        self._mapped_paths: Dict[str, str] = {}
+        self.session_batch_http_request_expectations: list[
+            BatchHttpRequestExpectation
+        ] = []
+        self.local_batch_http_request_expectations: list[
+            BatchHttpRequestExpectation
+        ] = []
+
+        self._temp_dirs: list[tempfile.TemporaryDirectory] = []
+        self._mapped_paths: dict[str, str] = {}
 
         manifest = self._parse_manifest(path)
         self._load_extension(manifest)
@@ -295,7 +326,7 @@ class Moounit:
     def expect_command(
         self,
         command: MainCommand,
-        response: Union[MainCommandResponse, Callable[[], MainCommandResponse]],
+        response: MainCommandResponse | Callable[[], MainCommandResponse],
         times: int = 1,
     ):
         expectation = Expectation(
@@ -308,9 +339,7 @@ class Moounit:
         else:
             self.session_expectations.append(expectation)
 
-    def expect_system_time(
-        self, return_value: Union[int, Callable[[], int]], times: int = 1
-    ):
+    def expect_system_time(self, return_value: int | Callable[[], int], times: int = 1):
         expectation = SystemTimeExpectation(return_value=return_value, times=times)
         if current_scope.get() == Scope.LOCAL:
             self.local_system_time_expectations.append(expectation)
@@ -321,7 +350,7 @@ class Moounit:
         self,
         hash_type: str,
         data: bytes,
-        return_value: Union[bytes, Callable[[], bytes]],
+        return_value: bytes | Callable[[], bytes],
         times: int = 1,
     ):
         expectation = HashExpectation(
@@ -333,7 +362,7 @@ class Moounit:
             self.session_hash_expectations.append(expectation)
 
     def expect_open_clientfd(
-        self, path: str, return_value: Union[int, Callable[[], int]], times: int = 1
+        self, path: str, return_value: int | Callable[[], int], times: int = 1
     ):
         expectation = OpenClientFdExpectation(
             path=path, return_value=return_value, times=times
@@ -347,7 +376,7 @@ class Moounit:
         self,
         sock_id: int,
         buf: bytes = b"",
-        return_value: Union[int, Callable[[], int]] = 0,
+        return_value: int | Callable[[], int] = 0,
         times: int = 1,
     ):
         """
@@ -366,7 +395,7 @@ class Moounit:
         self,
         sock_id: int,
         read_len: int = 0,
-        return_value: Union[bytes, Callable[[], bytes]] = b"",
+        return_value: bytes | Callable[[], bytes] = b"",
         times: int = 1,
     ):
         """
@@ -381,6 +410,20 @@ class Moounit:
         else:
             self.session_read_sock_expectations.append(expectation)
 
+    def expect_batch_http_request(
+        self,
+        requests: BatchHttpRequest,
+        response: BatchHttpResponse | Callable[[], BatchHttpResponse],
+        times: int = 1,
+    ):
+        expectation = BatchHttpRequestExpectation(
+            requests=requests, response=response, times=times
+        )
+        if current_scope.get() == Scope.LOCAL:
+            self.local_batch_http_request_expectations.append(expectation)
+        else:
+            self.session_batch_http_request_expectations.append(expectation)
+
     def clear_local_expectations(self):
         self.local_expectations.clear()
         self.local_system_time_expectations.clear()
@@ -388,17 +431,22 @@ class Moounit:
         self.local_open_clientfd_expectations.clear()
         self.local_write_sock_expectations.clear()
         self.local_read_sock_expectations.clear()
+        self.local_batch_http_request_expectations.clear()
 
     def verify_and_clear_local_expectations(self):
         errors = []
         if any(e.times > 0 for e in self.local_expectations):
-            errors.append(f"Unused command expectations: {[e for e in self.local_expectations if e.times > 0]}")
+            errors.append(
+                f"Unused command expectations: {[e for e in self.local_expectations if e.times > 0]}"
+            )
         if any(e.times > 0 for e in self.local_system_time_expectations):
             errors.append(
                 f"Unused system_time expectations: {[e for e in self.local_system_time_expectations if e.times > 0]}"
             )
         if any(e.times > 0 for e in self.local_hash_expectations):
-            errors.append(f"Unused hash expectations: {[e for e in self.local_hash_expectations if e.times > 0]}")
+            errors.append(
+                f"Unused hash expectations: {[e for e in self.local_hash_expectations if e.times > 0]}"
+            )
         if any(e.times > 0 for e in self.local_open_clientfd_expectations):
             errors.append(
                 f"Unused open_clientfd expectations: {[e for e in self.local_open_clientfd_expectations if e.times > 0]}"
@@ -410,6 +458,10 @@ class Moounit:
         if any(e.times > 0 for e in self.local_read_sock_expectations):
             errors.append(
                 f"Unused read_sock expectations: {[e for e in self.local_read_sock_expectations if e.times > 0]}"
+            )
+        if any(e.times > 0 for e in self.local_batch_http_request_expectations):
+            errors.append(
+                f"Unused batch_http_request expectations: {[e for e in self.local_batch_http_request_expectations if e.times > 0]}"
             )
 
         self.clear_local_expectations()
@@ -424,6 +476,7 @@ class Moounit:
         self.session_open_clientfd_expectations.clear()
         self.session_write_sock_expectations.clear()
         self.session_read_sock_expectations.clear()
+        self.session_batch_http_request_expectations.clear()
 
     def verify_and_clear_session_expectations(self):
         errors = []
@@ -451,21 +504,25 @@ class Moounit:
             errors.append(
                 f"Unused session read_sock expectations: {[e for e in self.session_read_sock_expectations if e.times > 0]}"
             )
+        if any(e.times > 0 for e in self.session_batch_http_request_expectations):
+            errors.append(
+                f"Unused session batch_http_request expectations: {[e for e in self.session_batch_http_request_expectations if e.times > 0]}"
+            )
 
         self.clear_session_expectations()
 
         if errors:
             raise AssertionError("\n".join(errors))
 
-    def _get_value(self, val: Union[Any, Callable[[], Any]]) -> Any:
+    def _get_value(self, val: Any | Callable[[], Any]) -> Any:
         if callable(val):
             return val()
         return val
 
     def _consume_expectation(
         self,
-        local_list: List[Any],
-        session_list: List[Any],
+        local_list: list[Any],
+        session_list: list[Any],
         matcher: Callable[[Any], bool],
         error_msg: str,
     ) -> Any:
@@ -527,6 +584,19 @@ class Moounit:
         )
         return self._get_value(exp.return_value)
 
+    def _check_batch_http_request(self, data: bytes) -> bytes:
+        req = BatchHttpRequest.FromString(data)
+        exp = self._consume_expectation(
+            self.local_batch_http_request_expectations,
+            self.session_batch_http_request_expectations,
+            lambda e: partial_match(e.requests, req),
+            f"Unexpected batch_http_request: {req}. If this request is expected, please ensure you have set an expectation using expect_batch_http_request.",
+        )
+        resp = exp.response
+        if callable(resp):
+            return resp().SerializeToString()
+        return resp.SerializeToString()
+
     def handle_main_command(self, data: bytes) -> bytes:
         command = MainCommand.FromString(data)
 
@@ -542,7 +612,7 @@ class Moounit:
             return resp().SerializeToString()
         return resp.SerializeToString()
 
-    def get_mapped_paths(self) -> Dict[str, str]:
+    def get_mapped_paths(self) -> dict[str, str]:
         """
         Returns a dictionary mapping original host paths to their corresponding temporary directory paths.
         """

@@ -7,4 +7,4 @@ extism==1.1.1
 extism-sys==1.11.1
 cffi==1.17.1
 pycparser==2.22
-protobuf==6.33.2
+protobuf==7.36.0

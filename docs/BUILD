@@ -1,4 +1,5 @@
-load("//docs:defs.bzl", "docs_site", "mdbook")
+load("@rules_rust_mdbook//:defs.bzl", "mdbook", "mdbook_server")
+load("//docs:defs.bzl", "docs_site")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -11,7 +12,11 @@ exports_files([
 
 mdbook(
     name = "book",
-    book_toml = "book.toml",
+    book = "book.toml",
+    plugins = [
+        "//tools:mdbook_admonish",
+        "//tools:mdbook_tabs",
+    ],
     srcs = glob([
         "src/**/*.md",
         "*.css",
@@ -26,6 +31,11 @@ mdbook(
         "//wasm-extension-js/examples:src/index.ts",
         "//wasm-extension-js/examples:BUILD",
     ],
+)
+
+mdbook_server(
+    name = "book_server",
+    book = ":book",
 )
 
 docs_site(

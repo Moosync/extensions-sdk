@@ -35,12 +35,6 @@ py_binary(
 )
 
 alias(
-    name = "mdbook",
-    actual = "@mdbook_tool//:mdbook",
-    visibility = ["//visibility:public"],
-)
-
-alias(
     name = "mdbook_admonish",
     actual = "@mdbook_admonish_tool//:mdbook-admonish",
     visibility = ["//visibility:public"],

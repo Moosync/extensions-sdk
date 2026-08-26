@@ -1,0 +1,14 @@
+[package]
+name = "extensions-sdk-docs-deps"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "../wasm-extension-rs/examples/src/lib.rs"
+
+# This manifest exists solely for Bazel crate_universe dependency resolution.
+# Do not build this crate directly with Cargo.
+
+[dependencies]
+mdbook-tabs = "0.1.3"
