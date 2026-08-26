@@ -37,6 +37,28 @@ def find_templates_root(custom_dir: str | None = None) -> str:
     raise FileNotFoundError("Could not locate tools/templates directory")
 
 
+def find_workspace_root(start_dir: str) -> str | None:
+    ws = os.environ.get("BUILD_WORKSPACE_DIRECTORY")
+    if ws and os.path.isdir(ws):
+        return os.path.abspath(ws)
+
+    current = os.path.abspath(start_dir)
+    while True:
+        if (
+            os.path.isfile(os.path.join(current, "MODULE.bazel"))
+            or os.path.isfile(os.path.join(current, "dependencies.MODULE.bazel"))
+            or os.path.isfile(os.path.join(current, "REPO.bazel"))
+            or os.path.isfile(os.path.join(current, "WORKSPACE"))
+            or os.path.isfile(os.path.join(current, "WORKSPACE.bazel"))
+        ):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+    return None
+
+
 def scaffold_extension(lang: str, name: str, dest: str, display_name: str, package_name: str, templates_root: str):
     lang_map = {
         "rs": "rust", "rust": "rust",
@@ -71,6 +93,7 @@ def scaffold_extension(lang: str, name: str, dest: str, display_name: str, packa
         for filename in files:
             src_file = os.path.join(root, filename)
             target_filename = filename[:-5] if filename.endswith(".tmpl") else filename
+            target_filename = Template(target_filename).safe_substitute(template_vars).replace("ext_name", name)
             target_file = os.path.join(target_dir, target_filename)
 
             with open(src_file, "r", encoding="utf-8") as f:
@@ -83,7 +106,57 @@ def scaffold_extension(lang: str, name: str, dest: str, display_name: str, packa
 
             created_files.append(target_file)
 
+    module_bazel_file = os.path.join(dest, f"{name}.MODULE.bazel")
+    if module_bazel_file not in created_files and not os.path.isfile(module_bazel_file):
+        with open(module_bazel_file, "w", encoding="utf-8") as f:
+            f.write(f"# Module dependencies for {name}\n")
+        created_files.append(module_bazel_file)
+
     return created_files
+
+
+def include_in_module(dest: str, name: str) -> tuple[str, bool] | None:
+    workspace_root = find_workspace_root(dest)
+    if not workspace_root:
+        return None
+
+    try:
+        rel_pkg = os.path.relpath(dest, workspace_root)
+    except ValueError:
+        return None
+
+    if rel_pkg.startswith(".."):
+        return None
+
+    if rel_pkg == ".":
+        include_target = f"//:{name}.MODULE.bazel"
+    else:
+        include_target = f"//{rel_pkg}:{name}.MODULE.bazel"
+
+    dep_file = os.path.join(workspace_root, "dependencies.MODULE.bazel")
+    mod_file = os.path.join(workspace_root, "MODULE.bazel")
+
+    if os.path.isfile(dep_file):
+        target_file = dep_file
+    elif os.path.isfile(mod_file):
+        target_file = mod_file
+    else:
+        return None
+
+    with open(target_file, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    include_stmt = f'include("{include_target}")'
+    if include_stmt in content:
+        return target_file, False
+
+    prefix = "" if not content or content.endswith("\n") else "\n"
+    new_content = content + prefix + include_stmt + "\n"
+
+    with open(target_file, "w", encoding="utf-8") as f:
+        f.write(new_content)
+
+    return target_file, True
 
 
 def main():
@@ -122,12 +195,31 @@ def main():
         templates_root=templates_root,
     )
 
+    include_result = include_in_module(dest, name)
+
     print(f"Successfully generated extension in: {dest}")
     print("Created files:")
     for cf in created_files:
         print(f"  - {os.path.relpath(cf, working_dir)}")
+
+    if include_result:
+        target_file, updated = include_result
+        rel_target = os.path.relpath(target_file, working_dir)
+        if updated:
+            print(f"\nIncluded {name}.MODULE.bazel in: {rel_target}")
+        else:
+            print(f"\n{name}.MODULE.bazel already included in: {rel_target}")
+
+    workspace_root = find_workspace_root(dest)
+    if workspace_root:
+        rel_to_ws = os.path.relpath(dest, workspace_root)
+        pkg = "" if rel_to_ws == "." else rel_to_ws
+        build_label = f"//{pkg}:{name}" if pkg else f"//:{name}"
+    else:
+        build_label = f"//{os.path.relpath(dest, working_dir)}:{name}"
+
     print(f"\nBuild target: {name}")
-    print(f"Run `bazel build //{os.path.relpath(dest, working_dir)}:{name}` to build your extension.")
+    print(f"Run `bazel build {build_label}` to build your extension.")
 
 
 if __name__ == "__main__":
