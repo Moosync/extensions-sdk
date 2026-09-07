@@ -30,12 +30,12 @@ pub use extensions_proto::moosync::types::{
     RequestedLyricsRequest, RequestedPlaylistContextMenuRequest, RequestedPlaylistFromUrlRequest,
     RequestedPlaylistSongsRequest, RequestedPlaylistsRequest, RequestedRecommendationsRequest,
     RequestedSearchResultRequest, RequestedSongContextMenuRequest, RequestedSongFromIdRequest,
-    RequestedSongFromUrlRequest, ScrobbleRequest, SeekedRequest, SetPreferenceRequest,
-    SetSecureRequest, SongAddedRequest, SongChangedRequest, SongQueueChangedRequest,
-    SongRemovedRequest, UnregisterUserPreferenceRequest, UpdateAccountsRequest, UpdateSongRequest,
+    RequestedSongFromUrlRequest, ScrobbleRequest, SeekedRequest, SetAccountRequest,
+    SetPreferenceRequest, SetSecureRequest, SongAddedRequest, SongChangedRequest,
+    SongQueueChangedRequest, SongRemovedRequest, UnregisterUserPreferenceRequest, UpdateSongRequest,
     VolumeChangedRequest,
 };
-use songs_proto::moosync::types::{Playlist, SearchResult, Song, EntityResult};
+use songs_proto::moosync::types::{EntityResult, Playlist, SearchResult, Song};
 use ui_proto::moosync::types::PreferenceUiData;
 
 pub type MoosyncResult<T> = Result<T, crate::handler::MoosyncError>;
@@ -44,11 +44,6 @@ pub type AccountLoginArgs = PerformAccountLoginRequest;
 #[allow(unused_variables)]
 /// Trait for handling account-related events.
 pub trait Accounts {
-    /// Called when the main app requests the list of accounts.
-    fn get_accounts(&self) -> MoosyncResult<Vec<ExtensionAccountDetail>> {
-        Err("Not implemented".into())
-    }
-
     /// Called when the main app requests to perform an account login.
     fn perform_account_login(&self, req: PerformAccountLoginRequest) -> MoosyncResult<String> {
         Err("Not implemented".into())
@@ -447,11 +442,13 @@ pub mod extension_api {
         update_song(UpdateSong, UpdateSongRequest, song: Song) -> ();
     }
 
-    /// Updates the list of accounts in the main app.
-    pub fn update_accounts(account: Option<String>) -> MoosyncResult<()> {
+    /// Registers or updates an account in the main app.
+    pub fn set_account(account: ExtensionAccountDetail) -> MoosyncResult<()> {
         unsafe {
-            let request = UpdateAccountsRequest { account };
-            let cmd_enum = MainCommandEnum::UpdateAccounts(request);
+            let request = SetAccountRequest {
+                account: Some(account),
+            };
+            let cmd_enum = MainCommandEnum::SetAccount(request);
             let cmd = MainCommand {
                 command: Some(cmd_enum),
             };
@@ -462,7 +459,7 @@ pub mod extension_api {
                 return Err(MoosyncError::String(e.message.clone()));
             }
 
-            if let Some(MainCommandResponseEnum::UpdateAccounts(_)) = res.response {
+            if let Some(MainCommandResponseEnum::SetAccount(_)) = res.response {
                 return Ok(());
             }
 

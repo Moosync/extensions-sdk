@@ -19,7 +19,6 @@ import (
 )
 
 type Extension interface {
-	GetAccounts() ([]*extensions.ExtensionAccountDetail, error)
 	PerformAccountLogin(req *extensions.PerformAccountLoginRequest) (string, error)
 	OauthCallback(req *extensions.OauthCallbackRequest) error
 	OnSongAdded(req *extensions.SongAddedRequest) error
@@ -52,10 +51,6 @@ type Extension interface {
 }
 
 type DefaultExtension struct{}
-
-func (DefaultExtension) GetAccounts() ([]*extensions.ExtensionAccountDetail, error) {
-	return nil, errors.New("Not implemented")
-}
 
 func (DefaultExtension) PerformAccountLogin(req *extensions.PerformAccountLoginRequest) (string, error) {
 	return "", errors.New("Not implemented")
@@ -431,10 +426,10 @@ func UnregisterUserPreference(keys []string) error {
 	return err
 }
 
-func UpdateAccounts(account *string) error {
+func SetAccount(account *extensions.ExtensionAccountDetail) error {
 	cmd := &extensions.MainCommand{
-		Command: &extensions.MainCommand_UpdateAccounts{
-			UpdateAccounts: &extensions.UpdateAccountsRequest{Account: account},
+		Command: &extensions.MainCommand_SetAccount{
+			SetAccount: &extensions.SetAccountRequest{Account: account},
 		},
 	}
 	_, err := sendMainCommand(cmd)

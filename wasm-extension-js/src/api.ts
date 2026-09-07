@@ -31,7 +31,8 @@ import {
   MainCommand,
   ExtensionCommand,
   ExtensionCommandResponse,
-  UpdateAccountsRequest,
+  SetAccountRequest,
+  SetAccountResponse,
   RequestedPlaylistsRequest,
   RequestedPlaylistSongsRequest,
   RequestedPlaylistFromUrlRequest,
@@ -56,8 +57,6 @@ import {
   SongRemovedRequest,
   PlaylistAddedRequest,
   PlaylistRemovedRequest,
-  GetAccountsRequest,
-  GetAccountsResponse,
   OauthCallbackRequest,
   PerformAccountLoginRequest,
   ScrobbleRequest,
@@ -161,7 +160,7 @@ export interface ExtensionAPI {
   getQueue(): Song[];
   getContext(): ExtensionContext;
 
-  updateAccounts(accountId?: string): void;
+  setAccount(account: ExtensionAccountDetail): boolean;
   registerOauth(url: string): boolean;
   registerUserPreferences(preferences: PreferenceUiData[]): void;
   unregisterUserPreferences(preferenceIds: string[]): void;
@@ -221,14 +220,18 @@ class Api implements ExtensionAPI {
     return new ExtensionContext();
   }
 
-  updateAccounts(accountId?: string): void {
+  setAccount(account: ExtensionAccountDetail): boolean {
     const cmd = new MainCommand({
       command: {
-        case: "updateAccounts",
-        value: new UpdateAccountsRequest({ account: accountId }),
+        case: "setAccount",
+        value: new SetAccountRequest({ account }),
       },
     });
-    sendMainCommand(cmd);
+    const res = sendMainCommand(cmd);
+    if (res.response.case === "setAccount") {
+      return res.response.value.success;
+    }
+    return false;
   }
 
   registerOauth(url: string): boolean {

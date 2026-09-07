@@ -365,16 +365,6 @@ func handle_extension_command() int32 {
 			GetProviderScopes: &extensions.GetProviderScopesResponse{Scopes: res},
 		}
 
-	case *extensions.ExtensionCommand_GetAccounts:
-		res, err := extension.GetAccounts()
-		if err != nil {
-			pdk.SetError(err)
-			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_GetAccounts{
-			GetAccounts: &extensions.GetAccountsResponse{Accounts: res},
-		}
-
 	case *extensions.ExtensionCommand_PerformAccountLogin:
 		res, err := extension.PerformAccountLogin(e.PerformAccountLogin)
 		if err != nil {

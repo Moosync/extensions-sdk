@@ -346,12 +346,12 @@ class Api:
         resp = send_main_command_(req)
         return resp.open_external_url.success
 
-    def update_accounts(self, account: Optional[str] = None) -> bool:
+    def set_account(self, account: extensions_pb2.ExtensionAccountDetail) -> bool:
         req = extensions_pb2.MainCommand(
-            update_accounts=extensions_pb2.UpdateAccountsRequest(account=account)
+            set_account=extensions_pb2.SetAccountRequest(account=account)
         )
         resp = send_main_command_(req)
-        return resp.update_accounts.success
+        return resp.set_account.success
 
     def register_user_preferences(self, prefs: List[ui_pb2.PreferenceUiData]) -> bool:
         req = extensions_pb2.MainCommand(
@@ -484,11 +484,6 @@ class Extension:
         self, req: extensions_pb2.PlaylistRemovedRequest
     ) -> extensions_pb2.PlaylistRemovedResponse:
         raise NotImplementedError()
-
-    def get_accounts(
-        self, req: extensions_pb2.GetAccountsRequest
-    ) -> extensions_pb2.GetAccountsResponse:
-        return extensions_pb2.GetAccountsResponse()
 
     def perform_account_login(
         self, req: extensions_pb2.PerformAccountLoginRequest
@@ -666,8 +661,6 @@ def handle_extension_command():
         response.context_menu_action.CopyFrom(
             instance.on_context_menu_action(cmd.context_menu_action)
         )
-    elif number == extensions_pb2.ExtensionCommand.GET_ACCOUNTS_FIELD_NUMBER:
-        response.get_accounts.CopyFrom(instance.get_accounts(cmd.get_accounts))
     elif number == extensions_pb2.ExtensionCommand.PERFORM_ACCOUNT_LOGIN_FIELD_NUMBER:
         response.perform_account_login.CopyFrom(
             instance.perform_account_login(cmd.perform_account_login)

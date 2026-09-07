@@ -147,7 +147,6 @@ pub fn handle_command(
                     GetProviderScopes(_) => get_provider_scopes() => res in GetProviderScopesResponse {
                          scopes: res.into_iter().map(|s| s as i32).collect(),
                     },
-                    GetAccounts(_) => get_accounts() => res in GetAccountsResponse { accounts: res },
                     PerformAccountLogin(req) => perform_account_login(req) => res in PerformAccountLoginResponse { status: res },
                 });
 
