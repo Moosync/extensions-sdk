@@ -55,6 +55,7 @@ def go_extension(
             Label("//wasm-extension-go/pkg/api"),
             Label("@com_github_extism_go_pdk//:go_default_library"),
             Label("//protos:extensions_go_proto"),
+            Label("//protos:preferences_go_proto"),
             Label("//protos:songs_go_proto"),
             Label("//protos:ui_go_proto"),
         ],

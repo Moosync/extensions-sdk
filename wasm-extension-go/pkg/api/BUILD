@@ -14,6 +14,7 @@ go_library(
         "@com_github_extism_go_pdk//:go_default_library",
         "@com_github_extism_go_pdk//http:go_default_library",
         "//protos:extensions_go_proto",
+        "//protos:preferences_go_proto",
         "//protos:songs_go_proto",
         "//protos:themes_go_proto",
         "//protos:ui_go_proto",

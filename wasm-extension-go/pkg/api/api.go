@@ -14,8 +14,8 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	extensions "github.com/moosync/moosync/types/extensions"
+	preferences "github.com/moosync/moosync/types/preferences"
 	songs "github.com/moosync/moosync/types/songs"
-	ui "github.com/moosync/moosync/types/ui"
 )
 
 type Extension interface {
@@ -44,7 +44,7 @@ type Extension interface {
 	GetAlbumSongs(req *extensions.RequestedAlbumSongsRequest) (*extensions.RequestedAlbumSongsResponse, error)
 	GetSongFromID(req *extensions.RequestedSongFromIdRequest) (*extensions.RequestedSongFromIdResponse, error)
 	Scrobble(req *extensions.ScrobbleRequest) error
-	GetLyrics(req *extensions.RequestedLyricsRequest) (string, error)
+	GetLyrics(req *extensions.RequestedLyricsRequest) (*songs.Lyrics, error)
 	GetSongContextMenu(req *extensions.RequestedSongContextMenuRequest) ([]*extensions.ContextMenuReturnType, error)
 	GetPlaylistContextMenu(req *extensions.RequestedPlaylistContextMenuRequest) ([]*extensions.ContextMenuReturnType, error)
 	OnContextMenuAction(req *extensions.ContextMenuActionRequest) error
@@ -152,8 +152,8 @@ func (DefaultExtension) Scrobble(req *extensions.ScrobbleRequest) error {
 	return errors.New("Not implemented")
 }
 
-func (DefaultExtension) GetLyrics(req *extensions.RequestedLyricsRequest) (string, error) {
-	return "", errors.New("Not implemented")
+func (DefaultExtension) GetLyrics(req *extensions.RequestedLyricsRequest) (*songs.Lyrics, error) {
+	return nil, errors.New("Not implemented")
 }
 
 func (DefaultExtension) GetSongContextMenu(req *extensions.RequestedSongContextMenuRequest) ([]*extensions.ContextMenuReturnType, error) {
@@ -406,7 +406,7 @@ func OpenExternalUrl(url string) error {
 	return err
 }
 
-func RegisterUserPreference(prefs []*ui.PreferenceUiData) error {
+func RegisterUserPreference(prefs []*preferences.PreferenceItem) error {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_RegisterUserPreference{
 			RegisterUserPreference: &extensions.RegisterUserPreferenceRequest{Prefs: prefs},

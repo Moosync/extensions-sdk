@@ -105,8 +105,10 @@ import {
   Playlist,
   Genre,
   GetSongOptions,
+  LyricLine,
+  Lyrics,
 } from "./protos/songs_pb";
-import { PreferenceUiData } from "./protos/ui_pb";
+import { PreferenceItem } from "./protos/preferences_pb";
 
 export {
   Song,
@@ -114,7 +116,9 @@ export {
   Artist,
   Playlist,
   Genre,
-  PreferenceUiData,
+  LyricLine,
+  Lyrics,
+  PreferenceItem,
   ExtensionAccountDetail,
   PreferenceArgs,
 };
@@ -162,7 +166,7 @@ export interface ExtensionAPI {
 
   setAccount(account: ExtensionAccountDetail): boolean;
   registerOauth(url: string): boolean;
-  registerUserPreferences(preferences: PreferenceUiData[]): void;
+  registerUserPreferences(preferences: PreferenceItem[]): void;
   unregisterUserPreferences(preferenceIds: string[]): void;
   openExternalUrl(url: string): void;
   addPlaylist(playlist: Playlist): void;
@@ -248,7 +252,7 @@ class Api implements ExtensionAPI {
     return false;
   }
 
-  registerUserPreferences(preferences: PreferenceUiData[]): void {
+  registerUserPreferences(preferences: PreferenceItem[]): void {
     const cmd = new MainCommand({
       command: {
         case: "registerUserPreference",

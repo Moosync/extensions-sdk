@@ -19,12 +19,14 @@ use extism_pdk::{plugin_fn, FnResult, Prost};
 
 // Re-export generated types
 pub use extensions_proto;
+pub use preferences_proto;
 pub use songs_proto;
 pub use themes_proto;
 pub use ui_proto;
 pub use duration_proto;
 pub use prost_types;
 pub use extensions_proto::moosync::types::*;
+pub use preferences_proto::moosync::types::*;
 pub use songs_proto::moosync::types::*;
 pub use themes_proto::moosync::types::*;
 pub use ui_proto::moosync::types::*;

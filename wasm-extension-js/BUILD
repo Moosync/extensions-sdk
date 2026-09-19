@@ -48,6 +48,8 @@ ts_project(
     srcs = glob(["src/**/*.ts"]) + [
         ":src/protos/extensions_pb.d.ts",
         ":src/protos/extensions_pb.js",
+        ":src/protos/preferences_pb.d.ts",
+        ":src/protos/preferences_pb.js",
         ":src/protos/songs_pb.d.ts",
         ":src/protos/songs_pb.js",
         ":src/protos/themes_pb.d.ts",
@@ -71,6 +73,7 @@ filegroup(
     name = "proto_types",
     srcs = [
         "//protos:extensions_ts_proto",
+        "//protos:preferences_ts_proto",
         "//protos:songs_ts_proto",
         "//protos:themes_ts_proto",
         "//protos:ui_ts_proto",
@@ -82,6 +85,7 @@ genrule(
     name = "copy_protos",
     srcs = [
         "//protos:extensions_ts_proto",
+        "//protos:preferences_ts_proto",
         "//protos:songs_ts_proto",
         "//protos:ui_ts_proto",
         "//protos:themes_ts_proto",
@@ -90,6 +94,8 @@ genrule(
     outs = [
         "src/protos/extensions_pb.d.ts",
         "src/protos/extensions_pb.js",
+        "src/protos/preferences_pb.d.ts",
+        "src/protos/preferences_pb.js",
         "src/protos/songs_pb.d.ts",
         "src/protos/songs_pb.js",
         "src/protos/ui_pb.d.ts",
@@ -104,6 +110,7 @@ genrule(
     name = "copy_protos_to_lib",
     srcs = [
         "//protos:extensions_ts_proto",
+        "//protos:preferences_ts_proto",
         "//protos:songs_ts_proto",
         "//protos:ui_ts_proto",
         "//protos:themes_ts_proto",
@@ -112,6 +119,8 @@ genrule(
     outs = [
         "lib/src/protos/extensions_pb.d.ts",
         "lib/src/protos/extensions_pb.js",
+        "lib/src/protos/preferences_pb.d.ts",
+        "lib/src/protos/preferences_pb.js",
         "lib/src/protos/songs_pb.d.ts",
         "lib/src/protos/songs_pb.js",
         "lib/src/protos/ui_pb.d.ts",

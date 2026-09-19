@@ -9,6 +9,7 @@ py_library(
     deps = [
         "@com_google_protobuf//:protobuf_python",
         "//protos:extensions_py_proto",
+        "//protos:preferences_py_proto",
         "//protos:songs_py_proto",
         "//protos:themes_py_proto",
         "//protos:ui_py_proto",
@@ -20,6 +21,7 @@ genrule(
     srcs = glob(["moosync_edk/**/*.py"]) + [
         "extism.py",
         "//protos:extensions_py_proto",
+        "//protos:preferences_py_proto",
         "//protos:songs_py_proto",
         "//protos:themes_py_proto",
         "//protos:ui_py_proto",

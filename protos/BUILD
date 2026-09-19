@@ -48,9 +48,27 @@ genrule(
     cmd = "cp $< $@",
 )
 
+genrule(
+    name = "copy_preferences_proto",
+    srcs = ["@moosync//core/types/protos:preferences.proto"],
+    outs = ["preferences.proto"],
+    cmd = "cp $< $@",
+)
+
 # -------------------------------------------------------------
 # Local proto_library targets
 # -------------------------------------------------------------
+
+proto_library(
+    name = "preferences_proto",
+    srcs = ["preferences.proto"],
+    import_prefix = "core/types/protos",
+    strip_import_prefix = "/protos",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_protobuf//:any_proto",
+    ],
+)
 
 proto_library(
     name = "ui_proto",
@@ -59,6 +77,7 @@ proto_library(
     strip_import_prefix = "/protos",
     visibility = ["//visibility:public"],
     deps = [
+        ":preferences_proto",
         "@com_google_protobuf//:struct_proto",
     ],
 )
@@ -90,6 +109,7 @@ proto_library(
     strip_import_prefix = "/protos",
     visibility = ["//visibility:public"],
     deps = [
+        ":preferences_proto",
         ":songs_proto",
         ":ui_proto",
         "@com_google_protobuf//:duration_proto",
@@ -132,11 +152,25 @@ rust_prost_library(
     visibility = ["//visibility:public"],
 )
 
+rust_prost_library(
+    name = "preferences_rs",
+    proto = ":preferences_proto",
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "preferences_go_proto",
+    importpath = "github.com/moosync/moosync/types/preferences",
+    protos = [":preferences_proto"],
+    visibility = ["//visibility:public"],
+)
+
 go_proto_library(
     name = "ui_go_proto",
     importpath = "github.com/moosync/moosync/types/ui",
     protos = [":ui_proto"],
     visibility = ["//visibility:public"],
+    deps = [":preferences_go_proto"],
 )
 
 go_proto_library(
@@ -152,6 +186,7 @@ go_proto_library(
     protos = [":extensions_proto"],
     visibility = ["//visibility:public"],
     deps = [
+        ":preferences_go_proto",
         ":songs_go_proto",
         ":ui_go_proto",
     ],
@@ -163,6 +198,12 @@ go_proto_library(
     protos = [":themes_proto"],
     visibility = ["//visibility:public"],
     deps = [":songs_go_proto"],
+)
+
+py_proto_library(
+    name = "preferences_py_proto",
+    visibility = ["//visibility:public"],
+    deps = [":preferences_proto"],
 )
 
 py_proto_library(
@@ -187,6 +228,16 @@ py_proto_library(
     name = "themes_py_proto",
     visibility = ["//visibility:public"],
     deps = [":themes_proto"],
+)
+
+ts_proto_library(
+    name = "preferences_ts_proto",
+    copy_files = False,
+    node_modules = ":node_modules",
+    proto = ":preferences_proto",
+    proto_srcs = ["preferences.proto"],
+    protoc_gen_options = {"import_extension": "js"},
+    visibility = ["//visibility:public"],
 )
 
 ts_proto_library(

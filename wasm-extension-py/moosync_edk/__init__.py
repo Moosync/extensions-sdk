@@ -4,10 +4,11 @@ from datetime import timedelta
 from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
 import extism
-from core.types.protos import extensions_pb2, songs_pb2, themes_pb2, ui_pb2
+from core.types.protos import extensions_pb2, preferences_pb2, songs_pb2, themes_pb2, ui_pb2
 
 # Re-export protos
 from core.types.protos.extensions_pb2 import *
+from core.types.protos.preferences_pb2 import *
 from core.types.protos.songs_pb2 import *
 from core.types.protos.ui_pb2 import *
 from google.protobuf.duration_pb2 import Duration
@@ -346,14 +347,15 @@ class Api:
         resp = send_main_command_(req)
         return resp.open_external_url.success
 
-    def set_account(self, account: extensions_pb2.ExtensionAccountDetail) -> bool:
+    def set_account(self, account: extensions_pb2.ExtensionAccountDetail) -> None:
         req = extensions_pb2.MainCommand(
             set_account=extensions_pb2.SetAccountRequest(account=account)
         )
         resp = send_main_command_(req)
-        return resp.set_account.success
+        if not resp.HasField("set_account"):
+            raise Exception("Failed to set account")
 
-    def register_user_preferences(self, prefs: List[ui_pb2.PreferenceUiData]) -> bool:
+    def register_user_preferences(self, prefs: List[preferences_pb2.PreferenceItem]) -> bool:
         req = extensions_pb2.MainCommand(
             register_user_preference=extensions_pb2.RegisterUserPreferenceRequest(
                 prefs=prefs

@@ -35,8 +35,8 @@ pub use extensions_proto::moosync::types::{
     SongQueueChangedRequest, SongRemovedRequest, UnregisterUserPreferenceRequest, UpdateSongRequest,
     VolumeChangedRequest,
 };
-use songs_proto::moosync::types::{EntityResult, Playlist, SearchResult, Song};
-use ui_proto::moosync::types::PreferenceUiData;
+use preferences_proto::moosync::types::PreferenceItem;
+use songs_proto::moosync::types::{EntityResult, Lyrics, Playlist, SearchResult, Song};
 
 pub type MoosyncResult<T> = Result<T, crate::handler::MoosyncError>;
 pub type AccountLoginArgs = PerformAccountLoginRequest;
@@ -202,7 +202,7 @@ pub trait Provider {
     }
 
     /// Called when the main app requests lyrics for a song.
-    fn get_lyrics(&self, req: RequestedLyricsRequest) -> MoosyncResult<String> {
+    fn get_lyrics(&self, req: RequestedLyricsRequest) -> MoosyncResult<Option<Lyrics>> {
         Err("Not implemented".into())
     }
 }
@@ -517,7 +517,7 @@ pub mod extension_api {
 
         // RegisterUserPreferenceRequest has 'prefs' field (repeated).
         /// Registers user preferences with the main app.
-        register_user_preferences(RegisterUserPreference, RegisterUserPreferenceRequest, prefs, prefs: Vec<PreferenceUiData>) -> ();
+        register_user_preferences(RegisterUserPreference, RegisterUserPreferenceRequest, prefs, prefs: Vec<PreferenceItem>) -> ();
 
         // UnregisterUserPreferenceRequest has 'keys' field.
         /// Unregisters user preferences from the main app.

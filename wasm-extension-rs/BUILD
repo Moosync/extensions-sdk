@@ -17,6 +17,7 @@ rust_library(
     ],
     deps = [
         "//protos:extensions_rs",
+        "//protos:preferences_rs",
         "//protos:songs_rs",
         "//protos:themes_rs",
         "//protos:ui_rs",

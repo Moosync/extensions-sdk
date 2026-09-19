@@ -16,6 +16,7 @@
 
 export * from "./api";
 export * from "./protos/extensions_pb";
+export * from "./protos/preferences_pb";
 export * from "./protos/songs_pb";
 export * from "./protos/ui_pb";
 export * from "./protos/themes_pb";

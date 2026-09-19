@@ -263,6 +263,7 @@ def py_extension(
         name = name + "_pyi",
         deps = [
             Label("//protos:extensions_py_proto"),
+            Label("//protos:preferences_py_proto"),
             Label("//protos:songs_py_proto"),
             Label("//protos:themes_py_proto"),
             Label("//protos:ui_py_proto"),
