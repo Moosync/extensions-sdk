@@ -29,9 +29,9 @@ import {
 } from "./protos/extensions_pb";
 import { Message } from "@bufbuild/protobuf";
 
-function handle(
+async function handle(
   command: ExtensionCommand,
-): ExtensionCommandResponse | undefined {
+): Promise<ExtensionCommandResponse | undefined> {
   if (!command.event.case) return undefined;
 
   const caseStr = command.event.case;
@@ -41,7 +41,7 @@ function handle(
     try {
       // payload.constructor is the Message Class (e.g. RequestedPlaylistsRequest)
       // This matches the key used in api.on()
-      const result = callListener(caseStr as any, payload);
+      const result = await Promise.resolve(callListener(caseStr as any, payload));
 
       // Construct response based on responseField
       if (result !== undefined) {
@@ -69,7 +69,7 @@ function handle(
   return undefined;
 }
 
-export function handle_extension_command(): number {
+export async function handle_extension_command(): Promise<number> {
   const bytes = Host.inputBytes();
   if (bytes.byteLength === 0) {
     return 0;
@@ -77,7 +77,7 @@ export function handle_extension_command(): number {
 
   try {
     const command = ExtensionCommand.fromBinary(new Uint8Array(bytes));
-    const response = handle(command);
+    const response = await handle(command);
     if (response) {
       const binary = response.toBinary();
       const copy = new Uint8Array(binary);
@@ -89,4 +89,5 @@ export function handle_extension_command(): number {
     return 1;
   }
 }
+
 

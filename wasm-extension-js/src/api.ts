@@ -10,7 +10,8 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
+/// <reference types="@types/node/web-globals/fetch.d.ts" />
+
 import { Message, Duration } from "@bufbuild/protobuf";
 import {
   ExtensionAccountDetail,
@@ -175,9 +176,9 @@ export interface ExtensionAPI {
   getPreference(data: PreferenceData): PreferenceData;
   getSecure(data: PreferenceData): PreferenceData;
   fetch(
-    request: string | BatchFetchRequest,
-    options?: BatchFetchOptions,
-  ): Promise<BatchFetchResponse>;
+    input: string | URL | Request,
+    init?: RequestInit,
+  ): Promise<Response>;
   batchFetch(
     requests: (string | BatchFetchRequest)[],
     options?: BatchFetchOptions,
@@ -422,10 +423,10 @@ class Api implements ExtensionAPI {
   }
 
   fetch(
-    request: string | BatchFetchRequest,
-    options?: BatchFetchOptions,
-  ): Promise<BatchFetchResponse> {
-    return fetch(request, options);
+    input: string | URL | Request,
+    init?: RequestInit,
+  ): Promise<Response> {
+    return fetch(input, init);
   }
 
   batchFetch(
@@ -559,16 +560,145 @@ export function batchFetch(
   return Promise.resolve(responses);
 }
 
-export function fetch(
-  req: string | BatchFetchRequest,
-  options?: BatchFetchOptions,
-): Promise<BatchFetchResponse> {
-  return batchFetch([req], options).then((resps) => {
-    if (!resps || resps.length === 0) {
-      throw new Error("Host runner returned empty response");
+function resolveUrl(input: string | URL | Request): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (typeof (input as any)?.url === "string") {
+    return (input as any).url;
+  }
+  return String(input);
+}
+
+function resolveMethod(input: string | URL | Request, init?: RequestInit): string {
+  if (init?.method) {
+    return init.method.toUpperCase();
+  }
+  if (typeof (input as any)?.method === "string") {
+    return (input as any).method.toUpperCase();
+  }
+  return "GET";
+}
+
+function appendHeaders(target: Record<string, string>, source: any): void {
+  if (!source) {
+    return;
+  }
+  if (typeof source.forEach === "function") {
+    source.forEach((val: string, key: string) => {
+      target[key] = val;
+    });
+    return;
+  }
+  if (typeof source[Symbol.iterator] === "function") {
+    for (const item of source) {
+      if (Array.isArray(item) && item.length >= 2) {
+        target[item[0]] = item[1];
+      }
     }
-    return resps[0];
+    return;
+  }
+  if (typeof source === "object") {
+    for (const [key, value] of Object.entries(source)) {
+      if (typeof value === "string") {
+        target[key] = value;
+      }
+    }
+  }
+}
+
+function resolveHeaders(
+  input: string | URL | Request,
+  init?: RequestInit,
+): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (typeof (input as any)?.headers === "object") {
+    appendHeaders(headers, (input as any).headers);
+  }
+  if (init?.headers) {
+    appendHeaders(headers, init.headers);
+  }
+  return headers;
+}
+
+function resolveBody(
+  input: string | URL | Request,
+  init?: RequestInit,
+): Uint8Array | string | undefined {
+  const bodySource =
+    init?.body !== undefined
+      ? init.body
+      : typeof (input as any)?.body !== "undefined"
+        ? (input as any).body
+        : undefined;
+
+  if (bodySource === undefined || bodySource === null) {
+    return undefined;
+  }
+  if (typeof bodySource === "string") {
+    return bodySource;
+  }
+  if (bodySource instanceof Uint8Array) {
+    return bodySource;
+  }
+  if (bodySource instanceof ArrayBuffer) {
+    return new Uint8Array(bodySource);
+  }
+  if (ArrayBuffer.isView(bodySource)) {
+    return new Uint8Array(
+      bodySource.buffer,
+      bodySource.byteOffset,
+      bodySource.byteLength,
+    );
+  }
+  return String(bodySource);
+}
+
+function resolveTimeout(init?: RequestInit): number | undefined {
+  if (init && typeof (init as any).timeoutMs === "number") {
+    return (init as any).timeoutMs;
+  }
+  return undefined;
+}
+
+function toBatchFetchRequest(
+  input: string | URL | Request,
+  init?: RequestInit,
+): BatchFetchRequest {
+  return {
+    url: resolveUrl(input),
+    method: resolveMethod(input, init),
+    headers: resolveHeaders(input, init),
+    body: resolveBody(input, init),
+    timeoutMs: resolveTimeout(init),
+  };
+}
+
+function toResponse(resp: BatchFetchResponse): Response {
+  return new Response(resp.body, {
+    status: resp.status,
+    statusText: resp.statusText,
+    headers: resp.headers,
   });
+}
+
+export async function fetch(
+  input: string | URL | Request,
+  init?: RequestInit,
+): Promise<Response> {
+  const batchReq = toBatchFetchRequest(input, init);
+  const responses = await batchFetch([batchReq]);
+  if (!responses || responses.length === 0) {
+    throw new Error("Host runner returned empty response");
+  }
+  return toResponse(responses[0]);
+}
+
+if (typeof globalThis !== "undefined") {
+  (globalThis as any).fetch = fetch;
 }
 
 let apiInstance: ExtensionAPI;

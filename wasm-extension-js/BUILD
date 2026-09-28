@@ -1,4 +1,4 @@
-load("@aspect_rules_js//js:defs.bzl", "js_library", "js_run_binary")
+load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@aspect_rules_js//npm:defs.bzl", "npm_package")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@sdk_npm//:defs.bzl", "npm_link_all_packages")
@@ -9,11 +9,11 @@ package(default_visibility = ["//visibility:public"])
 typedoc_bin.typedoc(
     name = "doc",
     srcs = glob(["src/**/*.ts"]) + [
-        ":copy_protos",
         "tsconfig.json",
-        ":node_modules/typescript",
-        ":node_modules/@extism/js-pdk",
+        ":copy_protos",
         ":node_modules/@bufbuild/protobuf",
+        ":node_modules/@extism/js-pdk",
+        ":node_modules/typescript",
     ],
     args = [
         "--entryPoints",
@@ -65,6 +65,7 @@ ts_project(
     deps = [
         ":node_modules/@bufbuild/protobuf",
         ":node_modules/@extism/js-pdk",
+        ":node_modules/@types/node",
         ":node_modules/ts-proto",
     ],
 )
@@ -149,8 +150,8 @@ js_library(
     name = "wasm_extension_js_lib",
     srcs = [
         "package.json",
-        "tsconfig.json",
         "rollup.config.mjs",
+        "tsconfig.json",
     ],
     visibility = ["//visibility:public"],
     deps = [

@@ -2,15 +2,12 @@
   "compilerOptions": {
     "target": "ES2020",
     "outDir": "./lib",
-    "lib": [
-      "ES2020",
-      "DOM"
-    ],
-    "types": [
-      "@extism/js-pdk"
-    ],
+    "lib": ["ES2020", "DOM"],
+    "types": ["@extism/js-pdk"],
+    "skipLibCheck": true,
     "typeRoots": [
       "node_modules",
+      "node_modules/@types",
       "../../wasm-extension-js/node_modules",
       "../../../wasm-extension-js/node_modules",
       "../../external/extensions_sdk/wasm-extension-js/node_modules",
@@ -19,7 +16,6 @@
       "../../../external/extensions_sdk+/wasm-extension-js/node_modules",
       "../../../../external/extensions_sdk/wasm-extension-js/node_modules",
       "../../../../external/extensions_sdk+/wasm-extension-js/node_modules",
-      "node_modules/@types"
     ],
     "paths": {
       "wasm-extension-js": [
@@ -38,16 +34,14 @@
         "../../../../external/extensions_sdk/wasm-extension-js/lib/src/index.d.ts",
         "../../../../external/extensions_sdk+/wasm-extension-js/lib/src/index.d.ts",
         "../../../../external/extensions_sdk/wasm-extension-js/src/index.d.ts",
-        "../../../../external/extensions_sdk+/wasm-extension-js/src/index.d.ts"
-      ]
+        "../../../../external/extensions_sdk+/wasm-extension-js/src/index.d.ts",
+      ],
     },
     "moduleResolution": "Node",
     "emitDeclarationOnly": false,
     "isolatedModules": false,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
   },
-  "include": [
-    "src/index.ts"
-  ]
+  "include": ["src/index.ts"],
 }

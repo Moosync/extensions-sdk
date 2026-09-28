@@ -87,23 +87,27 @@ async function loadPlugins() {
     const resolveDir = findPluginDir('@rollup/plugin-node-resolve');
     const commonjsDir = findPluginDir('@rollup/plugin-commonjs');
     const aliasDir = findPluginDir('@rollup/plugin-alias');
+    const jsonDir = findPluginDir('@rollup/plugin-json');
 
     const resolveFile = resolveMainFile(resolveDir) || '@rollup/plugin-node-resolve';
     const commonjsFile = resolveMainFile(commonjsDir) || '@rollup/plugin-commonjs';
     const aliasFile = resolveMainFile(aliasDir) || '@rollup/plugin-alias';
+    const jsonFile = resolveMainFile(jsonDir) || '@rollup/plugin-json';
 
-    const [resolveModule, commonjsModule, aliasModule] = await Promise.all([
+    const [resolveModule, commonjsModule, aliasModule, jsonModule] = await Promise.all([
         import(resolveFile.startsWith('/') ? `file://${resolveFile}` : resolveFile),
         import(commonjsFile.startsWith('/') ? `file://${commonjsFile}` : commonjsFile),
-        import(aliasFile.startsWith('/') ? `file://${aliasFile}` : aliasFile)
+        import(aliasFile.startsWith('/') ? `file://${aliasFile}` : aliasFile),
+        import(jsonFile.startsWith('/') ? `file://${jsonFile}` : jsonFile)
     ]);
 
     // ESM default export handling
     const resolve = resolveModule.default || resolveModule;
     const commonjs = commonjsModule.default || commonjsModule;
     const alias = aliasModule.default || aliasModule;
+    const json = jsonModule.default || jsonModule;
 
-    return { resolve, commonjs, alias };
+    return { resolve, commonjs, alias, json };
 }
 
 // Dynamically locate wasm-extension-js library path in external repositories if present
@@ -134,7 +138,7 @@ if (!wasmExtJsPath) {
     wasmExtJsPath = path.resolve(process.cwd(), 'wasm-extension-js/lib/src/index.js');
 }
 
-export default loadPlugins().then(({ resolve, commonjs, alias }) => ({
+export default loadPlugins().then(({ resolve, commonjs, alias, json }) => ({
     output: {
         format: 'cjs',
         name: 'Extension',
@@ -142,6 +146,7 @@ export default loadPlugins().then(({ resolve, commonjs, alias }) => ({
         banner: 'var module = { exports: {} }; var exports = module.exports;',
     },
     plugins: [
+        json(),
         resolve(),
         commonjs(),
         alias({

@@ -70,12 +70,10 @@ export async function searchAndFetchDetails(query: string) {
     console.log("Search response:", text);
   }
 
-  const postResp = await api.fetch({
-    url: "https://api.spotify.com/v1/playlists",
+  const postResp = await api.fetch("https://api.spotify.com/v1/playlists", {
     method: "POST",
     headers: { Authorization: "Bearer token123" },
     body: JSON.stringify({ name: "My Playlist" }),
-    timeoutMs: 5000,
   });
   console.log("Create playlist status:", postResp.status);
 
