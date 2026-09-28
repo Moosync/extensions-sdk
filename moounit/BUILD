@@ -22,11 +22,11 @@ py_library(
     deps = [
         requirement("extism"),
         requirement("pytest"),
-        "@com_google_protobuf//:protobuf_python",
-        "//protos:moosync_python_root",
         "//protos:extensions_py_proto",
+        "//protos:moosync_python_root",
         "//protos:songs_py_proto",
         "//protos:ui_py_proto",
+        "@com_google_protobuf//:protobuf_python",
     ],
 )
 
@@ -55,7 +55,7 @@ py_binary(
     deps = [
         requirement("extism"),
         ":moounit_pyi",
-        "//wasm-extension-py:moosync_edk",
         "//protos:moosync_python_root",
+        "//wasm-extension-py:moosync_edk",
     ],
 )

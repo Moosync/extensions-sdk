@@ -135,8 +135,8 @@ class Moounit:
                 version=manifest["version"],
                 extension_entry=os.path.join(path, manifest["extensionEntry"]),
                 permissions=ManifestPermissions(
-                    hosts=manifest.get("permissions").get("hosts"),
-                    paths=manifest.get("permissions").get("paths"),
+                    hosts=(manifest.get("permissions") or {}).get("hosts"),
+                    paths=(manifest.get("permissions") or {}).get("paths"),
                 ),
             )
 
@@ -148,7 +148,11 @@ class Moounit:
         def _guard(default: Any, func: Callable[[Moounit], Any], error_msg: str) -> Any:
             instance = Moounit._instances.get(id)
             if instance:
-                return func(instance)
+                try:
+                    return func(instance)
+                except Exception as e:
+                    instance._host_exception = e
+                    return default
 
             raise AssertionError(error_msg)
 
@@ -199,7 +203,11 @@ class Moounit:
             if not instance:
                 return b""
 
-            return instance.handle_main_command(data)
+            try:
+                return instance.handle_main_command(data)
+            except Exception as e:
+                instance._host_exception = e
+                return b""
 
         def batch_http_request(data: bytes) -> bytes:
             return _guard(
@@ -283,15 +291,25 @@ class Moounit:
         self.plugin = extism.Plugin(compiled_plugin)
         Moounit._instances[id] = self
 
+    def _check_host_exception(self):
+        if self._host_exception is not None:
+            exc = self._host_exception
+            self._host_exception = None
+            raise exc
+
     def call_entry(self) -> bytes:
-        return self.plugin.call("entry", data=b"")
+        ret = self.plugin.call("entry", data=b"")
+        self._check_host_exception()
+        return ret
 
     def send_command(self, command: ExtensionCommand) -> ExtensionCommandResponse:
         data = command.SerializeToString()
         resp = self.plugin.call("handle_extension_command", data)
+        self._check_host_exception()
         return ExtensionCommandResponse.FromString(resp)
 
     def __init__(self, path: str):
+        self._host_exception: Exception | None = None
         self.session_expectations: list[Expectation] = []
         self.local_expectations: list[Expectation] = []
 
@@ -629,6 +647,7 @@ def moounit_session():
     yield
     current_scope.reset(token)
     for instance in Moounit._instances.values():
+        instance._check_host_exception()
         instance.verify_and_clear_local_expectations()
 
 
@@ -662,13 +681,14 @@ def moounit(request, moounit_session):  # pylint: disable=unused-argument
     if os.path.isfile(path):
         path = os.path.dirname(path)
 
-    instance = Moounit(path)
-
     logs = []
     logBuffer = set_log_custom(lambda s: logs.append(s.strip()), "debug")
+
+    instance = Moounit(path)
 
     yield instance
 
     logBuffer.drain()
     for line in logs:
         print(line)
+
