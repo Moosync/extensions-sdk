@@ -175,10 +175,7 @@ export interface ExtensionAPI {
   addToPlaylist(req: AddToPlaylistRequest): void;
   getPreference(data: PreferenceData): PreferenceData;
   getSecure(data: PreferenceData): PreferenceData;
-  fetch(
-    input: string | URL | Request,
-    init?: RequestInit,
-  ): Promise<Response>;
+  fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>;
   batchFetch(
     requests: (string | BatchFetchRequest)[],
     options?: BatchFetchOptions,
@@ -422,10 +419,7 @@ class Api implements ExtensionAPI {
     return [];
   }
 
-  fetch(
-    input: string | URL | Request,
-    init?: RequestInit,
-  ): Promise<Response> {
+  fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
     return fetch(input, init);
   }
 
@@ -573,7 +567,10 @@ function resolveUrl(input: string | URL | Request): string {
   return String(input);
 }
 
-function resolveMethod(input: string | URL | Request, init?: RequestInit): string {
+function resolveMethod(
+  input: string | URL | Request,
+  init?: RequestInit,
+): string {
   if (init?.method) {
     return init.method.toUpperCase();
   }
@@ -678,11 +675,14 @@ function toBatchFetchRequest(
 }
 
 function toResponse(resp: BatchFetchResponse): Response {
-  return new Response(resp.body, {
+  const textBody = new TextDecoder("utf-8").decode(resp.body);
+  const r = new Response(textBody, {
     status: resp.status,
     statusText: resp.statusText,
     headers: resp.headers,
   });
+
+  return r;
 }
 
 export async function fetch(

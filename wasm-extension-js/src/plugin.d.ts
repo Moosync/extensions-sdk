@@ -30,4 +30,3 @@ declare module "extism:host" {
     batch_http_request(ptr: I64): I64;
   }
 }
-

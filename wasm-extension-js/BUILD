@@ -43,33 +43,6 @@ npm_package(
 
 npm_link_all_packages(name = "node_modules")
 
-ts_project(
-    name = "wasm_extension_js",
-    srcs = glob(["src/**/*.ts"]) + [
-        ":src/protos/extensions_pb.d.ts",
-        ":src/protos/extensions_pb.js",
-        ":src/protos/preferences_pb.d.ts",
-        ":src/protos/preferences_pb.js",
-        ":src/protos/songs_pb.d.ts",
-        ":src/protos/songs_pb.js",
-        ":src/protos/themes_pb.d.ts",
-        ":src/protos/themes_pb.js",
-        ":src/protos/ui_pb.d.ts",
-        ":src/protos/ui_pb.js",
-    ],
-    declaration = True,
-    declaration_map = True,
-    emit_declaration_only = False,
-    out_dir = "lib",
-    tsconfig = "tsconfig.json",
-    deps = [
-        ":node_modules/@bufbuild/protobuf",
-        ":node_modules/@extism/js-pdk",
-        ":node_modules/@types/node",
-        ":node_modules/ts-proto",
-    ],
-)
-
 filegroup(
     name = "proto_types",
     srcs = [
@@ -146,6 +119,35 @@ js_library(
     visibility = ["//visibility:public"],
 )
 
+ts_project(
+    name = "wasm_extension_js",
+    srcs = glob(["src/**/*.ts"]) + [
+        ":src/protos/extensions_pb.d.ts",
+        ":src/protos/extensions_pb.js",
+        ":src/protos/preferences_pb.d.ts",
+        ":src/protos/preferences_pb.js",
+        ":src/protos/songs_pb.d.ts",
+        ":src/protos/songs_pb.js",
+        ":src/protos/themes_pb.d.ts",
+        ":src/protos/themes_pb.js",
+        ":src/protos/ui_pb.d.ts",
+        ":src/protos/ui_pb.js",
+    ],
+    declaration = True,
+    declaration_map = True,
+    emit_declaration_only = False,
+    out_dir = "lib",
+    tsconfig = "tsconfig.json",
+    deps = [
+        ":node_modules/@bufbuild/protobuf",
+        ":node_modules/@extism/js-pdk",
+        ":node_modules/@types/node",
+        ":node_modules/@whatwg-node/fetch",
+        ":node_modules/fast-text-encoding",
+        ":node_modules/ts-proto",
+    ],
+)
+
 js_library(
     name = "wasm_extension_js_lib",
     srcs = [
@@ -155,6 +157,7 @@ js_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        ":node_modules",
         ":protos_js_lib",
         ":wasm_extension_js",
     ],

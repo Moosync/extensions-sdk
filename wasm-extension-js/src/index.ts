@@ -14,6 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import "fast-text-encoding";
+import "./request-ponyfills";
+import "./abortcontroller-ponyfills";
+
 export * from "./api";
 export * from "./protos/extensions_pb";
 export * from "./protos/preferences_pb";
@@ -38,32 +42,28 @@ async function handle(
   const payload = command.event.value;
 
   if (payload) {
-    try {
-      // payload.constructor is the Message Class (e.g. RequestedPlaylistsRequest)
-      // This matches the key used in api.on()
-      const result = await Promise.resolve(callListener(caseStr as any, payload));
+    // payload.constructor is the Message Class (e.g. RequestedPlaylistsRequest)
+    // This matches the key used in api.on()
 
-      // Construct response based on responseField
-      if (result !== undefined) {
-        const response = new ExtensionCommandResponse({
-          response: {
-            case: caseStr as any,
-            value: result
-          }
-        });
-        return response;
-      } else {
-        const response = new ExtensionCommandResponse({
-          response: {
-            case: caseStr as any,
-            value: {}
-          }
-        });
-        return response;
-      }
+    const result = await Promise.resolve(callListener(caseStr as any, payload));
 
-    } catch (e) {
-      console.error("Error handling command", e);
+    // Construct response based on responseField
+    if (result !== undefined) {
+      const response = new ExtensionCommandResponse({
+        response: {
+          case: caseStr as any,
+          value: result,
+        },
+      });
+      return response;
+    } else {
+      const response = new ExtensionCommandResponse({
+        response: {
+          case: caseStr as any,
+          value: {},
+        },
+      });
+      return response;
     }
   }
   return undefined;
@@ -89,5 +89,3 @@ export async function handle_extension_command(): Promise<number> {
     return 1;
   }
 }
-
-
