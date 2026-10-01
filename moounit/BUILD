@@ -1,6 +1,7 @@
-load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_library")
+load("@aspect_rules_py//py:defs.bzl", "py_library")
 load("@pypi_moounit//:requirements.bzl", "requirement")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+load("//tools:defs.bzl", "pytest_test")
 load("//wasm-extension-py:defs.bzl", "expose_pyi")
 
 package(default_visibility = ["//visibility:public"])
@@ -16,7 +17,14 @@ py_library(
     name = "moounit",
     srcs = [
         "__init__.py",
-        "lib.py",
+        "core.py",
+        "defaults.py",
+        "expectations.py",
+        "matcher.py",
+        "models.py",
+        "passthrough.py",
+        "pytest_plugin.py",
+        "recorder.py",
     ],
     imports = ["moounit"],
     deps = [
@@ -40,22 +48,10 @@ expose_pyi(
     ],
 )
 
-py_binary(
-    name = "dummy",
-    srcs = [
-        "lib.py",
-    ],
-    args = ["$(location sample/package.json)"],
-    data = [
-        ":moounit_pyi",
-    ],
-    main = "lib.py",
-    tags = ["manual"],
-    visibility = ["//visibility:private"],
+pytest_test(
+    name = "moounit_unit_test",
+    srcs = ["test_moounit.py"],
     deps = [
-        requirement("extism"),
-        ":moounit_pyi",
-        "//protos:moosync_python_root",
-        "//wasm-extension-py:moosync_edk",
+        ":moounit",
     ],
 )
