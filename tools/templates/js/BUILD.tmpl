@@ -1,11 +1,28 @@
 load("@extensions_sdk//:defs.bzl", "js_extension")
+load("@npm_${name}//:defs.bzl", "npm_link_all_packages")
+load("@extensions_sdk//moounit:defs.bzl", "moounit_test")
 
 package(default_visibility = ["//visibility:public"])
+
+npm_link_all_packages(name = "node_modules")
 
 js_extension(
     name = "$name",
     srcs = ["src/index.ts"],
+    package_json = "package.json",
+    tsconfig="tsconfig.json",
+    node_modules = ":node_modules",
     package_name = "$package_name",
     display_name = "$display_name",
+    allowed_hosts = [],
+    allowed_paths = {},
+    deps = [],
     version = "0.0.1",
+)
+
+moounit_test(
+    name = "test",
+    srcs = ["test.py"],
+    debug = True,
+    extension = ":$name",
 )

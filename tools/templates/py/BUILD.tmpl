@@ -1,4 +1,6 @@
 load("@extensions_sdk//:defs.bzl", "py_extension")
+load("@pypi_${name}//:requirements.bzl", "all_requirements")
+load("@extensions_sdk//moounit:defs.bzl", "moounit_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -8,5 +10,15 @@ py_extension(
     main = "main.py",
     package_name = "$package_name",
     display_name = "$display_name",
+    allowed_hosts = [],
+    allowed_paths = {},
+    deps = all_requirements,
     version = "0.0.1",
+)
+
+moounit_test(
+    name = "test",
+    srcs = ["test.py"],
+    debug = True,
+    extension = ":$name",
 )

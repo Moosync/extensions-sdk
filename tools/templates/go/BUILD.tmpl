@@ -1,4 +1,5 @@
 load("@extensions_sdk//:defs.bzl", "go_extension")
+load("@extensions_sdk//moounit:defs.bzl", "moounit_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -7,5 +8,15 @@ go_extension(
     srcs = ["main.go"],
     package_name = "$package_name",
     display_name = "$display_name",
+    allowed_hosts = [],
+    allowed_paths = {},
+    deps = [],
     version = "0.0.1",
+)
+
+moounit_test(
+    name = "test",
+    srcs = ["test.py"],
+    debug = True,
+    extension = ":$name",
 )

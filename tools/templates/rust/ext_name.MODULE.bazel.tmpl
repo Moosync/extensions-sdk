@@ -1,1 +1,8 @@
-# Module dependencies for $name
+${name}_crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate", isolate = True)
+${name}_crate.from_cargo(
+    name = "${name}_crates",
+    cargo_lockfile = "${pkg_label}:Cargo.lock",
+    lockfile = "${pkg_label}:Cargo.Bazel.lock",
+    manifests = ["${pkg_label}:Cargo.toml"],
+)
+use_repo(${name}_crate, "${name}_crates")

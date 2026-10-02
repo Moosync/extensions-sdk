@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "nodenext",
+    "lib": ["es2020", "dom", "dom.iterable"],
+    "moduleResolution": "nodenext",
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "paths": {
+      "wasm-extension-js": [
+        "${rel_to_root}/external/extensions_sdk+/wasm-extension-js/lib/src/index.d.ts",
+        "${rel_to_root}/external/extensions_sdk/wasm-extension-js/lib/src/index.d.ts",
+        "${rel_to_root}/wasm-extension-js/lib/src/index.d.ts",
+        "${rel_to_root}/bazel-bin/external/extensions_sdk+/wasm-extension-js/lib/src/index.d.ts",
+        "${rel_to_root}/bazel-bin/external/extensions_sdk/wasm-extension-js/lib/src/index.d.ts",
+        "${rel_to_root}/bazel-bin/wasm-extension-js/lib/src/index.d.ts"
+      ]
+    },
+    "typeRoots": [
+      "${rel_to_root}/bazel-bin/external/extensions_sdk+/wasm-extension-js/node_modules",
+      "${rel_to_root}/bazel-bin/external/extensions_sdk/wasm-extension-js/node_modules",
+      "./node_modules/@types"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ]
+}

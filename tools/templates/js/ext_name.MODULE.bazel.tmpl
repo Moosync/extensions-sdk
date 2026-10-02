@@ -1,1 +1,9 @@
-# Module dependencies for $name
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+
+npm.npm_translate_lock(
+    name = "npm_${name}",
+    pnpm_lock = "${pkg_label}:pnpm-lock.yaml" if "${pkg_label}" else "//:pnpm-lock.yaml",
+    update_pnpm_lock = True,
+    data = ["${pkg_label}:package.json" if "${pkg_label}" else "//:package.json"],
+)
+use_repo(npm, "npm_${name}")

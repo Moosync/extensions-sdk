@@ -1,4 +1,5 @@
 import {
+  ExtensionProviderScope,
   GetProviderScopesResponse,
   RequestedSearchResultResponse,
   getApi,
@@ -12,7 +13,7 @@ export function entry(): number {
   api.on("getProviderScopes", () => {
     return new GetProviderScopesResponse({
       scopes: [
-        13 as any // ExtensionProviderScope.SEARCH
+        ExtensionProviderScope.SEARCH,
       ]
     });
   });
