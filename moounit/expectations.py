@@ -10,7 +10,6 @@ from core.types.protos.extensions_pb2 import (
 )
 from moounit.defaults import (
     default_batch_http_response,
-    default_hash,
     default_main_command_response,
     default_open_clientfd,
     default_read_sock,
@@ -21,7 +20,6 @@ from moounit.matcher import ReplayIgnoreBuilder, partial_match
 from moounit.models import (
     BatchHttpRequestExpectation,
     Expectation,
-    HashExpectation,
     OpenClientFdExpectation,
     ReadSockExpectation,
     Scope,
@@ -31,7 +29,6 @@ from moounit.models import (
 from moounit.passthrough import (
     RealSocketManager,
     execute_real_batch_http_request,
-    get_real_hash,
     get_real_system_time,
 )
 from moounit.recorder import Recorder
@@ -44,7 +41,6 @@ ATTR_MAP: dict[str, tuple[str, str]] = {
         "local_system_time_expectations",
         "session_system_time_expectations",
     ),
-    "hash": ("local_hash_expectations", "session_hash_expectations"),
     "open_clientfd": (
         "local_open_clientfd_expectations",
         "session_open_clientfd_expectations",
@@ -115,23 +111,6 @@ class ExpectationManager:
         self._add_expectation(
             "system_time",
             SystemTimeExpectation(return_value=return_value, times=times),
-        )
-
-    def expect_hash(
-        self,
-        hash_type: str,
-        data: bytes,
-        return_value: bytes | Callable[[], bytes],
-        times: int = 1,
-    ):
-        self._add_expectation(
-            "hash",
-            HashExpectation(
-                hash_type=hash_type,
-                data=data,
-                return_value=return_value,
-                times=times,
-            ),
         )
 
     def expect_open_clientfd(
@@ -350,20 +329,6 @@ class ExpectationManager:
             default_system_time,
             "system_time",
             "Unexpected call to system_time. If this call is expected, please ensure you have set an expectation using expect_system_time.",
-        )
-
-    def _check_hash(self, hash_type: str, data: bytes) -> bytes:
-        req_info = {"hash_type": hash_type, "data": data}
-        return self._dispatch(
-            "hash",
-            self.local_hash_expectations,
-            self.session_hash_expectations,
-            lambda e: e.hash_type == hash_type and e.data == data,
-            req_info,
-            lambda: get_real_hash(hash_type, data),
-            lambda: default_hash(hash_type, data),
-            "hash",
-            f"Unexpected call to hash with type: {hash_type}, data: {data}. If this call is expected, please ensure you have set an expectation using expect_hash.",
         )
 
     def _check_open_clientfd(self, path: str) -> int:

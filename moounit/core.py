@@ -92,12 +92,6 @@ class Moounit:
                 f"Unexpected call to read_sock with sock_id: {sock_id}. If this call is expected, please ensure you have set an expectation using expect_read_sock.",
             )
 
-        def hash_(hash_type: str, data: bytes) -> bytes:
-            return _guard(
-                lambda i: i.manager._check_hash(hash_type, data),
-                f"Unexpected call to hash with type: {hash_type}, data: {data}. If this call is expected, please ensure you have set an expectation using expect_hash.",
-            )
-
         def send_main_command(data: bytes) -> bytes:
             return _guard(
                 lambda i: i.manager.handle_main_command(data),
@@ -134,12 +128,6 @@ class Moounit:
                 read_sock.__name__,
                 read_sock,
                 [(3).to_bytes(length=4, byteorder="big")],
-            ),
-            TypeInferredFunction(
-                None,
-                "hash",
-                hash_,
-                [(4).to_bytes(length=4, byteorder="big")],
             ),
             TypeInferredFunction(
                 None,
@@ -241,9 +229,6 @@ class Moounit:
 
     def expect_system_time(self, *args: Any, **kwargs: Any) -> Any:
         return self.manager.expect_system_time(*args, **kwargs)
-
-    def expect_hash(self, *args: Any, **kwargs: Any) -> Any:
-        return self.manager.expect_hash(*args, **kwargs)
 
     def expect_open_clientfd(self, *args: Any, **kwargs: Any) -> Any:
         return self.manager.expect_open_clientfd(*args, **kwargs)

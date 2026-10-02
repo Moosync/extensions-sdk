@@ -138,7 +138,3 @@ def default_write_sock(_sock_id: int, buf: bytes) -> int:
 
 def default_read_sock(_sock_id: int, _read_len: int) -> bytes:
     return b""
-
-
-def default_hash(_hash_type: str, _data: bytes) -> bytes:
-    return b""

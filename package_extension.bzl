@@ -4,5 +4,5 @@ def package_extension(name, extension_target, visibility = None):
         srcs = [extension_target],
         outs = [name + ".msxt"],
         cmd = "zip -j $@ $(SRCS)",
-        visibility = visibility or ["//visibility:public"],
+        visibility = visibility,
     )

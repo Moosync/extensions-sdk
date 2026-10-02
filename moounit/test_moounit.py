@@ -18,7 +18,6 @@ from core.types.protos.extensions_pb2 import (
 from core.types.protos.songs_pb2 import GetSongOptions, Song
 from moounit.defaults import (
     default_batch_http_response,
-    default_hash,
     default_main_command_response,
     default_open_clientfd,
     default_read_sock,
@@ -481,9 +480,6 @@ def test_replay_ignore_other_calls(tmp_path):
     recorder.record_call(
         "read_sock", {"sock_id": 10, "read_len": 4}, b"resp", Scope.LOCAL
     )
-    recorder.record_call(
-        "hash", {"hash_type": "sha256", "data": b"secret"}, b"hashval", Scope.LOCAL
-    )
     recorder.record_call("system_time", {}, 12345, Scope.LOCAL)
 
     recorder.clear_current_test()
@@ -509,12 +505,6 @@ def test_replay_ignore_other_calls(tmp_path):
         "read_sock", {"sock_id": 10, "read_len": 4}, Scope.LOCAL
     )
     assert err is None and res == b"resp"
-
-    # hash
-    res, err = replay.match_and_consume_replay(
-        "hash", {"hash_type": "sha256", "data": b"secret"}, Scope.LOCAL
-    )
-    assert err is None and res == b"hashval"
 
     # system_time
     res, err = replay.match_and_consume_replay("system_time", {}, Scope.LOCAL)
@@ -565,9 +555,6 @@ def test_default_response_fallback():
     # system_time fallback to default_system_time
     assert manager._check_system_time() == default_system_time()
 
-    # hash fallback to default_hash
-    assert manager._check_hash("sha256", b"data") == default_hash("sha256", b"data")
-
     # open_clientfd fallback to default_open_clientfd
     assert manager._check_open_clientfd("test.sock") == default_open_clientfd(
         "test.sock"
@@ -609,8 +596,8 @@ def test_callable_return_values():
     # Session scope with callable
     token = current_scope.set(Scope.SESSION)
     try:
-        manager.expect_hash("sha256", b"call_test", lambda: b"dyn_hash")
-        assert manager._check_hash("sha256", b"call_test") == b"dyn_hash"
+        manager.expect_open_clientfd("test.sock", lambda: 42)
+        assert manager._check_open_clientfd("test.sock") == 42
     finally:
         current_scope.reset(token)
 

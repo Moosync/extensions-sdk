@@ -268,6 +268,7 @@ def py_extension(
             Label("//protos:themes_py_proto"),
             Label("//protos:ui_py_proto"),
         ],
+        visibility = ["//visibility:private"],
     )
 
     py_binary(
@@ -282,6 +283,7 @@ def py_extension(
         data = [
             ":" + name + "_pyi",
         ] + data,
+        visibility = ["//visibility:private"],
         **kwargs
     )
 
@@ -291,6 +293,7 @@ def py_extension(
         main = main,
         deps = deps + [Label("//wasm-extension-py:moosync_edk")],
         data = data,
+        visibility = ["//visibility:private"],
         **kwargs
     )
 

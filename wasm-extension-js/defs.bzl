@@ -11,7 +11,7 @@ load("//:package_json.bzl", "generate_package_json")
 def js_wasm_extension(
         name,
         srcs,
-        package_json,
+        package_json = None,
         deps = [],
         data = [],
         node_modules = None,
@@ -44,32 +44,12 @@ def js_wasm_extension(
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 1. Grab the relative path to pnpm passed via args
 PNPM_PATH="$$1"
 shift
 
-# 2. Resolve absolute path to the binary
-if [[ -x "$$PNPM_PATH" ]]; then
-  PNPM_BIN="$$(readlink -f "$$PNPM_PATH")"
-elif [[ -x "$$0.runfiles/$$PNPM_PATH" ]]; then
-  PNPM_BIN="$$(readlink -f "$$0.runfiles/$$PNPM_PATH")"
-else
-  PNPM_BIN="$$(which pnpm 2>/dev/null || true)"
-fi
-
-if [[ -z "$${PNPM_BIN:-}" || ! -x "$$PNPM_BIN" ]]; then
-  echo >&2 "ERROR: Could not locate executable pnpm binary ($$PNPM_PATH)"
-  exit 1
-fi
-
-# 3. Satisfy aspect_rules_js js_binary launcher requirement
 export BAZEL_BINDIR="."
-
-# 4. CD into the extension source directory
 cd "$${BUILD_WORKSPACE_DIRECTORY}/""" + pkg_dir + """"
-
-# 5. Run pnpm with the user-supplied arguments
-exec "$$PNPM_BIN" "$$@"
+exec "$${RUNFILES_DIR:-$$0.runfiles}/$$PNPM_PATH" "$$@"
 EOF
 """,
         visibility = ["//visibility:private"],
@@ -78,8 +58,7 @@ EOF
     sh_binary(
         name = name + "_pnpm",
         srcs = [":" + pnpm_runner_script],
-        # rootpath produces the clean relative path inside runfiles:
-        args = ["$(rootpath {})".format(pnpm_target)],
+        args = ["$(rlocationpath {})".format(pnpm_target)],
         data = [pnpm_target],
         visibility = visibility,
     )
@@ -118,6 +97,7 @@ EOF
         srcs = [tsconfig],
         outs = [tsconfig_local],
         cmd = 'sed \'s#"outDir": "./lib"#"outDir": "./{out_dir}"#g\' $< > $@'.format(out_dir = out_dir),
+        visibility = ["//visibility:private"],
     )
 
     rollup_config_local = name + "_rollup.config.mjs"
@@ -126,6 +106,7 @@ EOF
         srcs = [rollup_config],
         outs = [rollup_config_local],
         cmd = "cp $< $@",
+        visibility = ["//visibility:private"],
     )
 
     # Compilation
@@ -142,7 +123,7 @@ EOF
             Label("//wasm-extension-js:wasm_extension_js_lib"),
         ],
         data = data,
-        visibility = visibility,
+        visibility = ["//visibility:private"],
     )
 
     rollup(
@@ -162,7 +143,7 @@ EOF
             Label("//wasm-extension-js:wasm_extension_js_lib"),
             Label("//wasm-extension-js:node_modules/@extism/js-pdk"),
         ] + deps,
-        visibility = visibility,
+        visibility = ["//visibility:private"],
     )
 
     # Wasm generation
@@ -187,7 +168,7 @@ EOF
             bundle = bundle_name,
         ),
         tools = [Label("//wasm-extension-js:extism_js_cli")],
-        visibility = visibility,
+        visibility = ["//visibility:private"],
     )
 
     native.filegroup(

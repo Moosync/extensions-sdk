@@ -1,13 +1,13 @@
 load("@aspect_rules_py//py:defs.bzl", "py_binary")
 load("@rules_python//python/entry_points:py_console_script_binary.bzl", "py_console_script_binary")
 
-package(default_visibility = ["//visibility:public"])
-
-exports_files([
-    "pytest_wrapper.py",
-    ".pylintrc",
-    "requirements.txt",
-])
+exports_files(
+    [
+        "pytest_wrapper.py",
+        ".pylintrc",
+    ],
+    visibility = ["//visibility:public"],
+)
 
 py_binary(
     name = "scaffold",
@@ -24,24 +24,24 @@ py_console_script_binary(
         "@pip_deps//extism:pkg",
         "@pip_deps//protobuf:pkg",
     ],
-    visibility = ["//visibility:public"],
+    visibility = ["//wasm-extension-py:__pkg__"],
 )
 
 py_binary(
     name = "serve",
     srcs = ["serve.py"],
     main = "serve.py",
-    visibility = ["//visibility:public"],
+    visibility = ["//docs:__pkg__"],
 )
 
 alias(
     name = "mdbook_admonish",
     actual = "@mdbook_admonish_tool//:mdbook-admonish",
-    visibility = ["//visibility:public"],
+    visibility = ["//docs:__pkg__"],
 )
 
 alias(
     name = "mdbook_tabs",
     actual = "@host_crates//:mdbook-tabs__mdbook-tabs",
-    visibility = ["//visibility:public"],
+    visibility = ["//docs:__pkg__"],
 )

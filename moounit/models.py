@@ -30,14 +30,6 @@ class SystemTimeExpectation:
 
 
 @dataclass
-class HashExpectation:
-    hash_type: str
-    data: bytes
-    return_value: bytes | Callable[[], bytes]
-    times: int
-
-
-@dataclass
 class OpenClientFdExpectation:
     path: str
     return_value: int | Callable[[], int]

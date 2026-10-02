@@ -1,6 +1,6 @@
 load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//wasm-extension-go:__pkg__"])
 
 go_library(
     name = "gen_godoc_lib",

@@ -6,8 +6,6 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_python//python:defs.bzl", "py_library")
 load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 
-package(default_visibility = ["//visibility:public"])
-
 npm_link_all_packages(name = "node_modules")
 
 py_library(

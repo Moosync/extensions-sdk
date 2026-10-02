@@ -66,6 +66,7 @@ def go_extension(
         linkmode = "c-shared",
         cgo = True,
         pure = "on",
+        visibility = ["//visibility:private"],
         **kwargs
     )
 
@@ -74,7 +75,7 @@ def go_extension(
         srcs = [":" + name + "_wasm_bin"],
         outs = [name + ".wasm"],
         cmd = "cp $< $@",
-        visibility = visibility,
+        visibility = ["//visibility:private"],
     )
 
     native.filegroup(

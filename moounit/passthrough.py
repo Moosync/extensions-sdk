@@ -1,4 +1,3 @@
-import hashlib
 import os
 import re
 import socket
@@ -117,16 +116,6 @@ class RealSocketManager:
 
 def get_real_system_time() -> int:
     return int(time.time())
-
-
-def get_real_hash(hash_type: str, data: bytes) -> bytes:
-    try:
-        h = hashlib.new(hash_type)
-        h.update(data)
-        return h.digest()
-    except Exception as e:
-        print(f"Real hash calculation failed for {hash_type}: {e}")
-        return b""
 
 
 def execute_single_http_request(req: HttpRequest) -> HttpResult:

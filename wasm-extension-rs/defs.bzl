@@ -56,6 +56,7 @@ def rust_extension(
         platform = "@rules_rust//rust/platform:wasi",
         edition = edition,
         tags = ["manual"],
+        visibility = ["//visibility:private"],
         **kwargs
     )
 
@@ -64,7 +65,7 @@ def rust_extension(
         srcs = [":" + name + "_wasm_bin"],
         outs = [name + ".wasm"],
         cmd = "cp $< $@",
-        visibility = kwargs.get("visibility"),
+        visibility = ["//visibility:private"],
     )
 
     native.filegroup(

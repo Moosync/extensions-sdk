@@ -743,18 +743,6 @@ export function read_sock(sock_id: number, read_len: number) {
   return JSON.parse(response);
 }
 
-export function hash(hash_type: "SHA1" | "SHA256" | "SHA512", data: string) {
-  const { hash } = Host.getFunctions() as any;
-  // @ts-ignore
-  const hash_type_msg = Memory.fromString(hash_type);
-  // @ts-ignore
-  const data_msg = Memory.fromString(data);
-  const offset = hash(hash_type_msg.offset, data_msg.offset);
-  // @ts-ignore
-  const response = Memory.find(offset).readBytes();
-  return response;
-}
-
 /**
  * Converts a native duration (in milliseconds) into a protobuf Duration.
  * @param ms Duration in milliseconds.

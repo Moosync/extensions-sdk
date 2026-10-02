@@ -462,22 +462,6 @@ func ReadSock(sockId int64, readLen uint64) []byte {
 	return rMem.ReadBytes()
 }
 
-type HashType string
-
-const (
-	HashSHA1   HashType = "SHA1"
-	HashSHA256 HashType = "SHA256"
-	HashSHA512 HashType = "SHA512"
-)
-
-func Hash(hashType HashType, data []byte) []byte {
-	memType := pdk.AllocateString(string(hashType))
-	memData := pdk.AllocateBytes(data)
-	rPtr := hash(memType.Offset(), memData.Offset())
-	rMem := pdk.FindMemory(rPtr)
-	return rMem.ReadBytes()
-}
-
 func LogTrace(format string, args ...any) {
 	pdk.Log(pdk.LogTrace, fmt.Sprintf(format, args...))
 }

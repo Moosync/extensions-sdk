@@ -4,8 +4,6 @@ load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@sdk_npm//:defs.bzl", "npm_link_all_packages")
 load("@sdk_npm//wasm-extension-js:typedoc/package_json.bzl", typedoc_bin = "bin")
 
-package(default_visibility = ["//visibility:public"])
-
 typedoc_bin.typedoc(
     name = "doc",
     srcs = glob(["src/**/*.ts"]) + [
@@ -13,6 +11,10 @@ typedoc_bin.typedoc(
         ":copy_protos",
         ":node_modules/@bufbuild/protobuf",
         ":node_modules/@extism/js-pdk",
+        ":node_modules/@types/node",
+        ":node_modules/@whatwg-node/fetch",
+        ":node_modules/fast-text-encoding",
+        ":node_modules/ts-proto",
         ":node_modules/typescript",
     ],
     args = [
@@ -24,11 +26,14 @@ typedoc_bin.typedoc(
         "wasm-extension-js/tsconfig.json",
     ],
     out_dirs = ["doc"],
+    visibility = ["//docs:__pkg__"],
 )
 
 exports_files([
     "src/plugin.d.ts",
     "defs.bzl",
+    "rollup.config.mjs",
+    "tsconfig.json",
 ])
 
 npm_package(
@@ -186,5 +191,5 @@ genrule(
         ":extism_js_cli",
         "@binaryen_tool//:bin_files",
     ],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
 )

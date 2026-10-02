@@ -19,7 +19,7 @@ def pytest_test(name, srcs, deps = [], args = [], data = [], **kwargs):
             "--pylint",
             "--pylint-rcfile=$(location %s)" % pylint_rc,
             "-p",
-            "moounit.lib",
+            "moounit.pytest_plugin",
         ] + args + ["$(location :%s)" % x for x in srcs],
         deps = deps + [
             requirement("pytest"),

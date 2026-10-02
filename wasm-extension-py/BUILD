@@ -1,11 +1,10 @@
 load("@aspect_rules_py//py:defs.bzl", "py_library")
 
-package(default_visibility = ["//visibility:public"])
-
 py_library(
     name = "moosync_edk",
     srcs = glob(["moosync_edk/**/*.py"]),
     imports = ["."],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_protobuf//:protobuf_python",
         "//protos:extensions_py_proto",
@@ -52,5 +51,5 @@ else
 fi
 """,
     tools = ["//tools:pdoc"],
-    visibility = ["//visibility:public"],
+    visibility = ["//docs:__pkg__"],
 )

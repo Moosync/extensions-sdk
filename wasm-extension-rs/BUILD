@@ -1,10 +1,9 @@
 load("@rules_rust//rust:defs.bzl", "rust_doc", "rust_library")
 
-package(default_visibility = ["//visibility:public"])
-
 rust_doc(
     name = "doc",
     crate = ":wasm_extension_rs",
+    visibility = ["//docs:__pkg__"],
 )
 
 rust_library(
@@ -15,6 +14,7 @@ rust_library(
     target_compatible_with = [
         "@platforms//os:wasi",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "//protos:extensions_rs",
         "//protos:preferences_rs",

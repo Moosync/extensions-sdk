@@ -433,12 +433,6 @@ class Recorder:
                 err = format_colored_diff(
                     saved_req, request_obj, label="Mismatched read_sock request"
                 )
-        elif call_type == "hash":
-            matched = saved_req.get("hash_type") == request_obj.get("hash_type")
-            if not matched:
-                err = format_colored_diff(
-                    saved_req, request_obj, label="Mismatched hash request"
-                )
 
         if matched:
             calls_list.pop(0)
@@ -462,7 +456,7 @@ class Recorder:
             resp = BatchHttpResponse()
             ParseDict(resp_payload, resp)
             return resp
-        if call_type in ("read_sock", "hash"):
+        if call_type == "read_sock":
             return self._deserialize_bytes(resp_payload)
         if call_type in ("system_time", "open_clientfd", "write_sock"):
             return int(resp_payload)

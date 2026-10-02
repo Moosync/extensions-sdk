@@ -26,7 +26,6 @@ declare module "extism:host" {
     open_clientfd(path: I64): I64;
     write_sock(sock_id: I64, buf: I64): I64;
     read_sock(sock_id: I64, read_len: I64): I64;
-    hash(hash_type: I64, data: I64): I64;
     batch_http_request(ptr: I64): I64;
   }
 }

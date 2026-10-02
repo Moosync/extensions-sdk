@@ -1,10 +1,8 @@
-load("@aspect_rules_py//py:defs.bzl", "py_library")
+load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_library")
 load("@pypi_moounit//:requirements.bzl", "requirement")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 load("//tools:defs.bzl", "pytest_test")
 load("//wasm-extension-py:defs.bzl", "expose_pyi")
-
-package(default_visibility = ["//visibility:public"])
 
 compile_pip_requirements(
     name = "requirements",
@@ -27,6 +25,7 @@ py_library(
         "recorder.py",
     ],
     imports = ["moounit"],
+    visibility = ["//visibility:public"],
     deps = [
         requirement("extism"),
         requirement("pytest"),
@@ -38,8 +37,20 @@ py_library(
     ],
 )
 
+py_binary(
+    name = "moounit_runner",
+    srcs = ["test_moounit.py"],
+    main = "test_moounit.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":moounit",
+        requirement("pytest"),
+    ],
+)
+
 expose_pyi(
     name = "moounit_pyi",
+    visibility = ["//visibility:public"],
     deps = [
         "//protos:extensions_py_proto",
         "//protos:songs_py_proto",
