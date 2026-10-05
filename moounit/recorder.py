@@ -118,11 +118,22 @@ class Recorder:
         self,
         record_mode: bool = False,
         expectations_file: str | None = None,
-        filter: str | None = None,
+        filter: str | list[str] | None = None,
+        test_filter: str | list[str] | None = None,
     ):
         self.record_mode = record_mode
         self.expectations_file = expectations_file
-        self.filter = filter
+
+        raw_filter = test_filter if test_filter is not None else filter
+        if isinstance(raw_filter, str):
+            self.filters = [f.strip() for f in raw_filter.split(",") if f.strip()]
+            self.filter = raw_filter
+        elif isinstance(raw_filter, (list, tuple, set)):
+            self.filters = [str(f).strip() for f in raw_filter if str(f).strip()]
+            self.filter = ",".join(self.filters)
+        else:
+            self.filters = None
+            self.filter = None
 
         # Recorded expectations structure:
         # {
@@ -145,11 +156,8 @@ class Recorder:
         self.session_replay_ignore_rules: list[ReplayIgnoreRule] = []
         self.local_replay_ignore_rules: list[ReplayIgnoreRule] = []
 
-        if (
-            not self.record_mode
-            and self.expectations_file
-            and os.path.exists(self.expectations_file)
-        ):
+        self.existing_data: dict[str, Any] = {}
+        if self.expectations_file and os.path.exists(self.expectations_file):
             self._load_expectations()
 
     def replay_ignore(
@@ -217,10 +225,20 @@ class Recorder:
     def clear_session_replay_ignore_rules(self):
         self.session_replay_ignore_rules.clear()
 
+    def _matches_test_filter(self, test_name: str) -> bool:
+        if not self.filters:
+            return True
+        return any(f in test_name for f in self.filters)
+
     def set_current_test(self, test_name: str | None):
         self.current_test_name = test_name
-        if test_name and test_name not in self.recorded_test_calls:
-            if not self.filter or self.filter in test_name:
+        if test_name:
+            if self.record_mode and self.filters:
+                if not self._matches_test_filter(test_name):
+                    raise RuntimeError(
+                        f"Test '{test_name}' ran but is not included in test filter {self.filters}"
+                    )
+            if test_name not in self.recorded_test_calls:
                 self.recorded_test_calls[test_name] = []
 
     def clear_current_test(self):
@@ -241,11 +259,15 @@ class Recorder:
             with open(self.expectations_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict):
+                    self.existing_data = data
                     self.replay_session_calls = []
-                    self.replay_test_calls = data.get("tests", {})
+                    self.replay_test_calls = {
+                        k: list(v) for k, v in data.get("tests", {}).items()
+                    }
                 elif isinstance(data, list):
                     # Fallback / backward compatibility if simple list
-                    self.replay_session_calls = data
+                    self.existing_data = {"tests": {}}
+                    self.replay_session_calls = list(data)
                     self.replay_test_calls = {}
         except Exception as e:
             print(
@@ -265,14 +287,33 @@ class Recorder:
         if target_dir:
             os.makedirs(target_dir, exist_ok=True)
 
-        # Duplicate recorded session calls into each test's recorded calls
-        tests_data = {}
-        for test_name, calls in self.recorded_test_calls.items():
-            tests_data[test_name] = list(self.recorded_session_calls) + calls
+        existing_payload: dict[str, Any] = {}
+        if os.path.exists(target_file):
+            try:
+                with open(target_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        existing_payload = data
+            except Exception as e:
+                print(
+                    f"Warning: Failed to load existing expectations from {target_file}: {e}"
+                )
+        elif self.existing_data:
+            existing_payload = dict(self.existing_data)
 
-        payload = {
-            "tests": tests_data,
-        }
+        # Duplicate recorded session calls into each test's recorded calls
+        new_tests_data = {}
+        for test_name, calls in self.recorded_test_calls.items():
+            new_tests_data[test_name] = list(self.recorded_session_calls) + calls
+
+        if self.filters:
+            tests_data = dict(existing_payload.get("tests", {}))
+            tests_data.update(new_tests_data)
+        else:
+            tests_data = new_tests_data
+
+        payload = dict(existing_payload)
+        payload["tests"] = tests_data
 
         with open(target_file, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)
@@ -291,8 +332,14 @@ class Recorder:
         }
 
         if scope == Scope.LOCAL and self.current_test_name:
-            if self.filter and self.filter not in self.current_test_name:
-                return
+            if (
+                self.record_mode
+                and self.filters
+                and not self._matches_test_filter(self.current_test_name)
+            ):
+                raise RuntimeError(
+                    f"Test '{self.current_test_name}' ran but is not included in test filter {self.filters}"
+                )
             if self.current_test_name not in self.recorded_test_calls:
                 self.recorded_test_calls[self.current_test_name] = []
             self.recorded_test_calls[self.current_test_name].append(entry)

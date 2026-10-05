@@ -3,15 +3,19 @@ import os
 import tempfile
 import uuid
 from collections.abc import Callable
-from typing import Any
+from typing import TypeVar
 
+from google.protobuf.message import Message
 import extism
 from core.types.protos.extensions_pb2 import (
     BatchHttpRequest,
     BatchHttpResponse,
+    ExtensionAccountDetail,
     ExtensionCommand,
     ExtensionCommandResponse,
     ExtensionManifest,
+    HttpRequest,
+    HttpResult,
     MainCommand,
     MainCommandResponse,
     ManifestPermissions,
@@ -19,8 +23,10 @@ from core.types.protos.extensions_pb2 import (
 from extism.extism import (
     HOST_FN_REGISTRY,
     CompiledPlugin,
+    ExplicitFunction,
     Function,
     TypeInferredFunction,
+    ValType,
 )
 
 from moounit.expectations import ExpectationManager, current_scope
@@ -50,7 +56,9 @@ class Moounit:
     ) -> tuple[uuid.UUID, CompiledPlugin]:
         id_ = uuid.uuid4()
 
-        def _guard(func: Callable[[Moounit], Any], error_msg: str) -> Any:
+        T = TypeVar("T")
+
+        def _guard(func: Callable[[Moounit], T], error_msg: str) -> T:
             instance = Moounit._instances.get(id_)
             if not instance:
                 raise AssertionError(error_msg)
@@ -104,6 +112,44 @@ class Moounit:
                 "Unexpected call to batch_http_request. If this call is expected, please ensure you have set an expectation using expect_batch_http_request.",
             )
 
+        def http_request(
+            plugin: extism.CurrentPlugin,
+            inputs: list[extism.Val],
+            outputs: list[extism.Val],
+            *_user_data: bytes,
+        ) -> None:
+            req_offs = inputs[0].value
+            body_offs = inputs[1].value
+            offs = _guard(
+                lambda i: i.manager._check_http_request(plugin, req_offs, body_offs),
+                "Unexpected call to extism:host/env::http_request. If this call is expected, please ensure you have set an expectation using expect_batch_http_request.",
+            )
+            outputs[0]._assign(offs)
+
+        def http_status_code(
+            _plugin: extism.CurrentPlugin,
+            _inputs: list[extism.Val],
+            outputs: list[extism.Val],
+            *_user_data: bytes,
+        ) -> None:
+            code = _guard(
+                lambda i: i.manager._check_http_status_code(),
+                "Unexpected call to extism:host/env::http_status_code.",
+            )
+            outputs[0]._assign(code)
+
+        def http_headers(
+            plugin: extism.CurrentPlugin,
+            _inputs: list[extism.Val],
+            outputs: list[extism.Val],
+            *_user_data: bytes,
+        ) -> None:
+            offs = _guard(
+                lambda i: i.manager._check_http_headers(plugin),
+                "Unexpected call to extism:host/env::http_headers.",
+            )
+            outputs[0]._assign(offs)
+
         fns: list[Function] = [
             TypeInferredFunction(
                 None,
@@ -133,13 +179,37 @@ class Moounit:
                 None,
                 send_main_command.__name__,
                 send_main_command,
-                [(5).to_bytes(length=4, byteorder="big")],
+                [(4).to_bytes(length=4, byteorder="big")],
             ),
             TypeInferredFunction(
                 None,
                 batch_http_request.__name__,
                 batch_http_request,
+                [(5).to_bytes(length=4, byteorder="big")],
+            ),
+            ExplicitFunction(
+                "extism:host/env",
+                "http_request",
+                [ValType.I64, ValType.I64],
+                [ValType.I64],
+                http_request,
                 [(6).to_bytes(length=4, byteorder="big")],
+            ),
+            ExplicitFunction(
+                "extism:host/env",
+                "http_status_code",
+                [],
+                [ValType.I32],
+                http_status_code,
+                [(7).to_bytes(length=4, byteorder="big")],
+            ),
+            ExplicitFunction(
+                "extism:host/env",
+                "http_headers",
+                [],
+                [ValType.I64],
+                http_headers,
+                [(8).to_bytes(length=4, byteorder="big")],
             ),
         ]
 
@@ -210,7 +280,9 @@ class Moounit:
         self,
         path: str,
         recorder: Recorder | None = None,
+        passthrough: bool = True,
     ):
+        self.passthrough = passthrough
         self.recorder = recorder or Recorder()
         self.manager = ExpectationManager(recorder=self.recorder, moounit=self)
         self._host_exception: Exception | None = None
@@ -221,29 +293,66 @@ class Moounit:
         self.socket_manager = RealSocketManager(dict(manifest.permissions.paths))
         self._load_extension(manifest)
 
+    @property
+    def accounts(self) -> dict[str, ExtensionAccountDetail]:
+        return self.manager.accounts
+
     def get_mapped_paths(self) -> dict[str, str]:
         return self._mapped_paths
 
-    def expect_command(self, *args: Any, **kwargs: Any) -> Any:
-        return self.manager.expect_command(*args, **kwargs)
+    def expect_command(
+        self,
+        command: MainCommand,
+        response: MainCommandResponse | Callable[[], MainCommandResponse],
+        times: int = 1,
+    ) -> None:
+        self.manager.expect_command(command, response, times=times)
 
-    def expect_system_time(self, *args: Any, **kwargs: Any) -> Any:
-        return self.manager.expect_system_time(*args, **kwargs)
+    def expect_system_time(
+        self, return_value: int | Callable[[], int], times: int = 1
+    ) -> None:
+        self.manager.expect_system_time(return_value, times=times)
 
-    def expect_open_clientfd(self, *args: Any, **kwargs: Any) -> Any:
-        return self.manager.expect_open_clientfd(*args, **kwargs)
+    def expect_open_clientfd(
+        self, path: str, return_value: int | Callable[[], int], times: int = 1
+    ) -> None:
+        self.manager.expect_open_clientfd(path, return_value, times=times)
 
-    def expect_write_sock(self, *args: Any, **kwargs: Any) -> Any:
-        return self.manager.expect_write_sock(*args, **kwargs)
+    def expect_write_sock(
+        self, sock_id: int, return_value: int | Callable[[], int], times: int = 1
+    ) -> None:
+        self.manager.expect_write_sock(sock_id, return_value, times=times)
 
-    def expect_read_sock(self, *args: Any, **kwargs: Any) -> Any:
-        return self.manager.expect_read_sock(*args, **kwargs)
+    def expect_read_sock(
+        self,
+        sock_id: int,
+        read_len: int,
+        return_value: bytes | Callable[[], bytes],
+        times: int = 1,
+    ) -> None:
+        self.manager.expect_read_sock(sock_id, read_len, return_value, times=times)
 
-    def expect_batch_http_request(self, *args: Any, **kwargs: Any) -> Any:
-        return self.manager.expect_batch_http_request(*args, **kwargs)
+    def expect_batch_http_request(
+        self,
+        requests: BatchHttpRequest,
+        responses: BatchHttpResponse | Callable[[], BatchHttpResponse],
+        times: int = 1,
+    ) -> None:
+        self.manager.expect_batch_http_request(requests, responses, times=times)
 
-    def replay_ignore(self, *args: Any, **kwargs: Any) -> Any:
-        return self.manager.replay_ignore(*args, **kwargs)
+    def replay_ignore(
+        self,
+        request: Message,
+        ignore_fields: list[str] | None = None,
+        regex: bool = False,
+        test_name: str | None = None,
+    ) -> None:
+        self.manager.replay_ignore(
+            request=request,
+            ignore_fields=ignore_fields,
+            regex=regex,
+            test_name=test_name,
+        )
 
     def clear_local_expectations(self) -> None:
         self.manager.clear_local_expectations()
@@ -257,5 +366,5 @@ class Moounit:
     def verify_and_clear_session_expectations(self) -> None:
         self.manager.verify_and_clear_session_expectations()
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> object:
         return getattr(self.manager, name)

@@ -1,13 +1,27 @@
 import contextvars
+import json
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, TypeVar
+
+import extism
+from google.protobuf.message import Message
 
 from core.types.protos.extensions_pb2 import (
     BatchHttpRequest,
     BatchHttpResponse,
+    ExtensionAccountDetail,
+    HttpRequest,
+    HttpResult,
     MainCommand,
     MainCommandResponse,
 )
+
+if TYPE_CHECKING:
+    from moounit.core import Moounit
+
+T = TypeVar("T")
+E = TypeVar("E", bound=object)
+RequestInfoType = Message | int | str | bytes
 from moounit.defaults import (
     default_batch_http_response,
     default_main_command_response,
@@ -25,6 +39,15 @@ from moounit.models import (
     Scope,
     SystemTimeExpectation,
     WriteSockExpectation,
+)
+
+ExpectationType = (
+    Expectation
+    | SystemTimeExpectation
+    | OpenClientFdExpectation
+    | WriteSockExpectation
+    | ReadSockExpectation
+    | BatchHttpRequestExpectation
 )
 from moounit.passthrough import (
     RealSocketManager,
@@ -64,11 +87,13 @@ class ExpectationManager:
     def __init__(
         self,
         recorder: Recorder | None = None,
-        moounit: Any | None = None,
+        moounit: "Moounit | None" = None,
     ):
         self.recorder = recorder or Recorder()
         self.moounit = moounit
         self._socket_manager: RealSocketManager | None = None
+        self.accounts: dict[str, ExtensionAccountDetail] = {}
+        self._last_http_result: HttpResult | None = None
 
         for local_attr, session_attr in ATTR_MAP.values():
             setattr(self, local_attr, [])
@@ -86,7 +111,7 @@ class ExpectationManager:
             return getattr(self.moounit, "socket_manager", None)
         return self._socket_manager
 
-    def _add_expectation(self, kind: str, exp: Any):
+    def _add_expectation(self, kind: str, exp: ExpectationType) -> None:
         local_attr, session_attr = ATTR_MAP[kind]
         target = getattr(
             self,
@@ -105,9 +130,7 @@ class ExpectationManager:
             Expectation(command=command, response=response, times=times),
         )
 
-    def expect_system_time(
-        self, return_value: int | Callable[[], int], times: int = 1
-    ):
+    def expect_system_time(self, return_value: int | Callable[[], int], times: int = 1):
         self._add_expectation(
             "system_time",
             SystemTimeExpectation(return_value=return_value, times=times),
@@ -118,9 +141,7 @@ class ExpectationManager:
     ):
         self._add_expectation(
             "open_clientfd",
-            OpenClientFdExpectation(
-                path=path, return_value=return_value, times=times
-            ),
+            OpenClientFdExpectation(path=path, return_value=return_value, times=times),
         )
 
     def expect_write_sock(
@@ -172,7 +193,7 @@ class ExpectationManager:
 
     def replay_ignore(
         self,
-        request: Any,
+        request: Message,
         ignore_fields: list[str] | str | None = None,
         ignore_field: list[str] | str | None = None,
         regex: str | None = None,
@@ -195,6 +216,8 @@ class ExpectationManager:
         )
 
     def clear_local_expectations(self):
+        self.accounts.clear()
+        self._last_http_result = None
         for local_attr, _ in ATTR_MAP.values():
             getattr(self, local_attr).clear()
 
@@ -213,6 +236,7 @@ class ExpectationManager:
             raise AssertionError("\n".join(errors))
 
     def clear_session_expectations(self):
+        self._last_http_result = None
         for _, session_attr in ATTR_MAP.values():
             getattr(self, session_attr).clear()
 
@@ -230,17 +254,17 @@ class ExpectationManager:
         if errors:
             raise AssertionError("\n".join(errors))
 
-    def _get_value(self, val: Any | Callable[[], Any]) -> Any:
+    def _get_value(self, val: T | Callable[[], T]) -> T:
         if callable(val):
             return val()
         return val
 
     def _consume_expectation(
         self,
-        local_list: list[Any],
-        session_list: list[Any],
-        matcher: Callable[[Any], bool],
-    ) -> Any | None:
+        local_list: list[E],
+        session_list: list[E],
+        matcher: Callable[[E], bool],
+    ) -> E | None:
         for exp in local_list + session_list:
             if matcher(exp):
                 if exp.times >= 0:
@@ -254,8 +278,8 @@ class ExpectationManager:
         return None
 
     def _replay_or_fail(
-        self, call_type: str, request_obj: Any, default_error_msg: str
-    ) -> Any:
+        self, call_type: str, request_obj: RequestInfoType, default_error_msg: str
+    ) -> object:
         scope = current_scope.get()
         if self.recorder.has_replay_expectations(scope):
             resp, err = self.recorder.match_and_consume_replay(
@@ -282,21 +306,25 @@ class ExpectationManager:
     def _dispatch(
         self,
         kind: str,
-        local_list: list[Any],
-        session_list: list[Any],
-        matcher: Callable[[Any], bool],
-        req_info: Any,
-        passthrough_fn: Callable[[], Any] | None,
-        default_fn: Callable[[], Any],
+        local_list: list[E],
+        session_list: list[E],
+        matcher: Callable[[E], bool],
+        req_info: RequestInfoType,
+        passthrough_fn: Callable[[], T] | None,
+        default_fn: Callable[[], T],
         record_name: str,
         error_msg: str | None = None,
-    ) -> Any:
+    ) -> T:
         scope = current_scope.get()
         exp = self._consume_expectation(local_list, session_list, matcher)
         if exp is not None:
             ret = self._get_value(
                 getattr(exp, "return_value", getattr(exp, "response", None))
             )
+            if not self.recorder.record_mode and self.recorder.has_replay_expectations(
+                scope
+            ):
+                self.recorder.match_and_consume_replay(kind, req_info, scope)
         elif self.recorder.record_mode:
             if self.passthrough_enabled and passthrough_fn is not None:
                 try:
@@ -380,11 +408,19 @@ class ExpectationManager:
 
     def _check_batch_http_request(self, data: bytes) -> bytes:
         req = BatchHttpRequest.FromString(data)
+        ignore_rules, _ = self.recorder._collect_ignore_rules_for_request(
+            "batch_http_request", req
+        )
         resp = self._dispatch(
             "batch_http_request",
             self.local_batch_http_request_expectations,
             self.session_batch_http_request_expectations,
-            lambda e: partial_match(e.requests, req)[0],
+            lambda e: partial_match(
+                e.requests,
+                req,
+                ignored_fields=ignore_rules,
+                root_call="batch_http_request",
+            )[0],
             req,
             lambda: execute_real_batch_http_request(req),
             lambda: default_batch_http_response(req),
@@ -393,13 +429,78 @@ class ExpectationManager:
         )
         return resp.SerializeToString()
 
+    def _check_http_request(
+        self, plugin: extism.CurrentPlugin, req_offs: int, body_offs: int
+    ) -> int:
+        req_mem = plugin.memory_at_offset(req_offs)
+        req_json = bytes(plugin.memory(req_mem)).decode("utf-8")
+        req_dict = json.loads(req_json)
+        headers = {str(k): str(v) for k, v in req_dict.get("headers", {}).items()}
+        if body_offs != 0:
+            body_mem = plugin.memory_at_offset(body_offs)
+            body = bytes(plugin.memory(body_mem))
+        else:
+            body = b""
+
+        http_req = HttpRequest(
+            url=req_dict.get("url", ""),
+            method=req_dict.get("method", "GET").upper(),
+            headers=headers,
+            body=body,
+        )
+        batch_req = BatchHttpRequest(requests=[http_req])
+        batch_resp_bytes = self._check_batch_http_request(
+            batch_req.SerializeToString()
+        )
+        batch_resp = BatchHttpResponse.FromString(batch_resp_bytes)
+        result = batch_resp.responses[0] if batch_resp.responses else HttpResult()
+        self._last_http_result = result
+
+        if result.HasField("error"):
+            err_bytes = result.error.encode("utf-8")
+            mem = plugin.alloc(len(err_bytes))
+            plugin.memory(mem)[:] = err_bytes
+            return mem.offset
+
+        resp_bytes = result.response.body if result.response.body else b""
+        mem = plugin.alloc(len(resp_bytes))
+        plugin.memory(mem)[:] = resp_bytes
+        return mem.offset
+
+    def _check_http_status_code(self) -> int:
+        if self._last_http_result is None or self._last_http_result.HasField("error"):
+            return 500
+        return self._last_http_result.response.status_code
+
+    def _check_http_headers(self, plugin: extism.CurrentPlugin) -> int:
+        if self._last_http_result is None or self._last_http_result.HasField("error"):
+            headers_dict = {}
+        else:
+            headers_dict = dict(self._last_http_result.response.headers)
+        headers_json = json.dumps(headers_dict).encode("utf-8")
+        mem = plugin.alloc(len(headers_json))
+        plugin.memory(mem)[:] = headers_json
+        return mem.offset
+
     def handle_main_command(self, data: bytes) -> bytes:
         command = MainCommand.FromString(data)
+        if command.WhichOneof("command") == "set_account":
+            self.accounts[
+                command.set_account.account.id
+            ] = command.set_account.account
+        ignore_rules, _ = self.recorder._collect_ignore_rules_for_request(
+            "send_main_command", command
+        )
         resp = self._dispatch(
             "send_main_command",
             self.local_expectations,
             self.session_expectations,
-            lambda e: partial_match(e.command, command)[0],
+            lambda e: partial_match(
+                e.command,
+                command,
+                ignored_fields=ignore_rules,
+                root_call="send_main_command",
+            )[0],
             command,
             None,
             lambda: default_main_command_response(command),

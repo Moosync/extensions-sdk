@@ -1,5 +1,9 @@
-# pylint: disable=unused-import,too-many-locals,protected-access,no-member,too-few-public-methods
+# pylint: disable=unused-import,too-many-locals,too-many-statements,protected-access,no-member,too-few-public-methods,line-too-long,import-outside-toplevel,unspecified-encoding
+import inspect
 import json
+import uuid
+import extism
+from extism.extism import Function, TypeInferredFunction
 import pytest
 from core.types.protos.extensions_pb2 import (
     BatchHttpRequest,
@@ -16,6 +20,7 @@ from core.types.protos.extensions_pb2 import (
     PreferenceData,
 )
 from core.types.protos.songs_pb2 import GetSongOptions, Song
+from moounit.core import Moounit
 from moounit.defaults import (
     default_batch_http_response,
     default_main_command_response,
@@ -27,6 +32,7 @@ from moounit.defaults import (
 from moounit.expectations import ExpectationManager, current_scope
 from moounit.matcher import partial_match
 from moounit.models import Scope
+from moounit.pytest_plugin import pytest_collection_modifyitems
 from moounit.recorder import Recorder, _matches_filter
 
 
@@ -605,10 +611,9 @@ def test_callable_return_values():
 def test_recorder_filter():
     recorder = Recorder(record_mode=True, filter="target")
 
-    # Call under non-matching test name should not be recorded
-    recorder.set_current_test("other_test")
-    recorder.record_call("system_time", {}, 100, Scope.LOCAL)
-    assert "other_test" not in recorder.recorded_test_calls
+    # Call under non-matching test name should raise RuntimeError
+    with pytest.raises(RuntimeError, match="not included in test filter"):
+        recorder.set_current_test("other_test")
 
     # Call under matching test name should be recorded
     recorder.set_current_test("my_target_test")
@@ -623,6 +628,128 @@ def test_recorder_filter():
     assert not _matches_filter("baz", "foobar")
     assert _matches_filter(b"part", b"full_part_byte")
     assert not _matches_filter(b"missing", b"full_part_byte")
+
+
+def test_recorder_filter_preserves_other_expectations(tmp_path):
+    expectations_path = str(tmp_path / "expectations.json")
+    initial_data = {
+        "tests": {
+            "test_stay": [{"type": "system_time", "request": {}, "response": 111}],
+            "test_update": [{"type": "system_time", "request": {}, "response": 222}],
+        }
+    }
+    with open(expectations_path, "w", encoding="utf-8") as f:
+        json.dump(initial_data, f, indent=2)
+
+    recorder = Recorder(
+        record_mode=True,
+        expectations_file=expectations_path,
+        test_filter="test_update",
+    )
+    recorder.set_current_test("test_update")
+    recorder.record_call("system_time", {}, 999, Scope.LOCAL)
+    recorder.clear_current_test()
+    recorder.save_recorded_expectations()
+
+    with open(expectations_path, "r", encoding="utf-8") as f:
+        saved_data = json.load(f)
+
+    assert "tests" in saved_data
+    assert saved_data["tests"]["test_stay"] == [
+        {"type": "system_time", "request": {}, "response": 111}
+    ]
+    assert saved_data["tests"]["test_update"] == [
+        {"type": "system_time", "request": {}, "response": 999}
+    ]
+
+
+def test_recorder_multiple_filters_preserve_others(tmp_path):
+    expectations_path = str(tmp_path / "expectations.json")
+    initial_data = {
+        "tests": {
+            "test_a": [{"type": "system_time", "request": {}, "response": 1}],
+            "test_b": [{"type": "system_time", "request": {}, "response": 2}],
+            "test_c": [{"type": "system_time", "request": {}, "response": 3}],
+        }
+    }
+    with open(expectations_path, "w", encoding="utf-8") as f:
+        json.dump(initial_data, f, indent=2)
+
+    recorder = Recorder(
+        record_mode=True,
+        expectations_file=expectations_path,
+        test_filter=["test_a", "test_b"],
+    )
+    recorder.set_current_test("test_a")
+    recorder.record_call("system_time", {}, 10, Scope.LOCAL)
+    recorder.clear_current_test()
+
+    recorder.set_current_test("test_b")
+    recorder.record_call("system_time", {}, 20, Scope.LOCAL)
+    recorder.clear_current_test()
+
+    recorder.save_recorded_expectations()
+
+    with open(expectations_path, "r", encoding="utf-8") as f:
+        saved_data = json.load(f)
+
+    assert saved_data["tests"]["test_a"] == [
+        {"type": "system_time", "request": {}, "response": 10}
+    ]
+    assert saved_data["tests"]["test_b"] == [
+        {"type": "system_time", "request": {}, "response": 20}
+    ]
+    assert saved_data["tests"]["test_c"] == [
+        {"type": "system_time", "request": {}, "response": 3}
+    ]
+
+
+class DummyItem:
+    def __init__(self, name: str, nodeid: str):
+        self.name = name
+        self.nodeid = nodeid
+
+
+class DummyConfig:
+    def __init__(self, test_filter: str | None = None):
+        self._test_filter = test_filter
+        self.deselected_items = []
+        self.hook = self
+
+    def getoption(self, name: str, default=None):
+        if name == "--test-filter":
+            return self._test_filter
+        return default
+
+    def pytest_deselected(self, items):
+        self.deselected_items.extend(items)
+
+
+def test_pytest_collection_modifyitems():
+    item1 = DummyItem("test_foo", "test_file.py::test_foo")
+    item2 = DummyItem("test_bar", "test_file.py::test_bar")
+    item3 = DummyItem("test_baz", "test_file.py::test_baz")
+
+    # When no filter: nothing deselected
+    items = [item1, item2, item3]
+    config_none = DummyConfig(test_filter=None)
+    pytest_collection_modifyitems(config_none, items)
+    assert items == [item1, item2, item3]
+    assert len(config_none.deselected_items) == 0
+
+    # With single filter:
+    items = [item1, item2, item3]
+    config_single = DummyConfig(test_filter="test_foo")
+    pytest_collection_modifyitems(config_single, items)
+    assert items == [item1]
+    assert config_single.deselected_items == [item2, item3]
+
+    # With comma-separated filter:
+    items = [item1, item2, item3]
+    config_multi = DummyConfig(test_filter="test_foo, test_baz")
+    pytest_collection_modifyitems(config_multi, items)
+    assert items == [item1, item3]
+    assert config_multi.deselected_items == [item2]
 
 
 def test_session_expectations_lifecycle():
@@ -684,3 +811,161 @@ def test_verify_and_clear_local_expectations():
         assert len(rec_manager.local_system_time_expectations) == 0
     finally:
         current_scope.reset(token)
+
+
+def test_extism_http_interception(tmp_path):
+    class FakeBuffer:
+        def __init__(self, data: bytes):
+            self._data = bytearray(data)
+
+        def __bytes__(self) -> bytes:
+            return bytes(self._data)
+
+        def __setitem__(self, key, value):
+            self._data[key] = value
+
+    class FakeMemory:
+        def __init__(self, offset: int, length: int):
+            self.offset = offset
+            self.length = length
+
+    class FakePlugin:
+        def __init__(self, req_data: bytes, body_data: bytes = b""):
+            self._memory_store: dict[int, FakeBuffer] = {}
+            self._next_offset = 100
+            self._req_offset = self._store(req_data)
+            self._body_offset = self._store(body_data) if body_data else 0
+            self.allocations: list[FakeMemory] = []
+
+        def _store(self, data: bytes) -> int:
+            offset = self._next_offset
+            self._next_offset += 1
+            self._memory_store[offset] = FakeBuffer(data)
+            return offset
+
+        def memory_at_offset(self, offs: int):
+            buf = self._memory_store.get(offs)
+            length = len(buf._data) if buf else 0
+            return FakeMemory(offs, length)
+
+        def memory(self, mem):
+            return self._memory_store.get(mem.offset, FakeBuffer(b""))
+
+        def alloc(self, size: int):
+            offset = self._next_offset
+            self._next_offset += 1
+            buf = FakeBuffer(b"\x00" * size)
+            self._memory_store[offset] = buf
+            fake_mem = FakeMemory(offset, size)
+            self.allocations.append(fake_mem)
+            return fake_mem
+
+        def return_bytes(self, slot, value: bytes):
+            slot.value = int.from_bytes(value, "little")
+
+    recorder = Recorder(record_mode=False)
+    recorder.replay_session_calls = [
+        {
+            "type": "batch_http_request",
+            "request": {
+                "requests": [
+                    {
+                        "url": "https://api.test/data",
+                        "method": "POST",
+                        "headers": {"content-type": "application/json"},
+                        "body": "eyJpZCI6MX0=",
+                    }
+                ]
+            },
+            "response": {
+                "responses": [
+                    {
+                        "response": {
+                            "status_code": 201,
+                            "headers": {"x-res": "ok"},
+                            "body": "eyJyZXN1bHQiOiAid29ya2VkIn0=",
+                        }
+                    }
+                ]
+            },
+        }
+    ]
+
+    moounit = Moounit.__new__(Moounit)
+    moounit.passthrough = False
+    moounit.recorder = recorder
+    moounit.manager = ExpectationManager(recorder=recorder, moounit=moounit)
+    moounit._host_exception = None
+    moounit._temp_dirs = []
+    moounit._mapped_paths = {}
+
+    uid = uuid.uuid4()
+    moounit._plugin_id = uid
+    Moounit._instances[uid] = moounit
+
+    try:
+        pkg_file = tmp_path / "package.json"
+        pkg_file.write_text(
+            json.dumps(
+                {
+                    "name": "mock_ext",
+                    "version": "1.0.0",
+                    "extensionEntry": "entry.wasm",
+                }
+            ),
+            encoding="utf-8",
+        )
+        (tmp_path / "entry.wasm").write_bytes(b"\x00asm\x01\x00\x00\x00")
+
+        new_id, compiled = moounit._get_extism_manifest(
+            moounit._parse_manifest(str(tmp_path))
+        )
+        Moounit._instances[new_id] = moounit
+        fns_by_name = {f.name: f for f in compiled.functions}
+
+        assert "http_request" in fns_by_name
+        assert "http_status_code" in fns_by_name
+        assert "http_headers" in fns_by_name
+
+        req_fn = fns_by_name["http_request"]
+        status_fn = fns_by_name["http_status_code"]
+        headers_fn = fns_by_name["http_headers"]
+
+        raw_req_fn = req_fn.func
+        raw_status_fn = status_fn.func
+        raw_headers_fn = headers_fn.func
+
+        # Call wrapped host functions
+        req_payload = json.dumps(
+            {
+                "url": "https://api.test/data",
+                "method": "POST",
+                "headers": {"content-type": "application/json"},
+            }
+        ).encode("utf-8")
+        body_payload = b'{"id":1}'
+
+        plugin = FakePlugin(req_payload, body_payload)
+        in_slots = [
+            extism.Val(extism.ValType.I64, plugin._req_offset),
+            extism.Val(extism.ValType.I64, plugin._body_offset),
+        ]
+        out_slots = [extism.Val(extism.ValType.I64, 0)]
+        raw_req_fn(plugin, in_slots, out_slots)
+        resp_mem = plugin.allocations[0]
+        assert bytes(plugin.memory(resp_mem)) == b'{"result": "worked"}'
+
+        out_status = [extism.Val(extism.ValType.I32, 0)]
+        raw_status_fn(plugin, [], out_status)
+        assert out_status[0].value == 201
+
+        out_headers = [extism.Val(extism.ValType.I64, 0)]
+        raw_headers_fn(plugin, [], out_headers)
+        headers_mem = plugin.allocations[1]
+        res_headers = json.loads(bytes(plugin.memory(headers_mem)).decode("utf-8"))
+        assert res_headers == {"x-res": "ok"}
+    finally:
+        if uid in Moounit._instances:
+            del Moounit._instances[uid]
+        if "new_id" in locals() and new_id in Moounit._instances:
+            del Moounit._instances[new_id]

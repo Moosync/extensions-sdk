@@ -39,12 +39,41 @@ def pytest_addoption(parser):
         default=None,
         help="Path to expectations.json file",
     )
+    parser.addoption(
+        "--test-filter",
+        action="store",
+        default=None,
+        help="Filter tests to run/record (comma-separated or single pattern)",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    test_filter = config.getoption("--test-filter", default=None)
+    if not test_filter:
+        return
+
+    filters = [f.strip() for f in test_filter.split(",") if f.strip()]
+    if not filters:
+        return
+
+    selected = []
+    deselected = []
+    for item in items:
+        if any(f in item.name or f in item.nodeid for f in filters):
+            selected.append(item)
+        else:
+            deselected.append(item)
+
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+        items[:] = selected
 
 
 @pytest.fixture(scope="session")
 def moounit_recorder(request):
     record_mode = request.config.getoption("--record", default=False)
     expectations_file = request.config.getoption("--expectations-file", default=None)
+    test_filter = request.config.getoption("--test-filter", default=None)
 
     if not expectations_file:
         test_dir = os.path.dirname(str(request.config.rootdir))
@@ -55,6 +84,7 @@ def moounit_recorder(request):
     recorder = Recorder(
         record_mode=record_mode,
         expectations_file=expectations_file,
+        test_filter=test_filter,
     )
     yield recorder
     if record_mode:
