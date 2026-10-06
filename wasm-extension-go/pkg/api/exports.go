@@ -120,8 +120,20 @@ func handle_extension_command() int32 {
 			pdk.SetError(err)
 			return 1
 		}
+		var protoRes *extensions.PlaybackDetailsRequestedResponse
+		if res != nil {
+			var key *string
+			if res.DecryptionKey != "" {
+				key = &res.DecryptionKey
+			}
+			protoRes = &extensions.PlaybackDetailsRequestedResponse{
+				Duration:      DurationToProto(res.Duration),
+				Url:           res.Url,
+				DecryptionKey: key,
+			}
+		}
 		resp.Response = &extensions.ExtensionCommandResponse_PlaybackDetailsRequested{
-			PlaybackDetailsRequested: res,
+			PlaybackDetailsRequested: protoRes,
 		}
 
 	case *extensions.ExtensionCommand_CustomRequest:

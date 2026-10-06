@@ -26,10 +26,11 @@ export * from "./protos/ui_pb";
 export * from "./protos/themes_pb";
 export * from "@bufbuild/protobuf";
 
-import { callListener } from "./api";
+import { callListener, durationToProto } from "./api";
 import {
   ExtensionCommand,
   ExtensionCommandResponse,
+  PlaybackDetailsRequestedResponse,
 } from "./protos/extensions_pb";
 import { Message } from "@bufbuild/protobuf";
 
@@ -45,7 +46,22 @@ async function handle(
     // payload.constructor is the Message Class (e.g. RequestedPlaylistsRequest)
     // This matches the key used in api.on()
 
-    const result = await Promise.resolve(callListener(caseStr as any, payload));
+    let result = await Promise.resolve(callListener(caseStr as any, payload));
+
+    if (caseStr === "playbackDetailsRequested" && result) {
+      const resObj = result as any;
+      if (!(resObj instanceof PlaybackDetailsRequestedResponse)) {
+        let duration = resObj.duration;
+        if (typeof duration === "number") {
+          duration = durationToProto(duration);
+        }
+        result = new PlaybackDetailsRequestedResponse({
+          url: resObj.url,
+          duration: duration,
+          decryptionKey: resObj.decryption_key ?? resObj.decryptionKey,
+        });
+      }
+    }
 
     // Construct response based on responseField
     if (result !== undefined) {

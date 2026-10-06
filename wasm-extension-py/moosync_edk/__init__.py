@@ -116,6 +116,25 @@ class HttpResult:
             self.error = "Empty HTTP result"
 
 
+class PlaybackDetailsReturnType:
+    def __init__(
+        self,
+        url: str,
+        duration: Optional[timedelta] = None,
+    ):
+        self.url = url
+        self.duration = duration
+
+    def to_proto(self) -> extensions_pb2.PlaybackDetailsRequestedResponse:
+        proto_duration = None
+        if self.duration is not None:
+            proto_duration = duration_to_proto(self.duration)
+        return extensions_pb2.PlaybackDetailsRequestedResponse(
+            url=self.url,
+            duration=proto_duration,
+        )
+
+
 def http_batch_request(requests: Sequence[Union[HttpRequest, Dict[str, Any]]]) -> List[HttpResponse]:
     if not requests:
         return []
@@ -395,7 +414,7 @@ class Extension:
 
     def get_playback_details(
         self, req: extensions_pb2.PlaybackDetailsRequestedRequest
-    ) -> extensions_pb2.PlaybackDetailsRequestedResponse:
+    ) -> Union[PlaybackDetailsReturnType, extensions_pb2.PlaybackDetailsRequestedResponse]:
         raise NotImplementedError()
 
     def get_search(
@@ -587,9 +606,15 @@ def handle_extension_command():
         number
         == extensions_pb2.ExtensionCommand.PLAYBACK_DETAILS_REQUESTED_FIELD_NUMBER
     ):
-        response.playback_details_requested.CopyFrom(
-            instance.get_playback_details(cmd.playback_details_requested)
-        )
+        res = instance.get_playback_details(cmd.playback_details_requested)
+        if isinstance(res, PlaybackDetailsReturnType):
+            response.playback_details_requested.CopyFrom(res.to_proto())
+        elif isinstance(res, extensions_pb2.PlaybackDetailsRequestedResponse):
+            response.playback_details_requested.CopyFrom(res)
+        elif res is not None:
+            raise ValueError(
+                f"Invalid return type from get_playback_details: {type(res)}"
+            )
     elif number == extensions_pb2.ExtensionCommand.CUSTOM_REQUEST_FIELD_NUMBER:
         response.custom_request.CopyFrom(
             instance.handle_custom_request(cmd.custom_request)

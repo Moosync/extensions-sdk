@@ -35,7 +35,7 @@ type Extension interface {
 	GetPlaylists(req *extensions.RequestedPlaylistsRequest) ([]*songs.Playlist, error)
 	GetPlaylistContent(req *extensions.RequestedPlaylistSongsRequest) (*extensions.RequestedPlaylistSongsResponse, error)
 	GetPlaylistFromURL(req *extensions.RequestedPlaylistFromUrlRequest) (*extensions.RequestedPlaylistFromUrlResponse, error)
-	GetPlaybackDetails(req *extensions.PlaybackDetailsRequestedRequest) (*extensions.PlaybackDetailsRequestedResponse, error)
+	GetPlaybackDetails(req *extensions.PlaybackDetailsRequestedRequest) (*PlaybackDetailsReturnType, error)
 	Search(req *extensions.RequestedSearchResultRequest) (*songs.SearchResult, error)
 	GetRecommendations(req *extensions.RequestedRecommendationsRequest) ([]*songs.Song, error)
 	GetSongFromURL(req *extensions.RequestedSongFromUrlRequest) (*extensions.RequestedSongFromUrlResponse, error)
@@ -116,7 +116,7 @@ func (DefaultExtension) GetPlaylistFromURL(req *extensions.RequestedPlaylistFrom
 	return nil, errors.New("Not implemented")
 }
 
-func (DefaultExtension) GetPlaybackDetails(req *extensions.PlaybackDetailsRequestedRequest) (*extensions.PlaybackDetailsRequestedResponse, error) {
+func (DefaultExtension) GetPlaybackDetails(req *extensions.PlaybackDetailsRequestedRequest) (*PlaybackDetailsReturnType, error) {
 	return nil, errors.New("Not implemented")
 }
 
@@ -494,6 +494,12 @@ func init() {
 // DurationToProto converts a native time.Duration to a protobuf duration.
 func DurationToProto(d time.Duration) *durationpb.Duration {
 	return durationpb.New(d)
+}
+
+type PlaybackDetailsReturnType struct {
+	Duration      time.Duration
+	Url           string
+	DecryptionKey string
 }
 
 type HttpRequest struct {

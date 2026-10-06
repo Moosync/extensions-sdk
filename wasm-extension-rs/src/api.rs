@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::time::Duration;
+
 use extensions_proto::struct_proto::google::protobuf::Struct as ProtoStruct;
 use extism_pdk::{Prost, host_fn};
 
@@ -240,8 +242,9 @@ pub trait Extension:
 
 #[derive(Debug)]
 pub struct PlaybackDetailsReturnType {
-    pub duration: u32,
+    pub duration: Duration,
     pub url: String,
+    pub decryption_key: Option<String>,
 }
 
 #[derive(Debug)]

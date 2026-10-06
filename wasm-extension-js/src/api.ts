@@ -86,7 +86,9 @@ import {
   AddSongsRequest,
   AddToPlaylistRequest,
   GetPreferenceRequest,
+  SetPreferenceRequest,
   GetSecureRequest,
+  SetSecureRequest,
   GetSongRequest,
   GetCurrentSongRequest,
   GetPlayerStateRequest,
@@ -143,18 +145,30 @@ export type EventPayload<K extends ExtensionEventCase> = Extract<
   { case: K }
 >["value"];
 
+export interface PlaybackDetailsReturnType {
+  duration?: number;
+  url: string;
+  decryption_key?: string;
+  decryptionKey?: string;
+}
+
 type ExtensionResponseOneOf = ExtensionCommandResponse["response"];
 export type ResponsePayload<K extends ExtensionEventCase> = Extract<
   ExtensionResponseOneOf,
   { case: K }
 >["value"];
 
+export type ListenerReturnType<K extends ExtensionEventCase> =
+  K extends "playbackDetailsRequested"
+    ? PlaybackDetailsReturnType | ResponsePayload<K>
+    : ResponsePayload<K>;
+
 export interface ExtensionAPI {
   on<K extends ExtensionEventCase>(
     event: K,
     cb: (
       req: EventPayload<K>,
-    ) => ResponsePayload<K> | Promise<ResponsePayload<K>> | void,
+    ) => ListenerReturnType<K> | Promise<ListenerReturnType<K>> | void,
   ): void;
 
   getSong(options: GetSongOptions): Song[];
@@ -174,7 +188,9 @@ export interface ExtensionAPI {
   addSongs(songs: Song[]): void;
   addToPlaylist(req: AddToPlaylistRequest): void;
   getPreference(data: PreferenceData): PreferenceData;
+  setPreference(data: PreferenceData): void;
   getSecure(data: PreferenceData): PreferenceData;
+  setSecure(data: PreferenceData): void;
   fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>;
   batchFetch(
     requests: (string | BatchFetchRequest)[],
@@ -210,7 +226,7 @@ class Api implements ExtensionAPI {
     event: K,
     cb: (
       req: EventPayload<K>,
-    ) => ResponsePayload<K> | Promise<ResponsePayload<K>> | void,
+    ) => ListenerReturnType<K> | Promise<ListenerReturnType<K>> | void,
   ): void {
     if (!LISTENERS) {
       LISTENERS = {};
@@ -324,6 +340,16 @@ class Api implements ExtensionAPI {
     return new PreferenceData();
   }
 
+  setPreference(data: PreferenceData): void {
+    const cmd = new MainCommand({
+      command: {
+        case: "setPreference",
+        value: new SetPreferenceRequest({ data }),
+      },
+    });
+    sendMainCommand(cmd);
+  }
+
   getSecure(data: PreferenceData): PreferenceData {
     const cmd = new MainCommand({
       command: {
@@ -336,6 +362,16 @@ class Api implements ExtensionAPI {
       return res.response.value.data ?? new PreferenceData();
     }
     return new PreferenceData();
+  }
+
+  setSecure(data: PreferenceData): void {
+    const cmd = new MainCommand({
+      command: {
+        case: "setSecure",
+        value: new SetSecureRequest({ data }),
+      },
+    });
+    sendMainCommand(cmd);
   }
 
   getSong(options: GetSongOptions): Song[] {

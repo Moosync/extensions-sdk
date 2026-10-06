@@ -21,6 +21,8 @@ use extensions_proto::moosync::types::*;
 use extism_pdk::FnResult;
 use std::{cell::RefCell, rc::Rc};
 
+use crate::duration_to_proto;
+
 thread_local!(
     static EXTENSION: RefCell<Option<Rc<Box<dyn Extension>>>> = RefCell::new(None);
 );
@@ -102,8 +104,9 @@ pub fn handle_command(
                     SongChanged(req) => on_song_changed(req) => _res in SongChangedResponse {},
                     PreferenceChanged(req) => on_preferences_changed(req) => _res in PreferenceChangedResponse {},
                     PlaybackDetailsRequested(req) => get_playback_details(req) => res in PlaybackDetailsRequestedResponse {
-                        duration: res.duration,
+                        duration: Some(duration_to_proto(res.duration)),
                         url: res.url,
+                        decryption_key: res.decryption_key,
                     },
                     CustomRequest(req) => handle_custom_request(req) => res in CustomRequestResponse {
                          mime_type: res.mime_type,
