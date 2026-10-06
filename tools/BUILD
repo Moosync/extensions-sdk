@@ -17,6 +17,18 @@ py_binary(
     visibility = ["//visibility:public"],
 )
 
+py_binary(
+    name = "gen_manifest",
+    srcs = ["gen_manifest.py"],
+    main = "gen_manifest.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//protos:extensions_py_proto",
+        "//protos:moosync_python_root",
+        "@com_google_protobuf//:protobuf_python",
+    ],
+)
+
 py_console_script_binary(
     name = "pdoc",
     pkg = "@pip_deps//pdoc:pkg",

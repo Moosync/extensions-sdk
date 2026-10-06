@@ -269,12 +269,7 @@ func GetTime() (float64, error) {
 	return resp.GetGetTime().GetTime(), nil
 }
 
-func GetQueue() (any, error) {
-	// TODO: Queue is a google.protobuf.Struct. Need to convert or return Struct?
-	// User expects generic any or struct?
-	// Let's return *structpb.Struct for now.
-	// The previous code returned 'any'.
-
+func GetQueue() (*extensions.QueueState, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetQueue{
 			GetQueue: &extensions.GetQueueRequest{},

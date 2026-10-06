@@ -5,13 +5,12 @@ Wasm extension rules for TypeScript/JavaScript.
 load("@aspect_rules_rollup//rollup:defs.bzl", "rollup")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("//:manifest_pb.bzl", "generate_manifest_pb")
 load("//:package_extension.bzl", "package_extension")
-load("//:package_json.bzl", "generate_package_json")
 
 def js_wasm_extension(
         name,
         srcs,
-        package_json = None,
         deps = [],
         data = [],
         node_modules = None,
@@ -74,7 +73,7 @@ EOF
     # =========================================================================
     # Extension Manifest & Config Generation
     # =========================================================================
-    pkg_json_targets = generate_package_json(
+    manifest_pb_targets = generate_manifest_pb(
         name = name,
         display_name = display_name,
         package_name = package_name,
@@ -173,7 +172,7 @@ EOF
 
     native.filegroup(
         name = name + "_unpacked",
-        srcs = [":" + name + "_wasm"] + pkg_json_targets,
+        srcs = [":" + name + "_wasm"] + manifest_pb_targets,
         visibility = visibility,
     )
 

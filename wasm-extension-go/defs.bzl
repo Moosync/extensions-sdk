@@ -3,7 +3,7 @@ Wasm extension rules for Go.
 """
 
 load("@rules_go//go:def.bzl", "go_binary")
-load("//:package_json.bzl", "generate_package_json")
+load("//:manifest_pb.bzl", "generate_manifest_pb")
 load("//:package_extension.bzl", "package_extension")
 
 def go_extension(
@@ -35,7 +35,7 @@ def go_extension(
         **kwargs: Additional arguments to pass to go_binary.
     """
 
-    pkg_json_targets = generate_package_json(
+    manifest_pb_targets = generate_manifest_pb(
         name = name,
         display_name = display_name,
         package_name = package_name,
@@ -80,7 +80,7 @@ def go_extension(
 
     native.filegroup(
         name = name + "_unpacked",
-        srcs = [":" + name + "_wasm"] + pkg_json_targets,
+        srcs = [":" + name + "_wasm"] + manifest_pb_targets,
         visibility = visibility,
     )
 

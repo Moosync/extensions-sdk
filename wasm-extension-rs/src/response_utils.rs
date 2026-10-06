@@ -1,7 +1,6 @@
 use extensions_proto::moosync::types::PlayerState;
 use extensions_proto::moosync::types::*;
-use extensions_proto::struct_proto::google::protobuf::Struct as ProtoStruct;
-use songs_proto::moosync::types::{Song, EntityResult};
+use songs_proto::moosync::types::{EntityResult, Song};
 
 pub trait Extract<T> {
     fn extract(self) -> T;
@@ -61,8 +60,8 @@ impl Extract<Option<EntityResult>> for GetEntityResponse {
     }
 }
 
-impl Extract<Option<ProtoStruct>> for GetQueueResponse {
-    fn extract(self) -> Option<ProtoStruct> {
+impl Extract<Option<QueueState>> for GetQueueResponse {
+    fn extract(self) -> Option<QueueState> {
         self.queue
     }
 }

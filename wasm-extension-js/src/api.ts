@@ -95,6 +95,7 @@ import {
   GetVolumeRequest,
   GetTimeRequest,
   GetQueueRequest,
+  QueueState,
   PreferenceData,
   HttpRequest,
   HttpResponse,
@@ -176,7 +177,7 @@ export interface ExtensionAPI {
   getPlayerState(): PlayerState;
   getVolume(): number;
   getTime(): number;
-  getQueue(): Song[];
+  getQueue(): QueueState | undefined;
   getContext(): ExtensionContext;
 
   setAccount(account: ExtensionAccountDetail): boolean;
@@ -444,15 +445,18 @@ class Api implements ExtensionAPI {
     return 0;
   }
 
-  getQueue(): Song[] {
+  getQueue(): QueueState | undefined {
     const cmd = new MainCommand({
       command: {
         case: "getQueue",
         value: new GetQueueRequest(),
       },
     });
-    sendMainCommand(cmd);
-    return [];
+    const res = sendMainCommand(cmd);
+    if (res.response.case === "getQueue") {
+      return res.response.value.queue;
+    }
+    return undefined;
   }
 
   fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {

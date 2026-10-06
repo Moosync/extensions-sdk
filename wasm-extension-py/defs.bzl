@@ -4,8 +4,8 @@ Wasm extension rules for Python.
 
 load("@aspect_rules_py//py:defs.bzl", "py_binary")
 load("@rules_python//python:defs.bzl", "PyInfo")
+load("//:manifest_pb.bzl", "generate_manifest_pb")
 load("//:package_extension.bzl", "package_extension")
-load("//:package_json.bzl", "generate_package_json")
 
 def _py_wasm_extension_impl(ctx):
     extism_py = ctx.executable._extism_py
@@ -246,7 +246,7 @@ def py_extension(
         **kwargs: Additional arguments to pass to the rule.
     """
 
-    pkg_json_targets = generate_package_json(
+    manifest_pb_targets = generate_manifest_pb(
         name = name,
         display_name = display_name,
         package_name = package_name,
@@ -299,7 +299,7 @@ def py_extension(
 
     native.filegroup(
         name = name + "_unpacked",
-        srcs = [":" + name + "_wasm"] + pkg_json_targets,
+        srcs = [":" + name + "_wasm"] + manifest_pb_targets,
         visibility = kwargs.get("visibility"),
     )
 

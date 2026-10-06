@@ -3,7 +3,7 @@ Wasm extension rules for Rust.
 """
 
 load("@rules_rust//rust:defs.bzl", "rust_binary")
-load("//:package_json.bzl", "generate_package_json")
+load("//:manifest_pb.bzl", "generate_manifest_pb")
 load("//:package_extension.bzl", "package_extension")
 
 def rust_extension(
@@ -27,7 +27,7 @@ def rust_extension(
         data: Data dependencies.
         edition: Rust edition. Defaults to "2024".
         display_name: Display name of the extension.
-        package_name: Package name of the extension (mapped to name in json).
+        package_name: Package name of the extension.
         version: Version of the extension.
         icon: Icon of the extension. Can be file path or label.
         allowed_hosts: List of allowed hosts.
@@ -35,7 +35,7 @@ def rust_extension(
         **kwargs: Additional arguments to pass to rust_binary.
     """
 
-    pkg_json_targets = generate_package_json(
+    manifest_pb_targets = generate_manifest_pb(
         name = name,
         display_name = display_name,
         package_name = package_name,
@@ -70,7 +70,7 @@ def rust_extension(
 
     native.filegroup(
         name = name + "_unpacked",
-        srcs = [":" + name + "_wasm"] + pkg_json_targets,
+        srcs = [":" + name + "_wasm"] + manifest_pb_targets,
         visibility = kwargs.get("visibility"),
     )
 

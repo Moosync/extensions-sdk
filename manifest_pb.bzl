@@ -24,32 +24,33 @@ def _moosync_extension_package_impl(ctx):
     elif ctx.attr.icon_val:
         icon_val = expand(ctx.attr.icon_val)
 
-    out_json = ctx.actions.declare_file("package.json")
-    out_files.append(out_json)
+    out_pb = ctx.actions.declare_file("manifest.pb")
+    out_files.append(out_pb)
 
-    data = {
-        "name": expand(ctx.attr.package_name_val) if ctx.attr.package_name_val else "",
-        "displayName": expand(ctx.attr.display_name_val) if ctx.attr.display_name_val else "",
-        "version": expand(ctx.attr.version_val) if ctx.attr.version_val else "0.0.0",
-        "extensionEntry": ctx.file.extension_entry.basename,
-        "moosyncExtension": True,
-    }
+    args = ctx.actions.args()
+    args.add("--out", out_pb.path)
+    args.add("--name", expand(ctx.attr.package_name_val) if ctx.attr.package_name_val else "")
+    args.add("--display-name", expand(ctx.attr.display_name_val) if ctx.attr.display_name_val else "")
+    args.add("--version", expand(ctx.attr.version_val) if ctx.attr.version_val else "0.0.0")
+    args.add("--entry", ctx.file.extension_entry.basename)
 
     if icon_val:
-        data["icon"] = icon_val
+        args.add("--icon", icon_val)
 
-    perms = {}
     if ctx.attr.allowed_hosts_val:
-        perms["hosts"] = [expand(v) for v in ctx.attr.allowed_hosts_val]
+        for host in ctx.attr.allowed_hosts_val:
+            args.add("--allowed-host", expand(host))
+
     if ctx.attr.allowed_paths_val:
-        perms["paths"] = {expand(k): expand(v) for k, v in ctx.attr.allowed_paths_val.items()}
+        for k, v in ctx.attr.allowed_paths_val.items():
+            args.add("--allowed-path", "{}:{}".format(expand(k), expand(v)))
 
-    if perms:
-        data["permissions"] = perms
-
-    ctx.actions.write(
-        output = out_json,
-        content = json.encode_indent(data, indent = "    ") + "\n",
+    ctx.actions.run(
+        inputs = [ctx.file.extension_entry],
+        outputs = [out_pb],
+        executable = ctx.executable._gen_manifest,
+        arguments = [args],
+        mnemonic = "GenManifestPb",
     )
 
     return [DefaultInfo(files = depset(out_files))]
@@ -71,10 +72,15 @@ moosync_extension_package = rule(
         "allowed_hosts_file": attr.label(allow_single_file = True),
         "allowed_paths_val": attr.string_dict(),
         "allowed_paths_file": attr.label(allow_single_file = True),
+        "_gen_manifest": attr.label(
+            default = Label("//tools:gen_manifest"),
+            executable = True,
+            cfg = "exec",
+        ),
     },
 )
 
-def generate_package_json(
+def generate_manifest_pb(
         name,
         display_name = None,
         package_name = None,
@@ -86,7 +92,7 @@ def generate_package_json(
         visibility = None,
         wasm_target = None):
     """
-    Macro to generate package.json if metadata is provided.
+    Macro to generate manifest.pb if metadata is provided.
 
     Args:
         name: Name of the extension.
@@ -101,7 +107,7 @@ def generate_package_json(
         wasm_target: Label of the WASM target rule.
 
     Returns:
-        List of targets generated (e.g. [":name_pkg_json"]), or empty list.
+        List of targets generated (e.g. [":name_manifest_pb"]), or empty list.
     """
 
     def is_file_like(arg):
@@ -140,9 +146,9 @@ def generate_package_json(
 
     if pkg_args or package_name or display_name:
         if not wasm_target:
-            fail("wasm_target is required to generate package.json")
+            fail("wasm_target is required to generate manifest.pb")
 
-        target_name = name + "_pkg_json"
+        target_name = name + "_manifest_pb"
         moosync_extension_package(
             name = target_name,
             extension_entry = wasm_target,

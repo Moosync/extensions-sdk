@@ -16,7 +16,6 @@
 
 use std::time::Duration;
 
-use extensions_proto::struct_proto::google::protobuf::Struct as ProtoStruct;
 use extism_pdk::{Prost, host_fn};
 
 pub use extensions_proto::moosync::types::{
@@ -24,6 +23,7 @@ pub use extensions_proto::moosync::types::{
     ContextMenuReturnType, CustomRequest, ExtensionAccountDetail, ExtensionProviderScope,
     GetCurrentSongRequest, GetEntityRequest, GetPlayerStateRequest, GetPreferenceRequest,
     GetQueueRequest, GetSecureRequest, GetSongRequest, GetTimeRequest, GetVolumeRequest,
+    QueueState,
     MainCommand, MainCommandResponse, OauthCallbackRequest, OpenExternalUrlRequest,
     PerformAccountLoginRequest, PlaybackDetailsRequestedRequest, PlayerState,
     PlayerStateChangedRequest, PlaylistAddedRequest, PlaylistRemovedRequest,
@@ -419,7 +419,7 @@ pub mod extension_api {
         get_time(GetTime, GetTimeRequest, GetTimeResponse) -> f64;
 
         /// Retrieves the current playback queue.
-        get_queue(GetQueue, GetQueueRequest, GetQueueResponse) -> Option<ProtoStruct>;
+        get_queue(GetQueue, GetQueueRequest, GetQueueResponse) -> Option<QueueState>;
 
         /// Retrieves a preference value based on the provided data.
         get_preference(GetPreference, GetPreferenceRequest, GetPreferenceResponse, data: PreferenceData) -> PreferenceData;

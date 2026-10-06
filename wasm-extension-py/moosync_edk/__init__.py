@@ -274,7 +274,7 @@ class Api:
         resp = send_main_command_(req)
         return resp.get_time.time
 
-    def get_queue(self) -> Any:  # Returns Struct
+    def get_queue(self) -> Optional[extensions_pb2.QueueState]:
         req = extensions_pb2.MainCommand(get_queue=extensions_pb2.GetQueueRequest())
         resp = send_main_command_(req)
         return resp.get_queue.queue
