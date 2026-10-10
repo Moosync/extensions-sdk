@@ -23,6 +23,7 @@ py_library(
         "passthrough.py",
         "pytest_plugin.py",
         "recorder.py",
+        "sanitize.py",
     ],
     imports = ["moounit"],
     visibility = ["//visibility:public"],

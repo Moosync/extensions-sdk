@@ -9,6 +9,7 @@ from google.protobuf.message import Message
 from core.types.protos.extensions_pb2 import (
     BatchHttpRequest,
     BatchHttpResponse,
+    Error,
     ExtensionAccountDetail,
     HttpRequest,
     HttpResult,
@@ -55,6 +56,7 @@ from moounit.passthrough import (
     get_real_system_time,
 )
 from moounit.recorder import Recorder
+from moounit.sanitize import sanitize_main_command
 
 current_scope = contextvars.ContextVar("current_scope", default=Scope.SESSION)
 
@@ -111,6 +113,12 @@ class ExpectationManager:
             return getattr(self.moounit, "socket_manager", None)
         return self._socket_manager
 
+    @property
+    def package_name(self) -> str:
+        if self.moounit is not None:
+            return getattr(self.moounit, "package_name", "")
+        return ""
+
     def _add_expectation(self, kind: str, exp: ExpectationType) -> None:
         local_attr, session_attr = ATTR_MAP[kind]
         target = getattr(
@@ -125,6 +133,8 @@ class ExpectationManager:
         response: MainCommandResponse | Callable[[], MainCommandResponse],
         times: int = 1,
     ):
+        pkg_name = getattr(self.moounit, "package_name", "") if self.moounit else ""
+        sanitize_main_command(command, pkg_name)
         self._add_expectation(
             "command",
             Expectation(command=command, response=response, times=times),
@@ -283,7 +293,7 @@ class ExpectationManager:
         scope = current_scope.get()
         if self.recorder.has_replay_expectations(scope):
             resp, err = self.recorder.match_and_consume_replay(
-                call_type, request_obj, scope
+                call_type, request_obj, scope, package_name=self.package_name
             )
             if resp is not None:
                 return resp
@@ -294,7 +304,7 @@ class ExpectationManager:
             Scope.SESSION
         ):
             resp, err = self.recorder.match_and_consume_replay(
-                call_type, request_obj, Scope.SESSION
+                call_type, request_obj, Scope.SESSION, package_name=self.package_name
             )
             if resp is not None:
                 return resp
@@ -324,7 +334,9 @@ class ExpectationManager:
             if not self.recorder.record_mode and self.recorder.has_replay_expectations(
                 scope
             ):
-                self.recorder.match_and_consume_replay(kind, req_info, scope)
+                self.recorder.match_and_consume_replay(
+                    kind, req_info, scope, package_name=self.package_name
+                )
         elif self.recorder.record_mode:
             if self.passthrough_enabled and passthrough_fn is not None:
                 try:
@@ -449,9 +461,7 @@ class ExpectationManager:
             body=body,
         )
         batch_req = BatchHttpRequest(requests=[http_req])
-        batch_resp_bytes = self._check_batch_http_request(
-            batch_req.SerializeToString()
-        )
+        batch_resp_bytes = self._check_batch_http_request(batch_req.SerializeToString())
         batch_resp = BatchHttpResponse.FromString(batch_resp_bytes)
         result = batch_resp.responses[0] if batch_resp.responses else HttpResult()
         self._last_http_result = result
@@ -484,10 +494,14 @@ class ExpectationManager:
 
     def handle_main_command(self, data: bytes) -> bytes:
         command = MainCommand.FromString(data)
+        pkg_name = getattr(self.moounit, "package_name", "") if self.moounit else ""
+        try:
+            sanitize_main_command(command, pkg_name)
+        except Exception as e:
+            return MainCommandResponse(error=Error(message=str(e))).SerializeToString()
+
         if command.WhichOneof("command") == "set_account":
-            self.accounts[
-                command.set_account.account.id
-            ] = command.set_account.account
+            self.accounts[command.set_account.account.id] = command.set_account.account
         ignore_rules, _ = self.recorder._collect_ignore_rules_for_request(
             "send_main_command", command
         )

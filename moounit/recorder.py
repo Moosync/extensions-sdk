@@ -18,6 +18,7 @@ from moounit.matcher import (
     partial_match,
 )
 from moounit.models import ReplayIgnoreRule, Scope
+from moounit.sanitize import sanitize_main_command
 
 
 def bytes_to_b64(b: bytes) -> str:
@@ -399,6 +400,7 @@ class Recorder:
         call_type: str,
         request_obj: Any,
         scope: Scope,
+        package_name: str = "",
     ) -> tuple[Any | None, str | None]:
         """
         Finds the first replay entry matching call_type and request_obj in the specified scope.
@@ -445,6 +447,8 @@ class Recorder:
         if call_type == "send_main_command":
             expected_cmd = MainCommand()
             ParseDict(saved_req, expected_cmd)
+            if package_name:
+                sanitize_main_command(expected_cmd, package_name)
             matched, err = partial_match(
                 expected_cmd,
                 request_obj,

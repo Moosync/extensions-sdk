@@ -1,4 +1,4 @@
-# pylint: disable=unused-import,too-many-locals,too-many-statements,protected-access,no-member,too-few-public-methods,line-too-long,import-outside-toplevel,unspecified-encoding
+# pylint: disable=unused-import,too-many-locals,too-many-statements,protected-access,no-member,too-few-public-methods,line-too-long,import-outside-toplevel,unspecified-encoding,too-many-lines,duplicate-code
 import inspect
 import json
 import uuid
@@ -6,8 +6,16 @@ import extism
 from extism.extism import Function, TypeInferredFunction
 import pytest
 from core.types.protos.extensions_pb2 import (
+    AddPlaylistRequest,
+    AddSongsRequest,
+    AddToPlaylistRequest,
     BatchHttpRequest,
     BatchHttpResponse,
+    ExtensionAccountDetail,
+    ExtensionCommand,
+    ExtensionCommandResponse,
+    ExtensionManifest,
+    GetPreferenceRequest,
     GetSecureRequest,
     GetSecureResponse,
     GetSongRequest,
@@ -18,8 +26,30 @@ from core.types.protos.extensions_pb2 import (
     MainCommand,
     MainCommandResponse,
     PreferenceData,
+    RemoveSongRequest,
+    RequestedAlbumSongsResponse,
+    RequestedArtistSongsResponse,
+    RequestedPlaylistFromUrlResponse,
+    RequestedPlaylistSongsResponse,
+    RequestedPlaylistsResponse,
+    RequestedRecommendationsResponse,
+    RequestedSearchResultResponse,
+    RequestedSongFromIdResponse,
+    RequestedSongFromUrlResponse,
+    SetAccountRequest,
+    SetPreferenceRequest,
+    SetSecureRequest,
+    UpdateSongRequest,
 )
-from core.types.protos.songs_pb2 import GetSongOptions, Song
+from core.types.protos.songs_pb2 import (
+    Album,
+    Artist,
+    Genre,
+    GetSongOptions,
+    InnerSong,
+    Playlist,
+    Song,
+)
 from moounit.core import Moounit
 from moounit.defaults import (
     default_batch_http_response,
@@ -34,6 +64,16 @@ from moounit.matcher import partial_match
 from moounit.models import Scope
 from moounit.pytest_plugin import pytest_collection_modifyitems
 from moounit.recorder import Recorder, _matches_filter
+from moounit.sanitize import (
+    sanitize_album,
+    sanitize_artist,
+    sanitize_extension_command,
+    sanitize_extension_response,
+    sanitize_genre,
+    sanitize_main_command,
+    sanitize_playlist,
+    sanitize_song,
+)
 
 
 def test_defaults():
@@ -904,17 +944,14 @@ def test_extism_http_interception(tmp_path):
     Moounit._instances[uid] = moounit
 
     try:
-        pkg_file = tmp_path / "package.json"
-        pkg_file.write_text(
-            json.dumps(
-                {
-                    "name": "mock_ext",
-                    "version": "1.0.0",
-                    "extensionEntry": "entry.wasm",
-                }
-            ),
-            encoding="utf-8",
+        manifest_proto = ExtensionManifest(
+            moosync_extension=True,
+            name="mock_ext",
+            display_name="mock_ext",
+            version="1.0.0",
+            extension_entry="entry.wasm",
         )
+        (tmp_path / "manifest.pb").write_bytes(manifest_proto.SerializeToString())
         (tmp_path / "entry.wasm").write_bytes(b"\x00asm\x01\x00\x00\x00")
 
         new_id, compiled = moounit._get_extism_manifest(
@@ -969,3 +1006,146 @@ def test_extism_http_interception(tmp_path):
             del Moounit._instances[uid]
         if "new_id" in locals() and new_id in Moounit._instances:
             del Moounit._instances[new_id]
+
+
+def test_sanitize_main_command_preferences():
+    pkg = "my.ext"
+    cmd1 = MainCommand(
+        get_preference=GetPreferenceRequest(data=PreferenceData(key="theme"))
+    )
+    sanitize_main_command(cmd1, pkg)
+    assert cmd1.get_preference.data.key == "my.ext.theme"
+    sanitize_main_command(cmd1, pkg)
+    assert cmd1.get_preference.data.key == "my.ext.theme"
+
+    cmd2 = MainCommand(
+        set_preference=SetPreferenceRequest(data=PreferenceData(key="volume"))
+    )
+    sanitize_main_command(cmd2, pkg)
+    assert cmd2.set_preference.data.key == "my.ext.volume"
+
+    cmd3 = MainCommand(
+        get_secure=GetSecureRequest(data=PreferenceData(key="auth_token"))
+    )
+    sanitize_main_command(cmd3, pkg)
+    assert cmd3.get_secure.data.key == "my.ext.auth_token"
+
+    cmd4 = MainCommand(
+        set_secure=SetSecureRequest(data=PreferenceData(key="refresh_token"))
+    )
+    sanitize_main_command(cmd4, pkg)
+    assert cmd4.set_secure.data.key == "my.ext.refresh_token"
+
+
+def test_sanitize_main_command_entities():
+    pkg = "my.ext"
+    song = Song(
+        song=InnerSong(id="s1"),
+        album=Album(album_id="al1"),
+        artists=[Artist(artist_id="ar1")],
+        genre=[Genre(genre_id="g1")],
+    )
+
+    cmd = MainCommand(add_songs=AddSongsRequest(songs=[song]))
+    sanitize_main_command(cmd, pkg)
+    assert cmd.add_songs.songs[0].song.id == "my.ext:s1"
+    assert cmd.add_songs.songs[0].album.album_id == "my.ext:al1"
+    assert cmd.add_songs.songs[0].artists[0].artist_id == "my.ext:ar1"
+    assert cmd.add_songs.songs[0].genre[0].genre_id == "my.ext:g1"
+
+    pl_cmd = MainCommand(
+        add_playlist=AddPlaylistRequest(playlist=Playlist(playlist_id="p1"))
+    )
+    sanitize_main_command(pl_cmd, pkg)
+    assert pl_cmd.add_playlist.playlist.playlist_id == "my.ext:p1"
+
+    acc_cmd = MainCommand(
+        set_account=SetAccountRequest(account=ExtensionAccountDetail(id="acc1"))
+    )
+    sanitize_main_command(acc_cmd, pkg)
+    assert acc_cmd.set_account.account.package_name == "my.ext"
+
+    empty_song_cmd = MainCommand(add_songs=AddSongsRequest(songs=[Song()]))
+    with pytest.raises(ValueError, match="Song cannot be empty"):
+        sanitize_main_command(empty_song_cmd, pkg)
+
+
+def test_sanitize_extension_response():
+    pkg = "my.ext"
+
+    resp1 = ExtensionCommandResponse(
+        requested_playlists=RequestedPlaylistsResponse(
+            playlists=[Playlist(playlist_id="p1", playlist_name="Favorites")]
+        )
+    )
+    sanitize_extension_response(resp1, pkg)
+    assert resp1.requested_playlists.playlists[0].playlist_id == "my.ext:p1"
+    assert resp1.requested_playlists.playlists[0].extension == "my.ext"
+
+    resp2 = ExtensionCommandResponse(
+        requested_search_result=RequestedSearchResultResponse(
+            songs=[
+                Song(
+                    song=InnerSong(id="s1", title="Song 1"),
+                    album=Album(album_id="al1", album_name="Album 1"),
+                    artists=[Artist(artist_id="ar1", artist_name="Artist 1")],
+                    genre=[Genre(genre_id="g1")],
+                )
+            ],
+            playlists=[Playlist(playlist_id="p2")],
+            artists=[Artist(artist_id="ar2")],
+            albums=[Album(album_id="al2")],
+        )
+    )
+    sanitize_extension_response(resp2, pkg)
+    s = resp2.requested_search_result.songs[0]
+    assert s.song.id == "my.ext:s1"
+    assert s.song.extension == "my.ext"
+    assert s.album.album_id == "my.ext:al1"
+    assert s.album.extension == "my.ext"
+    assert s.artists[0].artist_id == "my.ext:ar1"
+    assert s.artists[0].extension == "my.ext"
+    assert s.genre[0].genre_id == "my.ext:g1"
+    assert resp2.requested_search_result.playlists[0].playlist_id == "my.ext:p2"
+    assert resp2.requested_search_result.playlists[0].extension == "my.ext"
+    assert resp2.requested_search_result.artists[0].artist_id == "my.ext:ar2"
+    assert resp2.requested_search_result.artists[0].extension == "my.ext"
+    assert resp2.requested_search_result.albums[0].album_id == "my.ext:al2"
+    assert resp2.requested_search_result.albums[0].extension == "my.ext"
+
+    resp3 = ExtensionCommandResponse(
+        requested_song_from_url=RequestedSongFromUrlResponse(
+            song=Song(song=InnerSong(id="surl"))
+        )
+    )
+    sanitize_extension_response(resp3, pkg)
+    assert resp3.requested_song_from_url.song.song.id == "my.ext:surl"
+    assert resp3.requested_song_from_url.song.song.extension == "my.ext"
+
+
+def test_expectation_manager_sanitization():
+    class DummyMoounit:
+        package_name = "test.pkg"
+        passthrough = False
+
+    mgr = ExpectationManager(moounit=DummyMoounit())
+
+    mgr.expect_command(
+        MainCommand(get_secure=GetSecureRequest(data=PreferenceData(key="my_secret"))),
+        MainCommandResponse(
+            get_secure=GetSecureResponse(data=PreferenceData(key="test.pkg.my_secret"))
+        ),
+    )
+
+    raw_cmd = MainCommand(
+        get_secure=GetSecureRequest(data=PreferenceData(key="my_secret"))
+    )
+    resp_bytes = mgr.handle_main_command(raw_cmd.SerializeToString())
+    resp = MainCommandResponse.FromString(resp_bytes)
+    assert resp.WhichOneof("response") == "get_secure"
+
+    bad_cmd = MainCommand(add_songs=AddSongsRequest(songs=[Song()]))
+    err_resp_bytes = mgr.handle_main_command(bad_cmd.SerializeToString())
+    err_resp = MainCommandResponse.FromString(err_resp_bytes)
+    assert err_resp.WhichOneof("response") == "error"
+    assert "Song cannot be empty" in err_resp.error.message

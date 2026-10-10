@@ -32,24 +32,41 @@ from extism.extism import (
 from moounit.expectations import ExpectationManager, current_scope
 from moounit.passthrough import RealSocketManager
 from moounit.recorder import Recorder
+from moounit.sanitize import (
+    sanitize_extension_command,
+    sanitize_extension_response,
+)
 
 
 class Moounit:
     _instances: dict[uuid.UUID, "Moounit"] = {}
+    package_name: str = ""
 
     def _parse_manifest(self, path: str) -> ExtensionManifest:
-        with open(os.path.join(path, "package.json"), "r", encoding="utf-8") as f:
-            manifest = json.load(f)
-            return ExtensionManifest(
-                moosync_extension=True,
-                display_name=manifest["name"],
-                version=manifest["version"],
-                extension_entry=os.path.join(path, manifest["extensionEntry"]),
-                permissions=ManifestPermissions(
-                    hosts=(manifest.get("permissions") or {}).get("hosts"),
-                    paths=(manifest.get("permissions") or {}).get("paths"),
-                ),
-            )
+        manifest_path = None
+        if os.path.isfile(path):
+            if path.endswith(".pb"):
+                manifest_path = path
+            else:
+                cand = os.path.join(os.path.dirname(path), "manifest.pb")
+                if os.path.exists(cand):
+                    manifest_path = cand
+        elif os.path.isdir(path):
+            cand = os.path.join(path, "manifest.pb")
+            if os.path.exists(cand):
+                manifest_path = cand
+
+        if manifest_path and os.path.exists(manifest_path):
+            with open(manifest_path, "rb") as f:
+                manifest = ExtensionManifest.FromString(f.read())
+            parent = os.path.dirname(manifest_path)
+            if not os.path.isabs(manifest.extension_entry):
+                manifest.extension_entry = os.path.join(
+                    parent, manifest.extension_entry
+                )
+            return manifest
+
+        raise FileNotFoundError(f"manifest.pb not found for path: {path}")
 
     def _get_extism_manifest(
         self, manifest: ExtensionManifest
@@ -271,16 +288,20 @@ class Moounit:
     def send_command(self, command: ExtensionCommand) -> ExtensionCommandResponse:
         if self.plugin is None:
             raise RuntimeError("Plugin not loaded")
+        sanitize_extension_command(command, self.package_name)
         data = command.SerializeToString()
         resp = self.plugin.call("handle_extension_command", data)
         self._check_host_exception()
-        return ExtensionCommandResponse.FromString(resp)
+        res_obj = ExtensionCommandResponse.FromString(resp)
+        sanitize_extension_response(res_obj, self.package_name)
+        return res_obj
 
     def __init__(
         self,
         path: str,
         recorder: Recorder | None = None,
         passthrough: bool = True,
+        package_name: str | None = None,
     ):
         self.passthrough = passthrough
         self.recorder = recorder or Recorder()
@@ -290,6 +311,8 @@ class Moounit:
         self._mapped_paths: dict[str, str] = {}
 
         manifest = self._parse_manifest(path)
+        self.manifest = manifest
+        self.package_name = package_name or manifest.name or manifest.display_name or ""
         self.socket_manager = RealSocketManager(dict(manifest.permissions.paths))
         self._load_extension(manifest)
 
@@ -343,13 +366,15 @@ class Moounit:
     def replay_ignore(
         self,
         request: Message,
-        ignore_fields: list[str] | None = None,
-        regex: bool = False,
+        ignore_fields: list[str] | str | None = None,
+        ignore_field: list[str] | str | None = None,
+        regex: str | None = None,
         test_name: str | None = None,
     ) -> None:
         self.manager.replay_ignore(
             request=request,
             ignore_fields=ignore_fields,
+            ignore_field=ignore_field,
             regex=regex,
             test_name=test_name,
         )
@@ -367,4 +392,6 @@ class Moounit:
         self.manager.verify_and_clear_session_expectations()
 
     def __getattr__(self, name: str) -> object:
+        if name in ("package_name", "manifest", "plugin", "manager"):
+            raise AttributeError(name)
         return getattr(self.manager, name)
