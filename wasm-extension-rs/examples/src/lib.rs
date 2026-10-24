@@ -1,7 +1,7 @@
 #![no_main]
 
 use moosync_edk::{
-    ExtensionProviderScope, RequestedSearchResultRequest, ScrobbleRequest, SearchResult,
+    RequestedSearchResultRequest, ScrobbleRequest, SearchResult,
     api::{
         self, Accounts, ContextMenu, DatabaseEvents, Extension, PlayerEvents, PreferenceEvents,
         Provider, extension_api::get_current_song,
@@ -30,10 +30,6 @@ pub extern "C" fn init() {
 
 impl Provider for SampleExtension {
 // ANCHOR: provider
-    fn get_provider_scopes(&self) -> api::MoosyncResult<Vec<ExtensionProviderScope>> {
-        Ok(vec![ExtensionProviderScope::Search])
-    }
-
     fn search(&self, req: RequestedSearchResultRequest) -> api::MoosyncResult<SearchResult> {
         info!("Search requested for query: {}", req.query);
 
@@ -56,12 +52,8 @@ impl Provider for SampleExtension {
 // ANCHOR: api_usage
     fn scrobble(&self, _req: ScrobbleRequest) -> api::MoosyncResult<()> {
         let song = get_current_song()?;
-        if let Some(song) = song {
-            if let Some(inner) = song.song {
-                if let Some(title) = inner.title {
-                    info!("Currently playing song: {}", title);
-                }
-            }
+        if let Some(title) = song.and_then(|s| s.song).and_then(|i| i.title) {
+            info!("Currently playing song: {}", title);
         }
         Ok(())
     }

@@ -45,6 +45,10 @@ def _moosync_extension_package_impl(ctx):
         for k, v in ctx.attr.allowed_paths_val.items():
             args.add("--allowed-path", "{}:{}".format(expand(k), expand(v)))
 
+    if ctx.attr.scopes_val:
+        for scope in ctx.attr.scopes_val:
+            args.add("--scope", expand(scope))
+
     ctx.actions.run(
         inputs = [ctx.file.extension_entry],
         outputs = [out_pb],
@@ -72,6 +76,8 @@ moosync_extension_package = rule(
         "allowed_hosts_file": attr.label(allow_single_file = True),
         "allowed_paths_val": attr.string_dict(),
         "allowed_paths_file": attr.label(allow_single_file = True),
+        "scopes_val": attr.string_list(default = []),
+        "scopes_file": attr.label(allow_single_file = True),
         "_gen_manifest": attr.label(
             default = Label("//tools:gen_manifest"),
             executable = True,
@@ -88,6 +94,7 @@ def generate_manifest_pb(
         icon = None,
         allowed_hosts = None,
         allowed_paths = None,
+        scopes = None,
         data = [],
         visibility = None,
         wasm_target = None):
@@ -102,6 +109,7 @@ def generate_manifest_pb(
         icon: Icon file or label.
         allowed_hosts: List of allowed hosts.
         allowed_paths: Dict of allowed paths.
+        scopes: List of provider scopes.
         data: Data dependencies.
         visibility: Visibility of the target.
         wasm_target: Label of the WASM target rule.
@@ -143,6 +151,12 @@ def generate_manifest_pb(
             pkg_args["allowed_paths_val"] = allowed_paths
         else:
             pkg_args["allowed_paths_file"] = allowed_paths
+
+    if scopes:
+        if type(scopes) == "list":
+            pkg_args["scopes_val"] = scopes
+        else:
+            pkg_args["scopes_file"] = scopes
 
     if pkg_args or package_name or display_name:
         if not wasm_target:

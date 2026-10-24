@@ -368,13 +368,8 @@ func handle_extension_command() int32 {
 		}
 
 	case *extensions.ExtensionCommand_GetProviderScopes:
-		res, err := extension.GetProviderScopes()
-		if err != nil {
-			pdk.SetError(err)
-			return 1
-		}
 		resp.Response = &extensions.ExtensionCommandResponse_GetProviderScopes{
-			GetProviderScopes: &extensions.GetProviderScopesResponse{Scopes: res},
+			GetProviderScopes: &extensions.GetProviderScopesResponse{},
 		}
 
 	case *extensions.ExtensionCommand_PerformAccountLogin:

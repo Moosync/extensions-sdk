@@ -11,12 +11,6 @@ type $struct_name struct {
 	api.DefaultExtension
 }
 
-func (e *$struct_name) GetProviderScopes() ([]extensions.ExtensionProviderScope, error) {
-	return []extensions.ExtensionProviderScope{
-		extensions.ExtensionProviderScope_SEARCH,
-	}, nil
-}
-
 func (e *$struct_name) Search(req *extensions.RequestedSearchResultRequest) (*songs.SearchResult, error) {
 	api.LogInfo("Search query: %s", req.GetQuery())
 	return &songs.SearchResult{

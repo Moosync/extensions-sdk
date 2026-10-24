@@ -392,11 +392,6 @@ class Api:
 class Extension:
     api = Api()
 
-    def get_provider_scopes(
-        self, _: extensions_pb2.GetProviderScopesRequest
-    ) -> extensions_pb2.GetProviderScopesResponse:
-        return extensions_pb2.GetProviderScopesResponse()
-
     def get_playlists(
         self, req: extensions_pb2.RequestedPlaylistsRequest
     ) -> extensions_pb2.RequestedPlaylistsResponse:
@@ -570,7 +565,7 @@ def handle_extension_command():
 
     if number == extensions_pb2.ExtensionCommand.GET_PROVIDER_SCOPES_FIELD_NUMBER:
         response.get_provider_scopes.CopyFrom(
-            instance.get_provider_scopes(cmd.get_provider_scopes)
+            extensions_pb2.GetProviderScopesResponse()
         )
     elif number == extensions_pb2.ExtensionCommand.REQUESTED_PLAYLISTS_FIELD_NUMBER:
         response.requested_playlists.CopyFrom(

@@ -1,4 +1,4 @@
-load("@extensions_sdk//:defs.bzl", "rust_extension")
+load("@extensions_sdk//:defs.bzl", "PROVIDER_SCOPES", "rust_extension")
 load("@extensions_sdk//moounit:defs.bzl", "moounit_test")
 load("@${name}_crates//:defs.bzl", "all_crate_deps")
 
@@ -11,6 +11,9 @@ rust_extension(
     display_name = "$display_name",
     allowed_hosts = [],
     allowed_paths = {},
+    scopes = [
+        PROVIDER_SCOPES.SEARCH,
+    ],
     deps = all_crate_deps(),
     version = "0.0.1",
 )

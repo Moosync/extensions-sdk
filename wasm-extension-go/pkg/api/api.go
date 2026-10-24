@@ -31,7 +31,6 @@ type Extension interface {
 	OnPlayerStateChanged(req *extensions.PlayerStateChangedRequest) error
 	OnSongChanged(req *extensions.SongChangedRequest) error
 	OnSeeked(req *extensions.SeekedRequest) error
-	GetProviderScopes() ([]extensions.ExtensionProviderScope, error)
 	GetPlaylists(req *extensions.RequestedPlaylistsRequest) ([]*songs.Playlist, error)
 	GetPlaylistContent(req *extensions.RequestedPlaylistSongsRequest) (*extensions.RequestedPlaylistSongsResponse, error)
 	GetPlaylistFromURL(req *extensions.RequestedPlaylistFromUrlRequest) (*extensions.RequestedPlaylistFromUrlResponse, error)
@@ -98,10 +97,6 @@ func (DefaultExtension) OnSongChanged(req *extensions.SongChangedRequest) error 
 
 func (DefaultExtension) OnSeeked(req *extensions.SeekedRequest) error {
 	return errors.New("Not implemented")
-}
-
-func (DefaultExtension) GetProviderScopes() ([]extensions.ExtensionProviderScope, error) {
-	return nil, errors.New("Not implemented")
 }
 
 func (DefaultExtension) GetPlaylists(req *extensions.RequestedPlaylistsRequest) ([]*songs.Playlist, error) {

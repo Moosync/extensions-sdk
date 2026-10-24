@@ -1,6 +1,4 @@
 import {
-  ExtensionProviderScope,
-  GetProviderScopesResponse,
   RequestedSearchResultResponse,
   getApi,
 } from "wasm-extension-js";
@@ -9,14 +7,6 @@ export { handle_extension_command } from "wasm-extension-js";
 
 export function entry(): number {
   const api = getApi();
-
-  api.on("getProviderScopes", () => {
-    return new GetProviderScopesResponse({
-      scopes: [
-        ExtensionProviderScope.SEARCH,
-      ]
-    });
-  });
 
   api.on("requestedSearchResult", (req) => {
     console.log("Search query:", req.query);

@@ -1,4 +1,4 @@
-load("@extensions_sdk//:defs.bzl", "js_extension")
+load("@extensions_sdk//:defs.bzl", "PROVIDER_SCOPES", "js_extension")
 load("@npm_${name}//:defs.bzl", "npm_link_all_packages")
 load("@extensions_sdk//moounit:defs.bzl", "moounit_test")
 
@@ -16,6 +16,9 @@ js_extension(
     display_name = "$display_name",
     allowed_hosts = [],
     allowed_paths = {},
+    scopes = [
+        PROVIDER_SCOPES.SEARCH,
+    ],
     deps = [],
     version = "0.0.1",
 )

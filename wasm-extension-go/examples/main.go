@@ -22,12 +22,6 @@ func main() {}
 // ANCHOR_END: first_extension
 
 // ANCHOR: provider
-func (s *SampleExtension) GetProviderScopes() ([]extensions.ExtensionProviderScope, error) {
-	return []extensions.ExtensionProviderScope{
-		extensions.ExtensionProviderScope_SEARCH,
-	}, nil
-}
-
 func (s *SampleExtension) Search(req *extensions.RequestedSearchResultRequest) (*songs.SearchResult, error) {
 	api.LogInfo("Search called with query: %s", req.GetQuery())
 

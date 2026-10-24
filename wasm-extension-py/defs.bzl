@@ -226,6 +226,7 @@ def py_extension(
         icon = None,
         allowed_hosts = None,
         allowed_paths = None,
+        scopes = None,
         main = None,
         **kwargs):
     """
@@ -242,6 +243,7 @@ def py_extension(
         icon: Icon of the extension. Can be file path or label.
         allowed_hosts: List of allowed hosts.
         allowed_paths: Dict of allowed paths.
+        scopes: List of provider scopes.
         main: Entry point file. Defaults to name + ".py".
         **kwargs: Additional arguments to pass to the rule.
     """
@@ -254,6 +256,7 @@ def py_extension(
         icon = icon,
         allowed_hosts = allowed_hosts,
         allowed_paths = allowed_paths,
+        scopes = scopes,
         data = data,
         visibility = kwargs.get("visibility"),
         wasm_target = ":" + name + "_wasm",

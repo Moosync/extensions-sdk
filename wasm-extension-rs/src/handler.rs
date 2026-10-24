@@ -78,6 +78,11 @@ macro_rules! dispatch_command {
              Event::GetRemoteUrl(_) => {
                  return Err(extism_pdk::Error::msg("Not implemented"));
              }
+             Event::GetProviderScopes(_) => {
+                 Response::GetProviderScopes(GetProviderScopesResponse {
+                     scopes: vec![],
+                 })
+             }
         }
     };
 }
@@ -147,9 +152,6 @@ pub fn handle_command(
                          menu: res.into_iter().next(),
                     },
                     ContextMenuAction(req) => on_context_menu_action(req) => _res in ContextMenuActionResponse {},
-                    GetProviderScopes(_) => get_provider_scopes() => res in GetProviderScopesResponse {
-                         scopes: res.into_iter().map(|s| s as i32).collect(),
-                    },
                     PerformAccountLogin(req) => perform_account_login(req) => res in PerformAccountLoginResponse { status: res },
                 });
 

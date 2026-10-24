@@ -13,11 +13,6 @@ def entry():
 
 # ANCHOR: provider
 class SearchProviderExtension(Extension):
-    def get_provider_scopes(self, req):
-        return extensions_pb2.GetProviderScopesResponse(
-            scopes=[extensions_pb2.ExtensionProviderScope.SEARCH]
-        )
-
     def search(self, req):
         print(f"Search query: {req.query}")
 

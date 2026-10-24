@@ -16,6 +16,7 @@ def main():
     parser.add_argument("--description", default="", help="Description")
     parser.add_argument("--allowed-host", action="append", default=[], help="Allowed host")
     parser.add_argument("--allowed-path", action="append", default=[], help="Allowed path pair host:guest")
+    parser.add_argument("--scope", action="append", default=[], help="Provider scope")
 
     args = parser.parse_args()
 
@@ -31,6 +32,17 @@ def main():
         m.author = args.author
     if args.description:
         m.description = args.description
+
+    scope_map = {
+        name.lower(): val
+        for name, val in extensions_pb2.ExtensionProviderScope.items()
+    }
+    for s in args.scope:
+        norm = s.strip().lower()
+        if norm in scope_map:
+            m.scopes.append(scope_map[norm])
+        else:
+            raise ValueError(f"Unknown provider scope: '{s}'. Valid: {list(scope_map.keys())}")
 
     if args.allowed_host or args.allowed_path:
         perms = extensions_pb2.ManifestPermissions()

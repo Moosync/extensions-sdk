@@ -1,4 +1,4 @@
-load("@extensions_sdk//:defs.bzl", "py_extension")
+load("@extensions_sdk//:defs.bzl", "PROVIDER_SCOPES", "py_extension")
 load("@pypi_${name}//:requirements.bzl", "all_requirements")
 load("@extensions_sdk//moounit:defs.bzl", "moounit_test")
 
@@ -12,6 +12,9 @@ py_extension(
     display_name = "$display_name",
     allowed_hosts = [],
     allowed_paths = {},
+    scopes = [
+        PROVIDER_SCOPES.SEARCH,
+    ],
     deps = all_requirements,
     version = "0.0.1",
 )

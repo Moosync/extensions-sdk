@@ -23,7 +23,8 @@ def js_wasm_extension(
         version = None,
         icon = None,
         allowed_hosts = None,
-        allowed_paths = None):
+        allowed_paths = None,
+        scopes = None):
     """
     Builds a Wasm extension from TypeScript sources.
     """
@@ -81,6 +82,7 @@ EOF
         icon = icon,
         allowed_hosts = allowed_hosts,
         allowed_paths = allowed_paths,
+        scopes = scopes,
         data = data,
         visibility = visibility,
         wasm_target = ":" + name + "_wasm",

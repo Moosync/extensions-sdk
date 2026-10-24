@@ -122,9 +122,6 @@ pub trait PlayerEvents {
 #[allow(unused_variables)]
 /// Trait for handling provider-related events.
 pub trait Provider {
-    /// Called when the main app requests the provider scopes.
-    fn get_provider_scopes(&self) -> MoosyncResult<Vec<ExtensionProviderScope>>;
-
     /// Called when the main app requests the list of playlists.
     fn get_playlists(&self, req: RequestedPlaylistsRequest) -> MoosyncResult<Vec<Playlist>> {
         Err("Not implemented".into())

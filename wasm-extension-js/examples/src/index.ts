@@ -1,5 +1,4 @@
 import {
-  GetProviderScopesResponse,
   RequestedSearchResultResponse,
   ScrobbleResponse,
   getApi,
@@ -19,14 +18,6 @@ export function entry(): number {
 // ANCHOR: provider
 export function registerProviderHandlers() {
   const api = getApi();
-
-  api.on("getProviderScopes", () => {
-    return new GetProviderScopesResponse({
-      scopes: [
-        13 as any // ExtensionProviderScope.SEARCH
-      ]
-    });
-  });
 
   api.on("requestedSearchResult", async (req) => {
     console.log("Search query:", req.query);
