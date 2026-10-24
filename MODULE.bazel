@@ -137,12 +137,6 @@ git_override(
     remote = "https://github.com/Moosync/Moosync",
 )
 
-bazel_dep(name = "moosync_ext", version = "0.0.1")
-git_override(
-    module_name = "moosync_ext",
-    branch = "bazel",
-    remote = "https://github.com/Moosync/moosync-exts",
-)
 
 bazel_dep(name = "rules_rust_prost", version = "0.73.0")
 bazel_dep(name = "protobuf", version = "36.0", repo_name = "com_google_protobuf")
