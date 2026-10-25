@@ -176,16 +176,10 @@ def sanitize_extension_response(
             sanitize_artist(artist, package_name, is_response=True)
         for album in search_resp.albums:
             sanitize_album(album, package_name, is_response=True)
-    elif resp_variant in ("requested_song_from_url", "requested_song_from_id"):
+    elif resp_variant == "requested_song_from_id":
         sub_resp = getattr(response, resp_variant)
         if sub_resp.HasField("song"):
             sanitize_song(sub_resp.song, package_name, is_response=True)
-    elif resp_variant == "requested_playlist_from_url":
-        pl_resp = response.requested_playlist_from_url
-        if pl_resp.HasField("playlist"):
-            sanitize_playlist(pl_resp.playlist, package_name, is_response=True)
-        for song in pl_resp.songs:
-            sanitize_song(song, package_name, is_response=True)
 
 
 def sanitize_extension_command(command: ExtensionCommand, package_name: str) -> None:

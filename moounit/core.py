@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 import json
 import os
 import tempfile
@@ -14,12 +15,38 @@ from core.types.protos.extensions_pb2 import (
     ExtensionCommand,
     ExtensionCommandResponse,
     ExtensionManifest,
+    ExtensionProviderScope,
     HttpRequest,
     HttpResult,
     MainCommand,
     MainCommandResponse,
     ManifestPermissions,
 )
+
+EVENT_TO_PROVIDER_SCOPE: dict[str, int] = {
+    "requested_search_result": ExtensionProviderScope.SEARCH,
+    "requested_playlists": ExtensionProviderScope.PLAYLISTS,
+    "requested_playlist_songs": ExtensionProviderScope.PLAYLIST_SONGS,
+    "requested_artist_songs": ExtensionProviderScope.ARTIST_SONGS,
+    "requested_album_songs": ExtensionProviderScope.ALBUM_SONGS,
+    "requested_recommendations": ExtensionProviderScope.RECOMMENDATIONS,
+    "scrobble": ExtensionProviderScope.SCROBBLE,
+    "playback_details_requested": ExtensionProviderScope.PLAYBACK_DETAILS,
+    "requested_lyrics": ExtensionProviderScope.LYRICS,
+    "requested_song_context_menu": ExtensionProviderScope.SONG_CONTEXT_MENU,
+    "requested_playlist_context_menu": ExtensionProviderScope.PLAYLIST_CONTEXT_MENU,
+    "perform_account_login": ExtensionProviderScope.ACCOUNTS,
+    "oauth_callback": ExtensionProviderScope.ACCOUNTS,
+    "song_added": ExtensionProviderScope.DATABASE_SONG_EVENTS,
+    "song_removed": ExtensionProviderScope.DATABASE_SONG_EVENTS,
+    "playlist_added": ExtensionProviderScope.DATABASE_PLAYLIST_EVENTS,
+    "playlist_removed": ExtensionProviderScope.DATABASE_PLAYLIST_EVENTS,
+    "player_state_changed": ExtensionProviderScope.PLAYER_UI_EVENTS,
+    "seeked": ExtensionProviderScope.PLAYER_UI_EVENTS,
+    "volume_changed": ExtensionProviderScope.PLAYER_UI_EVENTS,
+    "song_changed": ExtensionProviderScope.PLAYER_DATA_EVENTS,
+    "song_queue_changed": ExtensionProviderScope.PLAYER_DATA_EVENTS,
+}
 from extism.extism import (
     HOST_FN_REGISTRY,
     CompiledPlugin,
@@ -288,6 +315,29 @@ class Moounit:
     def send_command(self, command: ExtensionCommand) -> ExtensionCommandResponse:
         if self.plugin is None:
             raise RuntimeError("Plugin not loaded")
+
+        event = command.WhichOneof("event")
+        if event in EVENT_TO_PROVIDER_SCOPE and hasattr(self, "manifest") and self.manifest is not None:
+            required_scope = EVENT_TO_PROVIDER_SCOPE[event]
+            scopes = set(self.manifest.scopes)
+            assert required_scope in scopes, (
+                f"Cannot call '{event}': extension does not have required scope "
+                f"'{ExtensionProviderScope.Name(required_scope)}' in manifest scopes: "
+                f"{[ExtensionProviderScope.Name(s) for s in scopes]}"
+            )
+
+        if event == "perform_account_login":
+            account_id = command.perform_account_login.account_id
+            if account_id:
+                assert account_id in self.accounts, (
+                    f"Cannot call 'perform_account_login': account '{account_id}' does not exist in registered accounts: {list(self.accounts.keys())}"
+                )
+            else:
+                assert len(self.accounts) > 0, (
+                    "Cannot call 'perform_account_login': no account exists. "
+                    "The extension must register an account before login can be called."
+                )
+
         sanitize_extension_command(command, self.package_name)
         data = command.SerializeToString()
         resp = self.plugin.call("handle_extension_command", data)

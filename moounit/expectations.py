@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 import contextvars
 import json
 from collections.abc import Callable
@@ -500,11 +501,41 @@ class ExpectationManager:
         except Exception as e:
             return MainCommandResponse(error=Error(message=str(e))).SerializeToString()
 
-        if command.WhichOneof("command") == "set_account":
-            self.accounts[command.set_account.account.id] = command.set_account.account
         ignore_rules, _ = self.recorder._collect_ignore_rules_for_request(
             "send_main_command", command
         )
+
+        if command.WhichOneof("command") in (
+            "set_account",
+            "get_cache",
+            "set_cache",
+        ):
+            if command.WhichOneof("command") == "set_account":
+                self.accounts[command.set_account.account.id] = command.set_account.account
+            try:
+                resp = self._dispatch(
+                    "send_main_command",
+                    self.local_expectations,
+                    self.session_expectations,
+                    lambda e: partial_match(
+                        e.command,
+                        command,
+                        ignored_fields=ignore_rules,
+                        root_call="send_main_command",
+                    )[0],
+                    command,
+                    None,
+                    lambda: default_main_command_response(command),
+                    "send_main_command",
+                    None,
+                )
+                return resp.SerializeToString()
+            except AssertionError:
+                resp = default_main_command_response(command)
+                self.recorder.record_call(
+                    "send_main_command", command, resp, current_scope.get()
+                )
+                return resp.SerializeToString()
         resp = self._dispatch(
             "send_main_command",
             self.local_expectations,

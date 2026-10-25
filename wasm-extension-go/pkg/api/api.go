@@ -35,11 +35,9 @@ type Extension interface {
 	OnSeeked(req *extensions.SeekedRequest) error
 	GetPlaylists(req *extensions.RequestedPlaylistsRequest) ([]*songs.Playlist, error)
 	GetPlaylistContent(req *extensions.RequestedPlaylistSongsRequest) (*extensions.RequestedPlaylistSongsResponse, error)
-	GetPlaylistFromURL(req *extensions.RequestedPlaylistFromUrlRequest) (*extensions.RequestedPlaylistFromUrlResponse, error)
 	GetPlaybackDetails(req *extensions.PlaybackDetailsRequestedRequest) (*PlaybackDetailsReturnType, error)
 	Search(req *extensions.RequestedSearchResultRequest) (*songs.SearchResult, error)
 	GetRecommendations(req *extensions.RequestedRecommendationsRequest) ([]*songs.Song, error)
-	GetSongFromURL(req *extensions.RequestedSongFromUrlRequest) (*extensions.RequestedSongFromUrlResponse, error)
 	HandleCustomRequest(req *extensions.CustomRequest) (*extensions.CustomRequestResponse, error)
 	GetArtistSongs(req *extensions.RequestedArtistSongsRequest) (*extensions.RequestedArtistSongsResponse, error)
 	GetAlbumSongs(req *extensions.RequestedAlbumSongsRequest) (*extensions.RequestedAlbumSongsResponse, error)
@@ -110,10 +108,6 @@ func (DefaultExtension) GetPlaylistContent(req *extensions.RequestedPlaylistSong
 	return nil, errors.New("Not implemented")
 }
 
-func (DefaultExtension) GetPlaylistFromURL(req *extensions.RequestedPlaylistFromUrlRequest) (*extensions.RequestedPlaylistFromUrlResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-
 func (DefaultExtension) GetPlaybackDetails(req *extensions.PlaybackDetailsRequestedRequest) (*PlaybackDetailsReturnType, error) {
 	return nil, errors.New("Not implemented")
 }
@@ -123,10 +117,6 @@ func (DefaultExtension) Search(req *extensions.RequestedSearchResultRequest) (*s
 }
 
 func (DefaultExtension) GetRecommendations(req *extensions.RequestedRecommendationsRequest) ([]*songs.Song, error) {
-	return nil, errors.New("Not implemented")
-}
-
-func (DefaultExtension) GetSongFromURL(req *extensions.RequestedSongFromUrlRequest) (*extensions.RequestedSongFromUrlResponse, error) {
 	return nil, errors.New("Not implemented")
 }
 

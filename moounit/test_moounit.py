@@ -30,13 +30,11 @@ from core.types.protos.extensions_pb2 import (
     RemoveSongRequest,
     RequestedAlbumSongsResponse,
     RequestedArtistSongsResponse,
-    RequestedPlaylistFromUrlResponse,
     RequestedPlaylistSongsResponse,
     RequestedPlaylistsResponse,
     RequestedRecommendationsResponse,
     RequestedSearchResultResponse,
     RequestedSongFromIdResponse,
-    RequestedSongFromUrlResponse,
     SetAccountRequest,
     SetCacheRequest,
     SetPreferenceRequest,
@@ -1139,15 +1137,6 @@ def test_sanitize_extension_response():
     assert resp2.requested_search_result.albums[0].album_id == "my.ext:al2"
     assert resp2.requested_search_result.albums[0].extension == "my.ext"
 
-    resp3 = ExtensionCommandResponse(
-        requested_song_from_url=RequestedSongFromUrlResponse(
-            song=Song(song=InnerSong(id="surl"))
-        )
-    )
-    sanitize_extension_response(resp3, pkg)
-    assert resp3.requested_song_from_url.song.song.id == "my.ext:surl"
-    assert resp3.requested_song_from_url.song.song.extension == "my.ext"
-
 
 def test_expectation_manager_sanitization():
     class DummyMoounit:
@@ -1175,3 +1164,67 @@ def test_expectation_manager_sanitization():
     err_resp = MainCommandResponse.FromString(err_resp_bytes)
     assert err_resp.WhichOneof("response") == "error"
     assert "Song cannot be empty" in err_resp.error.message
+
+
+def test_send_command_provider_scopes_and_login_assertions():
+    from core.types.protos.extensions_pb2 import (
+        ExtensionProviderScope,
+        PerformAccountLoginRequest,
+        RequestedPlaylistsRequest,
+    )
+
+    class MockPlugin:
+        def call(self, _fn, _data):
+            return ExtensionCommandResponse().SerializeToString()
+
+    moo = Moounit.__new__(Moounit)
+    moo.package_name = "test.ext"
+    moo.plugin = MockPlugin()
+    moo._host_exception = None
+    moo.manifest = ExtensionManifest(scopes=[ExtensionProviderScope.SEARCH])
+    moo.manager = ExpectationManager(moounit=moo)
+
+    with pytest.raises(
+        AssertionError,
+        match="extension does not have required scope 'PLAYLISTS'",
+    ):
+        moo.send_command(
+            ExtensionCommand(requested_playlists=RequestedPlaylistsRequest())
+        )
+
+    with pytest.raises(
+        AssertionError, match="extension does not have required scope 'ACCOUNTS'"
+    ):
+        moo.send_command(
+            ExtensionCommand(
+                perform_account_login=PerformAccountLoginRequest(login_status=True)
+            )
+        )
+
+    moo.manifest.scopes.append(ExtensionProviderScope.ACCOUNTS)
+
+    with pytest.raises(AssertionError, match="no account exists"):
+        moo.send_command(
+            ExtensionCommand(
+                perform_account_login=PerformAccountLoginRequest(login_status=True)
+            )
+        )
+
+    moo.manager.accounts["acc1"] = ExtensionAccountDetail(id="acc1")
+    with pytest.raises(AssertionError, match="account 'nonexistent' does not exist"):
+        moo.send_command(
+            ExtensionCommand(
+                perform_account_login=PerformAccountLoginRequest(
+                    account_id="nonexistent", login_status=True
+                )
+            )
+        )
+
+    resp = moo.send_command(
+        ExtensionCommand(
+            perform_account_login=PerformAccountLoginRequest(
+                account_id="acc1", login_status=True
+            )
+        )
+    )
+    assert resp is not None

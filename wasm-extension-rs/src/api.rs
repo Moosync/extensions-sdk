@@ -31,10 +31,10 @@ pub use extensions_proto::moosync::types::{
     PreferenceChangedRequest, PreferenceData, RegisterOauthRequest, RegisterUserPreferenceRequest,
     RemoveSongRequest, RequestedAlbumSongsRequest, RequestedArtistSongsRequest,
     RequestedCoverArtRequest,
-    RequestedLyricsRequest, RequestedPlaylistContextMenuRequest, RequestedPlaylistFromUrlRequest,
+    RequestedLyricsRequest, RequestedPlaylistContextMenuRequest,
     RequestedPlaylistSongsRequest, RequestedPlaylistsRequest, RequestedRecommendationsRequest,
     RequestedSearchResultRequest, RequestedSongContextMenuRequest, RequestedSongFromIdRequest,
-    RequestedSongFromUrlRequest, ScrobbleRequest, SeekedRequest, SetAccountRequest,
+    ScrobbleRequest, SeekedRequest, SetAccountRequest,
     SetCacheRequest, SetCacheResponse, SetPreferenceRequest, SetSecureRequest, SongAddedRequest, SongChangedRequest,
     SongQueueChangedRequest, SongRemovedRequest, UnregisterUserPreferenceRequest, UpdateSongRequest,
     VolumeChangedRequest,
@@ -137,14 +137,6 @@ pub trait Provider {
         Err("Not implemented".into())
     }
 
-    /// Called when the main app requests a playlist from a URL.
-    fn get_playlist_from_url(
-        &self,
-        req: RequestedPlaylistFromUrlRequest,
-    ) -> MoosyncResult<Option<Playlist>> {
-        Err("Not implemented".into())
-    }
-
     /// Called when the main app requests playback details for a song.
     fn get_playback_details(
         &self,
@@ -163,11 +155,6 @@ pub trait Provider {
         &self,
         req: RequestedRecommendationsRequest,
     ) -> MoosyncResult<Vec<Song>> {
-        Err("Not implemented".into())
-    }
-
-    /// Called when the main app requests a song from a URL.
-    fn get_song_from_url(&self, req: RequestedSongFromUrlRequest) -> MoosyncResult<Option<Song>> {
         Err("Not implemented".into())
     }
 

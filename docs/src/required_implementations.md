@@ -1,8 +1,8 @@
 # Required implementations
 
-All extensions must return ProviderScopes. These scopes determine which events are sent to your extension.
+Extensions declare scopes in their build rule (`scopes = [...]`). These scopes determine which events are sent to your extension.
 
-Lets consider the `search` scope for this example. Adding the search scope would cause the main app to request search results from your extension.
+Lets consider the `search` scope for this example. Adding the search scope causes the main app to request search results from your extension.
 
 {{#tabs }}
 {{#tab name="Rust" }}

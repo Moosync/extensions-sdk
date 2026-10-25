@@ -146,26 +146,6 @@ func handle_extension_command() int32 {
 			CustomRequest: res,
 		}
 
-	case *extensions.ExtensionCommand_RequestedSongFromUrl:
-		res, err := extension.GetSongFromURL(e.RequestedSongFromUrl)
-		if err != nil {
-			pdk.SetError(err)
-			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedSongFromUrl{
-			RequestedSongFromUrl: res,
-		}
-
-	case *extensions.ExtensionCommand_RequestedPlaylistFromUrl:
-		res, err := extension.GetPlaylistFromURL(e.RequestedPlaylistFromUrl)
-		if err != nil {
-			pdk.SetError(err)
-			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedPlaylistFromUrl{
-			RequestedPlaylistFromUrl: res,
-		}
-
 	case *extensions.ExtensionCommand_RequestedSearchResult:
 		res, err := extension.Search(e.RequestedSearchResult)
 		if err != nil {

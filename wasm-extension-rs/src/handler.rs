@@ -118,11 +118,6 @@ pub fn handle_command(
                          data: res.data,
                          redirect_url: res.redirect_url,
                     },
-                    RequestedSongFromUrl(req) => get_song_from_url(req) => res in RequestedSongFromUrlResponse { song: res },
-                    RequestedPlaylistFromUrl(req) => get_playlist_from_url(req) => res in RequestedPlaylistFromUrlResponse {
-                         playlist: res,
-                         songs: vec![],
-                    },
                     RequestedSearchResult(req) => search(req) => res in RequestedSearchResultResponse {
                          songs: res.songs,
                          playlists: res.playlists,
