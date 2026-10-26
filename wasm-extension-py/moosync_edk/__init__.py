@@ -1,7 +1,7 @@
 from enum import Enum
 import sys
 from datetime import timedelta
-from typing import Any, Dict, List, Optional, Sequence, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Type, TypeVar, Union, cast
 
 import extism
 from core.types.protos import extensions_pb2, preferences_pb2, songs_pb2, themes_pb2, ui_pb2
@@ -12,6 +12,9 @@ from core.types.protos.preferences_pb2 import *
 from core.types.protos.songs_pb2 import *
 from core.types.protos.ui_pb2 import *
 from google.protobuf.duration_pb2 import Duration
+from google.protobuf.message import Message
+
+T = TypeVar("T", bound=Message)
 
 # Fix module split issue when running as entry point
 if "moosync_edk" not in sys.modules:
@@ -310,6 +313,37 @@ class Api:
         )
         resp = send_main_command_(req)
         return resp.set_secure.success
+
+    def get_cache(self, key: str, proto_class: Type[T]) -> Optional[T]:
+        req = extensions_pb2.MainCommand(
+            get_cache=extensions_pb2.GetCacheRequest(key=key)
+        )
+        resp = send_main_command_(req)
+        if resp.HasField("get_cache"):
+            data = resp.get_cache.data
+            if data:
+                msg = proto_class()
+                msg.ParseFromString(data)
+                return msg
+        return None
+
+    def set_cache(
+        self,
+        key: str,
+        data: Message,
+        ttl_seconds: Optional[int] = None,
+    ) -> bool:
+        kwargs = {
+            "key": key,
+            "data": data.SerializeToString(),
+        }
+        if ttl_seconds is not None:
+            kwargs["ttl_seconds"] = ttl_seconds
+        req = extensions_pb2.MainCommand(
+            set_cache=extensions_pb2.SetCacheRequest(**kwargs)
+        )
+        resp = send_main_command_(req)
+        return resp.set_cache.success
 
     def add_songs(self, songs: List[songs_pb2.Song]) -> List[songs_pb2.Song]:
         req = extensions_pb2.MainCommand(

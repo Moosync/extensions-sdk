@@ -1,8 +1,8 @@
-load("@aspect_rules_py//py:defs.bzl", "py_library")
+load("@aspect_rules_py//py:defs.bzl", "py_library", "py_test")
 
 py_library(
     name = "moosync_edk",
-    srcs = glob(["moosync_edk/**/*.py"]),
+    srcs = glob(["moosync_edk/**/*.py"]) + ["extism.py"],
     imports = ["."],
     visibility = ["//visibility:public"],
     deps = [
@@ -12,6 +12,15 @@ py_library(
         "//protos:songs_py_proto",
         "//protos:themes_py_proto",
         "//protos:ui_py_proto",
+    ],
+)
+
+py_test(
+    name = "parse_lrc_test",
+    srcs = ["tests/test_parse_lrc.py"],
+    main = "tests/test_parse_lrc.py",
+    deps = [
+        ":moosync_edk",
     ],
 )
 

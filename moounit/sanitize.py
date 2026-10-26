@@ -142,6 +142,10 @@ def sanitize_main_command(command: MainCommand, package_name: str) -> None:
     elif cmd_variant == "set_account":
         if command.set_account.HasField("account"):
             command.set_account.account.package_name = package_name
+    elif cmd_variant in ("get_cache", "set_cache"):
+        sub_req = getattr(command, cmd_variant)
+        if sub_req.key:
+            sub_req.key = sanitize_key(sub_req.key, package_name)
 
 
 def sanitize_extension_response(

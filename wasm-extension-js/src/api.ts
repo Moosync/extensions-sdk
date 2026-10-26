@@ -95,6 +95,8 @@ import {
   GetVolumeRequest,
   GetTimeRequest,
   GetQueueRequest,
+  GetCacheRequest,
+  SetCacheRequest,
   QueueState,
   PreferenceData,
   HttpRequest,
@@ -192,6 +194,15 @@ export interface ExtensionAPI {
   setPreference(data: PreferenceData): void;
   getSecure(data: PreferenceData): PreferenceData;
   setSecure(data: PreferenceData): void;
+  getCache<T extends Message<T>>(
+    key: string,
+    schema: { fromBinary(bytes: Uint8Array): T },
+  ): T | undefined;
+  setCache<T extends Message<T>>(
+    key: string,
+    data: T,
+    ttlSeconds?: number | bigint,
+  ): void;
   fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>;
   batchFetch(
     requests: (string | BatchFetchRequest)[],
@@ -468,6 +479,45 @@ class Api implements ExtensionAPI {
     options?: BatchFetchOptions,
   ): Promise<BatchFetchResponse[]> {
     return batchFetch(requests, options);
+  }
+
+  getCache<T extends Message<T>>(
+    key: string,
+    schema: { fromBinary(bytes: Uint8Array): T },
+  ): T | undefined {
+    const cmd = new MainCommand({
+      command: {
+        case: "getCache",
+        value: new GetCacheRequest({ key }),
+      },
+    });
+    const res = sendMainCommand(cmd);
+    if (res.response.case === "getCache") {
+      const data = res.response.value.data;
+      if (data && data.length > 0) {
+        return schema.fromBinary(data);
+      }
+    }
+    return undefined;
+  }
+
+  setCache<T extends Message<T>>(
+    key: string,
+    data: T,
+    ttlSeconds?: number | bigint,
+  ): void {
+    const cmd = new MainCommand({
+      command: {
+        case: "setCache",
+        value: new SetCacheRequest({
+          key,
+          data: data.toBinary(),
+          ttlSeconds:
+            typeof ttlSeconds === "number" ? BigInt(ttlSeconds) : ttlSeconds,
+        }),
+      },
+    });
+    sendMainCommand(cmd);
   }
 }
 

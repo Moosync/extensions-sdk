@@ -25,6 +25,7 @@ rust_library(
         "@sdk_wasm_crates//:extism-convert",
         "@sdk_wasm_crates//:extism-pdk",
         "@sdk_wasm_crates//:lazy_static",
+        "@sdk_wasm_crates//:prost",
         "@sdk_wasm_crates//:prost-types",
         "@sdk_wasm_crates//:serde",
         "@sdk_wasm_crates//:serde_json",

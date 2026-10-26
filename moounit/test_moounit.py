@@ -15,6 +15,7 @@ from core.types.protos.extensions_pb2 import (
     ExtensionCommand,
     ExtensionCommandResponse,
     ExtensionManifest,
+    GetCacheRequest,
     GetPreferenceRequest,
     GetSecureRequest,
     GetSecureResponse,
@@ -37,6 +38,7 @@ from core.types.protos.extensions_pb2 import (
     RequestedSongFromIdResponse,
     RequestedSongFromUrlResponse,
     SetAccountRequest,
+    SetCacheRequest,
     SetPreferenceRequest,
     SetSecureRequest,
     UpdateSongRequest,
@@ -94,6 +96,17 @@ def test_defaults():
     http_resp = default_batch_http_response(http_req)
     assert len(http_resp.responses) == 1
     assert http_resp.responses[0].response.status_code == 200
+
+    cache_cmd = MainCommand(get_cache=GetCacheRequest(key="cached_key"))
+    cache_resp = default_main_command_response(cache_cmd)
+    assert cache_resp.WhichOneof("response") == "get_cache"
+
+    set_cache_cmd = MainCommand(
+        set_cache=SetCacheRequest(key="cached_key", data=b"val")
+    )
+    set_cache_resp = default_main_command_response(set_cache_cmd)
+    assert set_cache_resp.WhichOneof("response") == "set_cache"
+    assert set_cache_resp.set_cache.success is True
 
 
 def test_matcher_with_ignored_fields():
@@ -1035,6 +1048,19 @@ def test_sanitize_main_command_preferences():
     )
     sanitize_main_command(cmd4, pkg)
     assert cmd4.set_secure.data.key == "my.ext.refresh_token"
+
+
+def test_sanitize_main_command_cache():
+    pkg = "my.ext"
+    cmd1 = MainCommand(get_cache=GetCacheRequest(key="cached_token"))
+    sanitize_main_command(cmd1, pkg)
+    assert cmd1.get_cache.key == "my.ext.cached_token"
+    sanitize_main_command(cmd1, pkg)
+    assert cmd1.get_cache.key == "my.ext.cached_token"
+
+    cmd2 = MainCommand(set_cache=SetCacheRequest(key="session_data", data=b"abc"))
+    sanitize_main_command(cmd2, pkg)
+    assert cmd2.set_cache.key == "my.ext.session_data"
 
 
 def test_sanitize_main_command_entities():

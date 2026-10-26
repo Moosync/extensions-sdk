@@ -24,6 +24,7 @@ pub use songs_proto;
 pub use themes_proto;
 pub use ui_proto;
 pub use duration_proto;
+pub use prost;
 pub use prost_types;
 pub use extensions_proto::moosync::types::*;
 pub use preferences_proto::moosync::types::*;

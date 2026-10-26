@@ -28,6 +28,8 @@ from core.types.protos.extensions_pb2 import (
     UnregisterUserPreferenceResponse,
     ExtensionsUpdatedResponse,
     GetAppVersionResponse,
+    GetCacheResponse,
+    SetCacheResponse,
     PreferenceData,
 )
 
@@ -98,6 +100,10 @@ def default_main_command_response(cmd: MainCommand) -> MainCommandResponse:
         ),
         "get_app_version": lambda: MainCommandResponse(
             get_app_version=GetAppVersionResponse(version="1.0.0")
+        ),
+        "get_cache": lambda: MainCommandResponse(get_cache=GetCacheResponse()),
+        "set_cache": lambda: MainCommandResponse(
+            set_cache=SetCacheResponse(success=True)
         ),
     }
 

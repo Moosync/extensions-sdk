@@ -21,8 +21,9 @@ use extism_pdk::{Prost, host_fn};
 pub use extensions_proto::moosync::types::{
     AddPlaylistRequest, AddSongsRequest, AddToPlaylistRequest, ContextMenuActionRequest,
     ContextMenuReturnType, CustomRequest, ExtensionAccountDetail, ExtensionProviderScope,
-    GetCurrentSongRequest, GetEntityRequest, GetPlayerStateRequest, GetPreferenceRequest,
-    GetQueueRequest, GetSecureRequest, GetSongRequest, GetTimeRequest, GetVolumeRequest,
+    GetCacheRequest, GetCacheResponse, GetCurrentSongRequest, GetEntityRequest,
+    GetPlayerStateRequest, GetPreferenceRequest, GetQueueRequest, GetSecureRequest,
+    GetSongRequest, GetTimeRequest, GetVolumeRequest,
     QueueState,
     MainCommand, MainCommandResponse, OauthCallbackRequest, OpenExternalUrlRequest,
     PerformAccountLoginRequest, PlaybackDetailsRequestedRequest, PlayerState,
@@ -33,7 +34,7 @@ pub use extensions_proto::moosync::types::{
     RequestedPlaylistSongsRequest, RequestedPlaylistsRequest, RequestedRecommendationsRequest,
     RequestedSearchResultRequest, RequestedSongContextMenuRequest, RequestedSongFromIdRequest,
     RequestedSongFromUrlRequest, ScrobbleRequest, SeekedRequest, SetAccountRequest,
-    SetPreferenceRequest, SetSecureRequest, SongAddedRequest, SongChangedRequest,
+    SetCacheRequest, SetCacheResponse, SetPreferenceRequest, SetSecureRequest, SongAddedRequest, SongChangedRequest,
     SongQueueChangedRequest, SongRemovedRequest, UnregisterUserPreferenceRequest, UpdateSongRequest,
     VolumeChangedRequest,
 };
@@ -596,5 +597,69 @@ pub mod extension_api {
     pub fn gen_hash(hash_type: String, data: Vec<u8>) -> MoosyncResult<Vec<u8>> {
         let res = unsafe { hash(hash_type, data) };
         res.map_err(|e| MoosyncError::String(e.to_string()))
+    }
+
+    pub fn get_cache<T: prost::Message + Default>(key: &str) -> MoosyncResult<Option<T>> {
+        unsafe {
+            let request = GetCacheRequest {
+                key: key.to_string(),
+            };
+            let cmd_enum = MainCommandEnum::GetCache(request);
+            let cmd = MainCommand {
+                command: Some(cmd_enum),
+            };
+            let extism_pdk::Prost(res) = send_main_command(extism_pdk::Prost(cmd)).unwrap();
+
+            if let Some(MainCommandResponseEnum::Error(e)) = res.response.as_ref() {
+                return Err(MoosyncError::String(e.message.clone()));
+            }
+
+            if let Some(MainCommandResponseEnum::GetCache(resp)) = res.response {
+                if let Some(data) = resp.data {
+                    let msg = T::decode(data.as_slice())
+                        .map_err(|e| MoosyncError::String(e.to_string()))?;
+                    return Ok(Some(msg));
+                }
+                return Ok(None);
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
+    }
+
+    pub fn set_cache<T: prost::Message>(key: &str, data: &T) -> MoosyncResult<()> {
+        set_cache_with_ttl(key, data, None)
+    }
+
+    pub fn set_cache_with_ttl<T: prost::Message>(
+        key: &str,
+        data: &T,
+        ttl_seconds: Option<u64>,
+    ) -> MoosyncResult<()> {
+        unsafe {
+            let request = SetCacheRequest {
+                key: key.to_string(),
+                data: data.encode_to_vec(),
+                ttl_seconds,
+            };
+            let cmd_enum = MainCommandEnum::SetCache(request);
+            let cmd = MainCommand {
+                command: Some(cmd_enum),
+            };
+            let extism_pdk::Prost(res) = send_main_command(extism_pdk::Prost(cmd)).unwrap();
+
+            if let Some(MainCommandResponseEnum::Error(e)) = res.response.as_ref() {
+                return Err(MoosyncError::String(e.message.clone()));
+            }
+
+            if let Some(MainCommandResponseEnum::SetCache(resp)) = res.response {
+                if resp.success {
+                    return Ok(());
+                }
+                return Err(MoosyncError::String("Failed to set cache".to_string()));
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
     }
 }

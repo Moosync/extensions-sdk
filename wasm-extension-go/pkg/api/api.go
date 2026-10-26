@@ -323,6 +323,54 @@ func SetSecure(data *extensions.PreferenceData) error {
 	return err
 }
 
+func GetCache(key string, msg proto.Message) (bool, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_GetCache{
+			GetCache: &extensions.GetCacheRequest{Key: key},
+		},
+	}
+	resp, err := sendMainCommand(cmd)
+	if err != nil {
+		return false, err
+	}
+	cacheResp := resp.GetGetCache()
+	if cacheResp == nil || len(cacheResp.GetData()) == 0 {
+		return false, nil
+	}
+	if err := proto.Unmarshal(cacheResp.GetData(), msg); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func SetCache(key string, msg proto.Message, ttlSeconds ...uint64) error {
+	dataBytes, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	req := &extensions.SetCacheRequest{
+		Key:  key,
+		Data: dataBytes,
+	}
+	if len(ttlSeconds) > 0 {
+		req.TtlSeconds = &ttlSeconds[0]
+	}
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_SetCache{
+			SetCache: req,
+		},
+	}
+	resp, err := sendMainCommand(cmd)
+	if err != nil {
+		return err
+	}
+	setResp := resp.GetSetCache()
+	if setResp != nil && !setResp.GetSuccess() {
+		return errors.New("failed to set cache")
+	}
+	return nil
+}
+
 func AddSongs(s []*songs.Song) error {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_AddSongs{
