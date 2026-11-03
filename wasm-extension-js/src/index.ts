@@ -31,6 +31,7 @@ import {
   ExtensionCommand,
   ExtensionCommandResponse,
   PlaybackDetailsRequestedResponse,
+  RequestedCoverArtResponse,
 } from "./protos/extensions_pb";
 import { Message } from "@bufbuild/protobuf";
 
@@ -59,6 +60,27 @@ async function handle(
           url: resObj.url,
           duration: duration,
           decryptionKey: resObj.decryption_key ?? resObj.decryptionKey,
+        });
+      }
+    }
+
+    if (caseStr === "requestedCoverArt" && result) {
+      const resObj = result as any;
+      if (!(resObj instanceof RequestedCoverArtResponse)) {
+        let urls: string[] = [];
+        if (typeof resObj === "string") {
+          urls = [resObj];
+        } else if (Array.isArray(resObj)) {
+          urls = resObj.filter((u: any) => typeof u === "string");
+        } else if (resObj && typeof resObj === "object") {
+          if (Array.isArray(resObj.coverUrls)) {
+            urls = resObj.coverUrls;
+          } else if (typeof resObj.coverUrl === "string") {
+            urls = [resObj.coverUrl];
+          }
+        }
+        result = new RequestedCoverArtResponse({
+          coverUrls: urls,
         });
       }
     }

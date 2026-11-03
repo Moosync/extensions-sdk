@@ -1,4 +1,4 @@
-load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@aspect_rules_js//js:defs.bzl", "js_library", "js_test")
 load("@aspect_rules_js//npm:defs.bzl", "npm_package")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@sdk_npm//:defs.bzl", "npm_link_all_packages")
@@ -98,16 +98,27 @@ genrule(
     outs = [
         "lib/src/protos/extensions_pb.d.ts",
         "lib/src/protos/extensions_pb.js",
+        "lib/src/protos/extensions_pbjs",
         "lib/src/protos/preferences_pb.d.ts",
         "lib/src/protos/preferences_pb.js",
+        "lib/src/protos/preferences_pbjs",
         "lib/src/protos/songs_pb.d.ts",
         "lib/src/protos/songs_pb.js",
+        "lib/src/protos/songs_pbjs",
         "lib/src/protos/ui_pb.d.ts",
         "lib/src/protos/ui_pb.js",
+        "lib/src/protos/ui_pbjs",
         "lib/src/protos/themes_pb.d.ts",
         "lib/src/protos/themes_pb.js",
+        "lib/src/protos/themes_pbjs",
     ],
-    cmd = "mkdir -p $(@D)/lib/src/protos && cp $(SRCS) $(@D)/lib/src/protos/",
+    cmd = """
+        mkdir -p $(@D)/lib/src/protos
+        cp -f $(SRCS) $(@D)/lib/src/protos/
+        for f in $(@D)/lib/src/protos/*_pb.js; do
+            cp -f "$$f" "$${f%.js}js"
+        done
+    """,
     visibility = ["//visibility:public"],
 )
 
@@ -192,4 +203,19 @@ genrule(
         "@binaryen_tool//:bin_files",
     ],
     visibility = ["//visibility:private"],
+)
+
+
+js_test(
+    name = "parse_lrc_test",
+    data = [
+        ":copy_protos_to_lib",
+        ":wasm_extension_js",
+        ":node_modules/@bufbuild/protobuf",
+        ":node_modules/@extism/js-pdk",
+        ":node_modules/fast-text-encoding",
+        ":node_modules/@whatwg-node/fetch",
+        ":node_modules/ts-proto",
+    ],
+    entry_point = "tests/parse_lrc_test.mjs",
 )

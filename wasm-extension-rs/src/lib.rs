@@ -26,6 +26,9 @@ pub use ui_proto;
 pub use duration_proto;
 pub use prost;
 pub use prost_types;
+pub use serde;
+pub use serde_json;
+pub use tracing;
 pub use extensions_proto::moosync::types::*;
 pub use preferences_proto::moosync::types::*;
 pub use songs_proto::moosync::types::*;
@@ -37,6 +40,7 @@ pub mod handler;
 pub mod http;
 pub mod response_utils;
 
+pub use response_utils::{parse_lrc, LrcParseError};
 pub use api::MoosyncResult;
 pub use handler::MoosyncError;
 

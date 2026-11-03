@@ -22,4 +22,5 @@ PROVIDER_SCOPES = struct(
     DATABASE_PLAYLIST_EVENTS = "database_playlist_events",
     PLAYER_UI_EVENTS = "player_ui_events",
     PLAYER_DATA_EVENTS = "player_data_events",
+    COVER_ART = "cover_art",
 )

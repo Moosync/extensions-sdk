@@ -30,6 +30,7 @@ pub use extensions_proto::moosync::types::{
     PlayerStateChangedRequest, PlaylistAddedRequest, PlaylistRemovedRequest,
     PreferenceChangedRequest, PreferenceData, RegisterOauthRequest, RegisterUserPreferenceRequest,
     RemoveSongRequest, RequestedAlbumSongsRequest, RequestedArtistSongsRequest,
+    RequestedCoverArtRequest,
     RequestedLyricsRequest, RequestedPlaylistContextMenuRequest, RequestedPlaylistFromUrlRequest,
     RequestedPlaylistSongsRequest, RequestedPlaylistsRequest, RequestedRecommendationsRequest,
     RequestedSearchResultRequest, RequestedSongContextMenuRequest, RequestedSongFromIdRequest,
@@ -203,6 +204,11 @@ pub trait Provider {
 
     /// Called when the main app requests lyrics for a song.
     fn get_lyrics(&self, req: RequestedLyricsRequest) -> MoosyncResult<Option<Lyrics>> {
+        Err("Not implemented".into())
+    }
+
+    /// Called when the main app requests cover art for a song, album, or artist.
+    fn get_cover_art(&self, req: RequestedCoverArtRequest) -> MoosyncResult<Vec<String>> {
         Err("Not implemented".into())
     }
 }

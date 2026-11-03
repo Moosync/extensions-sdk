@@ -566,6 +566,11 @@ class Extension:
     ) -> extensions_pb2.RequestedLyricsResponse:
         raise NotImplementedError()
 
+    def get_cover_art(
+        self, req: extensions_pb2.RequestedCoverArtRequest
+    ) -> Union[List[str], str, extensions_pb2.RequestedCoverArtResponse]:
+        raise NotImplementedError()
+
 
 extension_instance: Optional[Extension] = None
 
@@ -671,6 +676,22 @@ def handle_extension_command():
         )
     elif number == extensions_pb2.ExtensionCommand.REQUESTED_LYRICS_FIELD_NUMBER:
         response.requested_lyrics.CopyFrom(instance.get_lyrics(cmd.requested_lyrics))
+    elif number == extensions_pb2.ExtensionCommand.REQUESTED_COVER_ART_FIELD_NUMBER:
+        res = instance.get_cover_art(cmd.requested_cover_art)
+        if isinstance(res, list):
+            response.requested_cover_art.CopyFrom(
+                extensions_pb2.RequestedCoverArtResponse(cover_urls=res)
+            )
+        elif isinstance(res, str):
+            response.requested_cover_art.CopyFrom(
+                extensions_pb2.RequestedCoverArtResponse(cover_urls=[res])
+            )
+        elif isinstance(res, extensions_pb2.RequestedCoverArtResponse):
+            response.requested_cover_art.CopyFrom(res)
+        else:
+            response.requested_cover_art.CopyFrom(
+                extensions_pb2.RequestedCoverArtResponse()
+            )
     elif number == extensions_pb2.ExtensionCommand.REQUESTED_ARTIST_SONGS_FIELD_NUMBER:
         response.requested_artist_songs.CopyFrom(
             instance.get_artist_songs(cmd.requested_artist_songs)
@@ -751,3 +772,51 @@ def duration_to_proto(td: timedelta) -> Duration:
     duration.seconds = int(td.total_seconds())
     duration.nanos = int((td.microseconds % 1000000) * 1000)
     return duration
+
+
+def parse_lrc(lrc_text: str) -> songs_pb2.Lyrics:
+    """Parses standard LRC content into a Lyrics proto."""
+    import re
+    trimmed = lrc_text.strip()
+    if not trimmed:
+        raise ValueError("Empty LRC text")
+
+    lines = []
+    has_timestamps = False
+
+    time_re = re.compile(r"\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]")
+
+    for raw_line in trimmed.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        matches = list(time_re.finditer(line))
+        if matches:
+            has_timestamps = True
+            last_match = matches[-1]
+            text = line[last_match.end():].strip()
+
+            for m in matches:
+                minutes = int(m.group(1))
+                seconds = int(m.group(2))
+                frac_str = m.group(3) or "0"
+                if len(frac_str) == 1:
+                    millis = int(frac_str) * 100
+                elif len(frac_str) == 2:
+                    millis = int(frac_str) * 10
+                elif len(frac_str) == 3:
+                    millis = int(frac_str)
+                else:
+                    millis = int(frac_str[:3])
+
+                time_ms = minutes * 60000 + seconds * 1000 + millis
+                lines.append(songs_pb2.LyricLine(text=text, time_ms=time_ms))
+        elif not has_timestamps:
+            if not line.startswith("[") or not line.endswith("]"):
+                lines.append(songs_pb2.LyricLine(text=line, time_ms=0))
+
+    if has_timestamps:
+        lines.sort(key=lambda l: l.time_ms)
+
+    return songs_pb2.Lyrics(lines=lines, is_synced=has_timestamps)

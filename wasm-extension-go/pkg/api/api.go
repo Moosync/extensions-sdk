@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	pdk "github.com/extism/go-pdk"
@@ -44,6 +46,7 @@ type Extension interface {
 	GetSongFromID(req *extensions.RequestedSongFromIdRequest) (*extensions.RequestedSongFromIdResponse, error)
 	Scrobble(req *extensions.ScrobbleRequest) error
 	GetLyrics(req *extensions.RequestedLyricsRequest) (*songs.Lyrics, error)
+	GetCoverArt(req *extensions.RequestedCoverArtRequest) (*extensions.RequestedCoverArtResponse, error)
 	GetSongContextMenu(req *extensions.RequestedSongContextMenuRequest) ([]*extensions.ContextMenuReturnType, error)
 	GetPlaylistContextMenu(req *extensions.RequestedPlaylistContextMenuRequest) ([]*extensions.ContextMenuReturnType, error)
 	OnContextMenuAction(req *extensions.ContextMenuActionRequest) error
@@ -151,6 +154,10 @@ func (DefaultExtension) GetLyrics(req *extensions.RequestedLyricsRequest) (*song
 	return nil, errors.New("Not implemented")
 }
 
+func (DefaultExtension) GetCoverArt(req *extensions.RequestedCoverArtRequest) (*extensions.RequestedCoverArtResponse, error) {
+	return nil, errors.New("Not implemented")
+}
+
 func (DefaultExtension) GetSongContextMenu(req *extensions.RequestedSongContextMenuRequest) ([]*extensions.ContextMenuReturnType, error) {
 	return nil, errors.New("Not implemented")
 }
@@ -169,6 +176,98 @@ func RegisterExtension(newExtension Extension) {
 		panic("Extension cannot be re-registered")
 	}
 	extension = newExtension
+}
+
+func parseLrcTimestamp(tag string) (int64, bool) {
+	parts := strings.Split(tag, ":")
+	if len(parts) != 2 {
+		return 0, false
+	}
+	min, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	secParts := strings.Split(parts[1], ".")
+	sec, err := strconv.ParseInt(secParts[0], 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	var millis int64 = 0
+	if len(secParts) > 1 {
+		frac := secParts[1]
+		val, err := strconv.ParseInt(frac, 10, 64)
+		if err == nil {
+			switch len(frac) {
+			case 1:
+				millis = val * 100
+			case 2:
+				millis = val * 10
+			case 3:
+				millis = val
+			default:
+				millis, _ = strconv.ParseInt(frac[:3], 10, 64)
+			}
+		}
+	}
+	return min*60000 + sec*1000 + millis, true
+}
+
+func ParseLrc(lrcText string) (*songs.Lyrics, error) {
+	trimmed := strings.TrimSpace(lrcText)
+	if len(trimmed) == 0 {
+		return nil, errors.New("empty LRC text")
+	}
+
+	var lines []*songs.LyricLine
+	hasTimestamps := false
+
+	rawLines := strings.Split(trimmed, "\n")
+	for _, rawLine := range rawLines {
+		line := strings.TrimSpace(rawLine)
+		if len(line) == 0 {
+			continue
+		}
+
+		remaining := line
+		var timestamps []int64
+
+		for strings.HasPrefix(remaining, "[") {
+			closeIdx := strings.Index(remaining, "]")
+			if closeIdx == -1 {
+				break
+			}
+			tag := remaining[1:closeIdx]
+			if ms, ok := parseLrcTimestamp(tag); ok {
+				timestamps = append(timestamps, ms)
+				remaining = remaining[closeIdx+1:]
+			} else if strings.Contains(tag, ":") && (len(tag) == 0 || tag[0] < '0' || tag[0] > '9') {
+				remaining = remaining[closeIdx+1:]
+			} else {
+				break
+			}
+		}
+
+		text := strings.TrimSpace(remaining)
+		if len(timestamps) > 0 {
+			hasTimestamps = true
+			for _, ms := range timestamps {
+				lines = append(lines, &songs.LyricLine{
+					Text:   text,
+					TimeMs: ms,
+				})
+			}
+		} else if !hasTimestamps && len(text) > 0 {
+			lines = append(lines, &songs.LyricLine{
+				Text:   text,
+				TimeMs: 0,
+			})
+		}
+	}
+
+	return &songs.Lyrics{
+		Lines:    lines,
+		IsSynced: hasTimestamps,
+	}, nil
 }
 
 func sendMainCommand(cmd *extensions.MainCommand) (*extensions.MainCommandResponse, error) {

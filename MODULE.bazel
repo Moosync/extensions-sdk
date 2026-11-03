@@ -8,7 +8,7 @@ bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "gazelle", version = "0.53.0")
 
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.download(version = "1.25.0")
+go_sdk.download(version = "1.27.3")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.module(
@@ -131,10 +131,9 @@ single_version_override(
 )
 
 bazel_dep(name = "moosync")
-git_override(
+local_path_override(
     module_name = "moosync",
-    branch = "main",
-    remote = "https://github.com/Moosync/Moosync",
+    path = "../Moosync-lyrics-cover",
 )
 
 

@@ -131,6 +131,7 @@ pub fn handle_command(
                     },
                     RequestedRecommendations(req) => get_recommendations(req) => res in RequestedRecommendationsResponse { songs: res },
                     RequestedLyrics(req) => get_lyrics(req) => res in RequestedLyricsResponse { lyrics: res },
+                    RequestedCoverArt(req) => get_cover_art(req) => res in RequestedCoverArtResponse { cover_urls: res },
                     RequestedArtistSongs(req) => get_artist_songs(req) => res in RequestedArtistSongsResponse {
                          songs: res.songs,
                          next_page_token: res.next_page_token,

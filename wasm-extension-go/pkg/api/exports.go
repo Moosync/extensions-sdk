@@ -214,6 +214,16 @@ func handle_extension_command() int32 {
 			RequestedLyrics: &extensions.RequestedLyricsResponse{Lyrics: res},
 		}
 
+	case *extensions.ExtensionCommand_RequestedCoverArt:
+		res, err := extension.GetCoverArt(e.RequestedCoverArt)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_RequestedCoverArt{
+			RequestedCoverArt: res,
+		}
+
 	case *extensions.ExtensionCommand_RequestedArtistSongs:
 		res, err := extension.GetArtistSongs(e.RequestedArtistSongs)
 		if err != nil {
