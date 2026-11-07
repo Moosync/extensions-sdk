@@ -18,6 +18,7 @@ pub use extism_pdk::{config, error, info, log, warn};
 use extism_pdk::{plugin_fn, FnResult, Prost};
 
 // Re-export generated types
+pub use extension_service_proto;
 pub use extensions_proto;
 pub use preferences_proto;
 pub use songs_proto;
@@ -29,12 +30,15 @@ pub use prost_types;
 pub use serde;
 pub use serde_json;
 pub use tracing;
+pub use extension_service_proto::moosync::types::*;
 pub use extensions_proto::moosync::types::*;
 pub use preferences_proto::moosync::types::*;
 pub use songs_proto::moosync::types::*;
 pub use themes_proto::moosync::types::*;
 pub use ui_proto::moosync::types::*;
 
+pub mod generated_api;
+pub mod generated_dispatcher;
 pub mod api;
 pub mod handler;
 pub mod http;

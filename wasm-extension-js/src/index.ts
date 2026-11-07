@@ -19,6 +19,9 @@ import "./request-ponyfills";
 import "./abortcontroller-ponyfills";
 
 export * from "./api";
+export * from "./generated_api";
+export * from "./generated_events";
+export * from "./protos/extension_service_pb";
 export * from "./protos/extensions_pb";
 export * from "./protos/preferences_pb";
 export * from "./protos/songs_pb";

@@ -1,0 +1,236 @@
+// Moosync
+// Copyright (C) 2024, 2025, 2026 Moosync <support@moosync.app>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+syntax = "proto3";
+
+package moosync.types;
+
+import "core/types/protos/extensions.proto";
+import "core/types/protos/preferences.proto";
+import "core/types/protos/songs.proto";
+import "google/protobuf/descriptor.proto";
+
+enum TransportType {
+  MAIN_COMMAND = 0;   // Multiplexed via send_main_command
+  DIRECT_HOST_FN = 1; // Direct Extism host function
+}
+
+extend google.protobuf.MethodOptions {
+  optional bool is_event_notification = 60001;
+  optional TransportType transport = 60002;
+  optional string wasm_symbol = 60003;
+}
+
+// -------------------------------------------------------------
+// Primitives & Scalar message wrappers for WASM Host Functions
+// -------------------------------------------------------------
+
+message SystemTimeRequest {}
+
+message SystemTimeResponse {
+  uint64 seconds_since_epoch = 1;
+}
+
+message OpenClientFdRequest {
+  string socket_path = 1;
+}
+
+message OpenClientFdResponse {
+  int64 fd = 1;
+}
+
+message WriteSockRequest {
+  int64 fd = 1;
+  bytes data = 2;
+}
+
+message WriteSockResponse {
+  int64 bytes_written = 1;
+}
+
+message ReadSockRequest {
+  int64 fd = 1;
+  uint64 max_bytes = 2;
+}
+
+message ReadSockResponse {
+  bytes data = 1;
+}
+
+// -------------------------------------------------------------
+// Host Service: All functions provided by the Host to Extensions
+// -------------------------------------------------------------
+service ExtensionHostService {
+  // Low-level WASM Host Functions
+  rpc SystemTime(SystemTimeRequest) returns (SystemTimeResponse) {
+    option (moosync.types.transport) = DIRECT_HOST_FN;
+    option (moosync.types.wasm_symbol) = "system_time";
+  }
+
+  rpc OpenClientFd(OpenClientFdRequest) returns (OpenClientFdResponse) {
+    option (moosync.types.transport) = DIRECT_HOST_FN;
+    option (moosync.types.wasm_symbol) = "open_clientfd";
+  }
+
+  rpc WriteSock(WriteSockRequest) returns (WriteSockResponse) {
+    option (moosync.types.transport) = DIRECT_HOST_FN;
+    option (moosync.types.wasm_symbol) = "write_sock";
+  }
+
+  rpc ReadSock(ReadSockRequest) returns (ReadSockResponse) {
+    option (moosync.types.transport) = DIRECT_HOST_FN;
+    option (moosync.types.wasm_symbol) = "read_sock";
+  }
+
+  rpc BatchHttpRequest(moosync.types.BatchHttpRequest) returns (moosync.types.BatchHttpResponse) {
+    option (moosync.types.transport) = DIRECT_HOST_FN;
+    option (moosync.types.wasm_symbol) = "batch_http_request";
+  }
+
+  // Multiplexed MainCommands (Transport: MAIN_COMMAND)
+  rpc GetSong(GetSongRequest) returns (GetSongResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc GetEntity(GetEntityRequest) returns (GetEntityResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc GetCurrentSong(GetCurrentSongRequest) returns (GetCurrentSongResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc GetPlayerState(GetPlayerStateRequest) returns (GetPlayerStateResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc GetVolume(GetVolumeRequest) returns (GetVolumeResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc GetTime(GetTimeRequest) returns (GetTimeResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc GetQueue(GetQueueRequest) returns (GetQueueResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc GetPreference(GetPreferenceRequest) returns (GetPreferenceResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc SetPreference(SetPreferenceRequest) returns (SetPreferenceResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc GetSecure(GetSecureRequest) returns (GetSecureResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc SetSecure(SetSecureRequest) returns (SetSecureResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc AddSongs(AddSongsRequest) returns (AddSongsResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc RemoveSong(RemoveSongRequest) returns (RemoveSongResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc UpdateSong(UpdateSongRequest) returns (UpdateSongResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc AddPlaylist(AddPlaylistRequest) returns (AddPlaylistResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc AddToPlaylist(AddToPlaylistRequest) returns (AddToPlaylistResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc RegisterOauth(RegisterOauthRequest) returns (RegisterOauthResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc OpenExternalUrl(OpenExternalUrlRequest) returns (OpenExternalUrlResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc SetAccount(SetAccountRequest) returns (SetAccountResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc RegisterUserPreference(RegisterUserPreferenceRequest) returns (RegisterUserPreferenceResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc UnregisterUserPreference(UnregisterUserPreferenceRequest) returns (UnregisterUserPreferenceResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc ExtensionsUpdated(ExtensionsUpdatedRequest) returns (ExtensionsUpdatedResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc GetAppVersion(GetAppVersionRequest) returns (GetAppVersionResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc GetCache(GetCacheRequest) returns (GetCacheResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc SetCache(SetCacheRequest) returns (SetCacheResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+}
+
+// -----------------------------------------------------------------
+// Guest Service: All commands & events handled by the Extension
+// -----------------------------------------------------------------
+service ExtensionGuestService {
+  rpc RequestedSearchResult(RequestedSearchResultRequest) returns (RequestedSearchResultResponse);
+  rpc RequestedPlaylists(RequestedPlaylistsRequest) returns (RequestedPlaylistsResponse);
+  rpc RequestedPlaylistSongs(RequestedPlaylistSongsRequest) returns (RequestedPlaylistSongsResponse);
+  rpc RequestedArtistSongs(RequestedArtistSongsRequest) returns (RequestedArtistSongsResponse);
+  rpc RequestedAlbumSongs(RequestedAlbumSongsRequest) returns (RequestedAlbumSongsResponse);
+  rpc RequestedRecommendations(RequestedRecommendationsRequest) returns (RequestedRecommendationsResponse);
+  rpc RequestedSongFromId(RequestedSongFromIdRequest) returns (RequestedSongFromIdResponse);
+  rpc PlaybackDetailsRequested(PlaybackDetailsRequestedRequest) returns (PlaybackDetailsRequestedResponse);
+  rpc RequestedLyrics(RequestedLyricsRequest) returns (RequestedLyricsResponse);
+  rpc RequestedCoverArt(RequestedCoverArtRequest) returns (RequestedCoverArtResponse);
+
+  rpc PerformAccountLogin(PerformAccountLoginRequest) returns (PerformAccountLoginResponse);
+  rpc OauthCallback(OauthCallbackRequest) returns (OauthCallbackResponse);
+  rpc RequestedSongContextMenu(RequestedSongContextMenuRequest) returns (RequestedSongContextMenuResponse);
+  rpc RequestedPlaylistContextMenu(RequestedPlaylistContextMenuRequest) returns (RequestedPlaylistContextMenuResponse);
+  rpc ContextMenuAction(ContextMenuActionRequest) returns (ContextMenuActionResponse);
+
+  rpc SongQueueChanged(SongQueueChangedRequest) returns (SongQueueChangedResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc Seeked(SeekedRequest) returns (SeekedResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc VolumeChanged(VolumeChangedRequest) returns (VolumeChangedResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc PlayerStateChanged(PlayerStateChangedRequest) returns (PlayerStateChangedResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc SongChanged(SongChangedRequest) returns (SongChangedResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc PreferenceChanged(PreferenceChangedRequest) returns (PreferenceChangedResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc Scrobble(ScrobbleRequest) returns (ScrobbleResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc SongAdded(SongAddedRequest) returns (SongAddedResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc SongRemoved(SongRemovedRequest) returns (SongRemovedResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc PlaylistAdded(PlaylistAddedRequest) returns (PlaylistAddedResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc PlaylistRemoved(PlaylistRemovedRequest) returns (PlaylistRemovedResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc CustomRequest(moosync.types.CustomRequest) returns (moosync.types.CustomRequestResponse);
+}

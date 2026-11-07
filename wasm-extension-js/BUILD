@@ -3,6 +3,15 @@ load("@aspect_rules_js//npm:defs.bzl", "npm_package")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@sdk_npm//:defs.bzl", "npm_link_all_packages")
 load("@sdk_npm//wasm-extension-js:typedoc/package_json.bzl", typedoc_bin = "bin")
+load("//tools/sdk_generator:defs.bzl", "generate_extension_sdk")
+
+generate_extension_sdk(
+    name = "gen_ts_sdk",
+    proto = "//protos:extension_service_proto",
+    lang = "ts",
+    out_api = "src/generated_api.ts",
+    out_dispatcher = "src/generated_events.ts",
+)
 
 typedoc_bin.typedoc(
     name = "doc",
@@ -51,6 +60,7 @@ npm_link_all_packages(name = "node_modules")
 filegroup(
     name = "proto_types",
     srcs = [
+        "//protos:extension_service_ts_proto",
         "//protos:extensions_ts_proto",
         "//protos:preferences_ts_proto",
         "//protos:songs_ts_proto",
@@ -63,6 +73,7 @@ filegroup(
 genrule(
     name = "copy_protos",
     srcs = [
+        "//protos:extension_service_ts_proto",
         "//protos:extensions_ts_proto",
         "//protos:preferences_ts_proto",
         "//protos:songs_ts_proto",
@@ -71,6 +82,8 @@ genrule(
         ":proto_types",
     ],
     outs = [
+        "src/protos/extension_service_pb.d.ts",
+        "src/protos/extension_service_pb.js",
         "src/protos/extensions_pb.d.ts",
         "src/protos/extensions_pb.js",
         "src/protos/preferences_pb.d.ts",
@@ -88,6 +101,7 @@ genrule(
 genrule(
     name = "copy_protos_to_lib",
     srcs = [
+        "//protos:extension_service_ts_proto",
         "//protos:extensions_ts_proto",
         "//protos:preferences_ts_proto",
         "//protos:songs_ts_proto",
@@ -96,6 +110,9 @@ genrule(
         ":proto_types",
     ],
     outs = [
+        "lib/src/protos/extension_service_pb.d.ts",
+        "lib/src/protos/extension_service_pb.js",
+        "lib/src/protos/extension_service_pbjs",
         "lib/src/protos/extensions_pb.d.ts",
         "lib/src/protos/extensions_pb.js",
         "lib/src/protos/extensions_pbjs",
@@ -138,6 +155,9 @@ js_library(
 ts_project(
     name = "wasm_extension_js",
     srcs = glob(["src/**/*.ts"]) + [
+        ":gen_ts_sdk",
+        ":src/protos/extension_service_pb.d.ts",
+        ":src/protos/extension_service_pb.js",
         ":src/protos/extensions_pb.d.ts",
         ":src/protos/extensions_pb.js",
         ":src/protos/preferences_pb.d.ts",

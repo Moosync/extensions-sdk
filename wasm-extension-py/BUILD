@@ -1,12 +1,25 @@
 load("@aspect_rules_py//py:defs.bzl", "py_library", "py_test")
+load("//tools/sdk_generator:defs.bzl", "generate_extension_sdk")
+
+generate_extension_sdk(
+    name = "gen_py_sdk",
+    lang = "python",
+    out_api = "moosync_edk/generated_api.py",
+    out_dispatcher = "moosync_edk/generated_dispatcher.py",
+    proto = "//protos:extension_service_proto",
+)
 
 py_library(
     name = "moosync_edk",
-    srcs = glob(["moosync_edk/**/*.py"]) + ["extism.py"],
+    srcs = glob(["moosync_edk/**/*.py"]) + [
+        "extism.py",
+        ":gen_py_sdk",
+    ],
     imports = ["."],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_protobuf//:protobuf_python",
+        "//protos:extension_service_py_proto",
         "//protos:extensions_py_proto",
         "//protos:preferences_py_proto",
         "//protos:songs_py_proto",

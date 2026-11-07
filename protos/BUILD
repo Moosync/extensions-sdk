@@ -116,6 +116,20 @@ proto_library(
     ],
 )
 
+proto_library(
+    name = "extension_service_proto",
+    srcs = ["extension_service.proto"],
+    import_prefix = "core/types/protos",
+    strip_import_prefix = "/protos",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":extensions_proto",
+        ":preferences_proto",
+        ":songs_proto",
+        "@com_google_protobuf//:descriptor_proto",
+    ],
+)
+
 # -------------------------------------------------------------
 # Language-specific targets
 # -------------------------------------------------------------
@@ -129,6 +143,12 @@ rust_prost_library(
 rust_prost_library(
     name = "extensions_rs",
     proto = ":extensions_proto",
+    visibility = ["//visibility:public"],
+)
+
+rust_prost_library(
+    name = "extension_service_rs",
+    proto = ":extension_service_proto",
     visibility = ["//visibility:public"],
 )
 
@@ -191,6 +211,18 @@ go_proto_library(
 )
 
 go_proto_library(
+    name = "extension_service_go_proto",
+    importpath = "github.com/moosync/moosync/types/extension_service",
+    protos = [":extension_service_proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":extensions_go_proto",
+        ":preferences_go_proto",
+        ":songs_go_proto",
+    ],
+)
+
+go_proto_library(
     name = "themes_go_proto",
     importpath = "github.com/moosync/moosync/types/themes",
     protos = [":themes_proto"],
@@ -208,6 +240,12 @@ py_proto_library(
     name = "extensions_py_proto",
     visibility = ["//visibility:public"],
     deps = [":extensions_proto"],
+)
+
+py_proto_library(
+    name = "extension_service_py_proto",
+    visibility = ["//visibility:public"],
+    deps = [":extension_service_proto"],
 )
 
 py_proto_library(
@@ -244,6 +282,16 @@ ts_proto_library(
     node_modules = ":node_modules",
     proto = ":extensions_proto",
     proto_srcs = ["extensions.proto"],
+    protoc_gen_options = {"import_extension": "js"},
+    visibility = ["//visibility:public"],
+)
+
+ts_proto_library(
+    name = "extension_service_ts_proto",
+    copy_files = False,
+    node_modules = ":node_modules",
+    proto = ":extension_service_proto",
+    proto_srcs = ["extension_service.proto"],
     protoc_gen_options = {"import_extension": "js"},
     visibility = ["//visibility:public"],
 )

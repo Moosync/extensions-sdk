@@ -46,12 +46,12 @@ func (s *SampleExtension) Search(req *extensions.RequestedSearchResultRequest) (
 
 // ANCHOR: api_usage
 func (s *SampleExtension) Scrobble(req *extensions.ScrobbleRequest) error {
-	song, err := api.GetCurrentSong()
+	songResp, err := api.GetCurrentSong(&extensions.GetCurrentSongRequest{})
 	if err != nil {
 		return err
 	}
-	if song != nil && song.GetSong() != nil {
-		api.LogInfo("Currently playing song: %s", song.GetSong().GetTitle())
+	if songResp != nil && songResp.GetSong() != nil && songResp.GetSong().GetSong() != nil {
+		api.LogInfo("Currently playing song: %s", songResp.GetSong().GetSong().GetTitle())
 	}
 	return nil
 }
