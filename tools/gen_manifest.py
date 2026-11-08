@@ -1,7 +1,20 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import sys
-from core.types.protos import extensions_pb2
+
+# Ensure external repos with protos (e.g. moosync) are in sys.path
+for p in list(sys.path):
+    for entry in os.listdir(p) if os.path.isdir(p) else []:
+        if entry.startswith("moosync"):
+            full_entry = os.path.join(p, entry)
+            if full_entry not in sys.path:
+                sys.path.insert(0, full_entry)
+
+try:
+    from core.types.protos import extensions_pb2
+except ImportError:
+    from moosync.core.types.protos import extensions_pb2
 
 
 def main():

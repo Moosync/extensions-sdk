@@ -13,7 +13,6 @@ py_library(
     name = "moosync_edk",
     srcs = glob(["moosync_edk/**/*.py"]) + [
         "extism.py",
-        ":gen_py_sdk",
     ],
     imports = ["."],
     visibility = ["//visibility:public"],
@@ -21,6 +20,7 @@ py_library(
         "@com_google_protobuf//:protobuf_python",
         "//protos:extension_service_py_proto",
         "//protos:extensions_py_proto",
+        "//protos:moosync_python_root",
         "//protos:preferences_py_proto",
         "//protos:songs_py_proto",
         "//protos:themes_py_proto",

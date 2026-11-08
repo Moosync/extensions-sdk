@@ -19,8 +19,6 @@ syntax = "proto3";
 package moosync.types;
 
 import "core/types/protos/extensions.proto";
-import "core/types/protos/preferences.proto";
-import "core/types/protos/songs.proto";
 import "google/protobuf/descriptor.proto";
 
 enum TransportType {

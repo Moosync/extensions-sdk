@@ -12,7 +12,8 @@ from tools.sdk_generator.generator import (
 class GeneratorTest(unittest.TestCase):
     def test_metadata_extraction(self):
         desc_files = []
-        for root, _, files in os.walk("."):
+        runfiles_dir = os.environ.get("TEST_SRCDIR", ".")
+        for root, _, files in os.walk(runfiles_dir):
             for f in files:
                 if f.endswith("-descriptor-set.proto.bin") or f.endswith(".proto.bin"):
                     desc_files.append(os.path.join(root, f))

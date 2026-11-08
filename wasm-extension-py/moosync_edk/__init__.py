@@ -4,12 +4,6 @@ import sys
 from datetime import timedelta
 from typing import Any, Dict, List, Optional, Sequence, Type, TypeVar, Union, cast
 
-edk_paths = [p + "/moosync_edk" for p in sys.path if p.endswith("wasm-extension-py")]
-__package__ = "moosync_edk"
-__path__ = edk_paths
-if "moosync_edk" not in sys.modules:
-    sys.modules["moosync_edk"] = sys.modules[__name__]
-
 import extism
 from core.types.protos import extensions_pb2, preferences_pb2, songs_pb2, themes_pb2, ui_pb2
 
@@ -23,16 +17,17 @@ from google.protobuf.message import Message
 
 T = TypeVar("T", bound=Message)
 
-try:
-    from .generated_api import *
-    from .generated_dispatcher import *
-except (ImportError, ValueError):
-    try:
-        from generated_api import *
-        from generated_dispatcher import *
-    except (ImportError, ValueError):
-        from moosync_edk.generated_api import *
-        from moosync_edk.generated_dispatcher import *
+edk_paths = [p + "/moosync_edk" for p in sys.path if p.endswith("wasm-extension-py")]
+if "__file__" in globals():
+    edk_paths.append(os.path.dirname(os.path.abspath(__file__)))
+
+__package__ = "moosync_edk"
+__path__ = edk_paths
+if "moosync_edk" not in sys.modules:
+    sys.modules["moosync_edk"] = sys.modules[__name__]
+
+from .generated_api import *
+from .generated_dispatcher import *
 
 open_sock = open_clientfd
 batch_http_request_host = batch_http_request

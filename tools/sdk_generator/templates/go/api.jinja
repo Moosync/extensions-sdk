@@ -40,7 +40,7 @@ func (DefaultExtension) {{ m.pascal_name }}(req *extensions.{{ m.req_type }}) (*
 //go:wasmimport extism:host/user send_main_command
 func send_main_command(uint64) uint64
 
-func SendMainCommand(cmd *extensions.MainCommand) (*extensions.MainCommandResponse, error) {
+func DispatchMainCommand(cmd *extensions.MainCommand) (*extensions.MainCommandResponse, error) {
 	cmdBytes, err := proto.Marshal(cmd)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func {{ m.pascal_name }}(req *extensions.{{ m.req_type }}) (*extensions.{{ m.res
 			{{ m.pascal_name }}: req,
 		},
 	}
-	res, err := SendMainCommand(cmd)
+	res, err := DispatchMainCommand(cmd)
 	if err != nil {
 		return nil, err
 	}

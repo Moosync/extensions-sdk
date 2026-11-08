@@ -1,119 +1,57 @@
-load("@aspect_rules_ts//ts:proto.bzl", "ts_proto_library")
 load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
-load("@proto_npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_python//python:defs.bzl", "py_library")
 load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 
-npm_link_all_packages(name = "node_modules")
+exports_files(
+    ["extension_service.proto"],
+    visibility = ["//visibility:public"],
+)
 
 py_library(
     name = "moosync_python_root",
-    imports = ["."],
+    imports = [
+        ".",
+        "..",
+        "../../moosync+",
+        "../moosync+",
+    ],
     visibility = ["//visibility:public"],
 )
 
 # -------------------------------------------------------------
-# Genrules to copy .proto source files from external workspace @moosync
+# Protobuf definitions directly from Moosync
 # -------------------------------------------------------------
 
-genrule(
-    name = "copy_ui_proto",
-    srcs = ["@moosync//core/types/protos:ui.proto"],
-    outs = ["ui.proto"],
-    cmd = "cp $< $@",
-)
-
-genrule(
-    name = "copy_songs_proto",
-    srcs = ["@moosync//core/types/protos:songs.proto"],
-    outs = ["songs.proto"],
-    cmd = "cp $< $@",
-)
-
-genrule(
-    name = "copy_themes_proto",
-    srcs = ["@moosync//core/types/protos:themes.proto"],
-    outs = ["themes.proto"],
-    cmd = "cp $< $@",
-)
-
-genrule(
-    name = "copy_extensions_proto",
-    srcs = ["@moosync//core/types/protos:extensions.proto"],
-    outs = ["extensions.proto"],
-    cmd = "cp $< $@",
-)
-
-genrule(
-    name = "copy_preferences_proto",
-    srcs = ["@moosync//core/types/protos:preferences.proto"],
-    outs = ["preferences.proto"],
-    cmd = "cp $< $@",
-)
-
-# -------------------------------------------------------------
-# Local proto_library targets
-# -------------------------------------------------------------
-
-proto_library(
+alias(
     name = "preferences_proto",
-    srcs = ["preferences.proto"],
-    import_prefix = "core/types/protos",
-    strip_import_prefix = "/protos",
+    actual = "@moosync//core/types/protos:preferences_proto",
     visibility = ["//visibility:public"],
-    deps = [
-        "@com_google_protobuf//:any_proto",
-    ],
 )
 
-proto_library(
+alias(
     name = "ui_proto",
-    srcs = ["ui.proto"],
-    import_prefix = "core/types/protos",
-    strip_import_prefix = "/protos",
+    actual = "@moosync//core/types/protos:ui_proto",
     visibility = ["//visibility:public"],
-    deps = [
-        ":preferences_proto",
-        "@com_google_protobuf//:struct_proto",
-    ],
 )
 
-proto_library(
+alias(
     name = "songs_proto",
-    srcs = ["songs.proto"],
-    import_prefix = "core/types/protos",
-    strip_import_prefix = "/protos",
+    actual = "@moosync//core/types/protos:songs_proto",
     visibility = ["//visibility:public"],
-    deps = [
-        "@com_google_protobuf//:duration_proto",
-    ],
 )
 
-proto_library(
+alias(
     name = "themes_proto",
-    srcs = ["themes.proto"],
-    import_prefix = "core/types/protos",
-    strip_import_prefix = "/protos",
+    actual = "@moosync//core/types/protos:themes_proto",
     visibility = ["//visibility:public"],
-    deps = [":songs_proto"],
 )
 
-proto_library(
+alias(
     name = "extensions_proto",
-    srcs = ["extensions.proto"],
-    import_prefix = "core/types/protos",
-    strip_import_prefix = "/protos",
+    actual = "@moosync//core/types/protos:extensions_proto",
     visibility = ["//visibility:public"],
-    deps = [
-        ":preferences_proto",
-        ":songs_proto",
-        ":ui_proto",
-        "@com_google_protobuf//:duration_proto",
-        "@com_google_protobuf//:empty_proto",
-        "@com_google_protobuf//:struct_proto",
-    ],
 )
 
 proto_library(
@@ -123,10 +61,9 @@ proto_library(
     strip_import_prefix = "/protos",
     visibility = ["//visibility:public"],
     deps = [
-        ":extensions_proto",
-        ":preferences_proto",
-        ":songs_proto",
         "@com_google_protobuf//:descriptor_proto",
+        "@com_google_protobuf//:duration_proto",
+        "@moosync//core/types/protos:extensions_proto",
     ],
 )
 
@@ -134,15 +71,15 @@ proto_library(
 # Language-specific targets
 # -------------------------------------------------------------
 
-rust_prost_library(
+alias(
     name = "ui_rs",
-    proto = ":ui_proto",
+    actual = "@moosync//core/types/protos:ui_rs",
     visibility = ["//visibility:public"],
 )
 
-rust_prost_library(
+alias(
     name = "extensions_rs",
-    proto = ":extensions_proto",
+    actual = "@moosync//core/types/protos:extensions_rs",
     visibility = ["//visibility:public"],
 )
 
@@ -152,9 +89,9 @@ rust_prost_library(
     visibility = ["//visibility:public"],
 )
 
-rust_prost_library(
+alias(
     name = "songs_rs",
-    proto = ":songs_proto",
+    actual = "@moosync//core/types/protos:songs_rs",
     visibility = ["//visibility:public"],
 )
 
@@ -164,15 +101,15 @@ rust_prost_library(
     visibility = ["//visibility:public"],
 )
 
-rust_prost_library(
+alias(
     name = "themes_rs",
-    proto = ":themes_proto",
+    actual = "@moosync//core/types/protos:themes_rs",
     visibility = ["//visibility:public"],
 )
 
-rust_prost_library(
+alias(
     name = "preferences_rs",
-    proto = ":preferences_proto",
+    actual = "@moosync//core/types/protos:preferences_rs",
     visibility = ["//visibility:public"],
 )
 
@@ -264,61 +201,4 @@ py_proto_library(
     name = "themes_py_proto",
     visibility = ["//visibility:public"],
     deps = [":themes_proto"],
-)
-
-ts_proto_library(
-    name = "preferences_ts_proto",
-    copy_files = False,
-    node_modules = ":node_modules",
-    proto = ":preferences_proto",
-    proto_srcs = ["preferences.proto"],
-    protoc_gen_options = {"import_extension": "js"},
-    visibility = ["//visibility:public"],
-)
-
-ts_proto_library(
-    name = "extensions_ts_proto",
-    copy_files = False,
-    node_modules = ":node_modules",
-    proto = ":extensions_proto",
-    proto_srcs = ["extensions.proto"],
-    protoc_gen_options = {"import_extension": "js"},
-    visibility = ["//visibility:public"],
-)
-
-ts_proto_library(
-    name = "extension_service_ts_proto",
-    copy_files = False,
-    node_modules = ":node_modules",
-    proto = ":extension_service_proto",
-    proto_srcs = ["extension_service.proto"],
-    protoc_gen_options = {"import_extension": "js"},
-    visibility = ["//visibility:public"],
-)
-
-ts_proto_library(
-    name = "songs_ts_proto",
-    copy_files = False,
-    node_modules = ":node_modules",
-    proto = ":songs_proto",
-    proto_srcs = ["songs.proto"],
-    visibility = ["//visibility:public"],
-)
-
-ts_proto_library(
-    name = "ui_ts_proto",
-    copy_files = False,
-    node_modules = ":node_modules",
-    proto = ":ui_proto",
-    proto_srcs = ["ui.proto"],
-    visibility = ["//visibility:public"],
-)
-
-ts_proto_library(
-    name = "themes_ts_proto",
-    copy_files = False,
-    node_modules = ":node_modules",
-    proto = ":themes_proto",
-    proto_srcs = ["themes.proto"],
-    visibility = ["//visibility:public"],
 )

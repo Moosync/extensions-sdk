@@ -3,21 +3,12 @@ load("@aspect_rules_js//npm:defs.bzl", "npm_package")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@sdk_npm//:defs.bzl", "npm_link_all_packages")
 load("@sdk_npm//wasm-extension-js:typedoc/package_json.bzl", typedoc_bin = "bin")
-load("//tools/sdk_generator:defs.bzl", "generate_extension_sdk")
-
-generate_extension_sdk(
-    name = "gen_ts_sdk",
-    proto = "//protos:extension_service_proto",
-    lang = "ts",
-    out_api = "src/generated_api.ts",
-    out_dispatcher = "src/generated_events.ts",
-)
 
 typedoc_bin.typedoc(
     name = "doc",
     srcs = glob(["src/**/*.ts"]) + [
         "tsconfig.json",
-        ":copy_protos",
+        ":generate_ts_protos",
         ":node_modules/@bufbuild/protobuf",
         ":node_modules/@extism/js-pdk",
         ":node_modules/@types/node",
@@ -57,29 +48,18 @@ npm_package(
 
 npm_link_all_packages(name = "node_modules")
 
-filegroup(
-    name = "proto_types",
-    srcs = [
-        "//protos:extension_service_ts_proto",
-        "//protos:extensions_ts_proto",
-        "//protos:preferences_ts_proto",
-        "//protos:songs_ts_proto",
-        "//protos:themes_ts_proto",
-        "//protos:ui_ts_proto",
-    ],
-    output_group = "types",
-)
-
 genrule(
-    name = "copy_protos",
+    name = "generate_ts_protos",
     srcs = [
-        "//protos:extension_service_ts_proto",
-        "//protos:extensions_ts_proto",
-        "//protos:preferences_ts_proto",
-        "//protos:songs_ts_proto",
-        "//protos:ui_ts_proto",
-        "//protos:themes_ts_proto",
-        ":proto_types",
+        "@moosync//core/types/protos:preferences.proto",
+        "@moosync//core/types/protos:ui.proto",
+        "@moosync//core/types/protos:songs.proto",
+        "@moosync//core/types/protos:themes.proto",
+        "@moosync//core/types/protos:extensions.proto",
+        "//protos:extension_service.proto",
+        "@com_google_protobuf//:descriptor_proto_srcs",
+        "@com_google_protobuf//:well_known_type_protos",
+        ":node_modules/@bufbuild/protoc-gen-es/dir",
     ],
     outs = [
         "src/protos/extension_service_pb.d.ts",
@@ -95,20 +75,47 @@ genrule(
         "src/protos/themes_pb.d.ts",
         "src/protos/themes_pb.js",
     ],
-    cmd = "mkdir -p $(@D)/src/protos && cp -f $(SRCS) $(@D)/src/protos/",
+    cmd = """
+        OUT_DIR=$(@D)/src/protos
+        mkdir -p $$OUT_DIR
+
+        PREF="$(location @moosync//core/types/protos:preferences.proto)"
+        MOOSYNC_ROOT="$${PREF%/core/types/protos/preferences.proto}"
+
+        WKTS="$(locations @com_google_protobuf//:well_known_type_protos)"
+        FIRST_WKT="$${WKTS%% *}"
+        PROTO_ROOT="$${FIRST_WKT%/google/protobuf/*}"
+
+        EXT_SRV="$(location //protos:extension_service.proto)"
+        EXT_DIR="$${EXT_SRV%/extension_service.proto}"
+        EXT_ROOT="$${EXT_DIR%/protos}"
+        if [ -z "$$EXT_ROOT" ]; then
+            EXT_ROOT="."
+        fi
+
+        $(location @com_google_protobuf//:protoc) \
+            --plugin=protoc-gen-es=$(location :node_modules/@bufbuild/protoc-gen-es/dir)/bin/protoc-gen-es \
+            --es_out=$$OUT_DIR \
+            --es_opt=import_extension=js \
+            -I"$$EXT_ROOT" \
+            -I"$$MOOSYNC_ROOT" \
+            -I"$$PROTO_ROOT" \
+            $(location @moosync//core/types/protos:preferences.proto) \
+            $(location @moosync//core/types/protos:ui.proto) \
+            $(location @moosync//core/types/protos:songs.proto) \
+            $(location @moosync//core/types/protos:themes.proto) \
+            $(location @moosync//core/types/protos:extensions.proto) \
+            "$$EXT_SRV"
+
+        find "$$OUT_DIR" -mindepth 2 -type f -exec mv -f {} "$$OUT_DIR/" \\;
+        find "$$OUT_DIR" -mindepth 1 -type d -exec rm -rf {} +
+    """,
+    tools = ["@com_google_protobuf//:protoc"],
 )
 
 genrule(
-    name = "copy_protos_to_lib",
-    srcs = [
-        "//protos:extension_service_ts_proto",
-        "//protos:extensions_ts_proto",
-        "//protos:preferences_ts_proto",
-        "//protos:songs_ts_proto",
-        "//protos:ui_ts_proto",
-        "//protos:themes_ts_proto",
-        ":proto_types",
-    ],
+    name = "protos_to_lib",
+    srcs = [":generate_ts_protos"],
     outs = [
         "lib/src/protos/extension_service_pb.d.ts",
         "lib/src/protos/extension_service_pb.js",
@@ -141,7 +148,7 @@ genrule(
 
 filegroup(
     name = "proto_dts_lib",
-    srcs = [":copy_protos_to_lib"],
+    srcs = [":protos_to_lib"],
     visibility = ["//visibility:public"],
 )
 
@@ -155,7 +162,6 @@ js_library(
 ts_project(
     name = "wasm_extension_js",
     srcs = glob(["src/**/*.ts"]) + [
-        ":gen_ts_sdk",
         ":src/protos/extension_service_pb.d.ts",
         ":src/protos/extension_service_pb.js",
         ":src/protos/extensions_pb.d.ts",
@@ -229,7 +235,7 @@ genrule(
 js_test(
     name = "parse_lrc_test",
     data = [
-        ":copy_protos_to_lib",
+        ":protos_to_lib",
         ":wasm_extension_js",
         ":node_modules/@bufbuild/protobuf",
         ":node_modules/@extism/js-pdk",

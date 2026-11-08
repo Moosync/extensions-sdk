@@ -17,7 +17,7 @@ rust_doc(
 
 rust_library(
     name = "wasm_extension_rs",
-    srcs = glob(["src/**/*.rs"]) + [":gen_rust_sdk"],
+    srcs = glob(["src/**/*.rs"]),
     crate_name = "moosync_edk",
     edition = "2024",
     target_compatible_with = [

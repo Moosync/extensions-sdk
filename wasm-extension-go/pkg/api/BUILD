@@ -9,13 +9,18 @@ generate_extension_sdk(
     proto = "//protos:extension_service_proto",
 )
 
-exports_files(["api.go"])
+exports_files([
+    "api.go",
+    "generated_api.go",
+    "generated_exports.go",
+])
 
 go_library(
     name = "api",
     srcs = [
         "api.go",
-        ":gen_go_sdk",
+        "generated_api.go",
+        "generated_exports.go",
     ],
     importpath = "github.com/Moosync/extensions-sdk/wasm-extension-go/pkg/api",
     visibility = ["//visibility:public"],

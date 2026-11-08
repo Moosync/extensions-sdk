@@ -7,7 +7,8 @@ genrule(
     name = "doc",
     srcs = [
         "//wasm-extension-go/pkg/api:api.go",
-        "//wasm-extension-go/pkg/api:exports.go",
+        "//wasm-extension-go/pkg/api:generated_api.go",
+        "//wasm-extension-go/pkg/api:generated_exports.go",
     ],
     outs = ["index.html"],
     cmd = "$(location //tools/gen_godoc) -src_dir wasm-extension-go/pkg/api -out_dir $(@D) -import_path github.com/Moosync/extensions-sdk/wasm-extension-go/pkg/api",

@@ -191,20 +191,42 @@ def main():
     )
     parser.add_argument(
         "--lang",
-        required=True,
         choices=["rust", "ts", "go", "python"],
         help="Target language",
     )
-    parser.add_argument("--out-api", required=True, help="Output path for generated API file")
+    parser.add_argument("--out-api", help="Output path for generated API file")
     parser.add_argument(
         "--out-dispatcher",
-        required=True,
         help="Output path for generated dispatcher file",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Generate SDKs for all supported languages into workspace tree",
     )
 
     args = parser.parse_args()
     pool = build_descriptor_pool(args.descriptor_sets)
     metadata = extract_metadata(pool)
+
+    if args.all:
+        workspace_dir = os.environ.get("BUILD_WORKSPACE_DIRECTORY", os.getcwd())
+        targets = [
+            ("rust", "wasm-extension-rs/src/generated_api.rs", "wasm-extension-rs/src/generated_dispatcher.rs"),
+            ("go", "wasm-extension-go/pkg/api/generated_api.go", "wasm-extension-go/pkg/api/generated_exports.go"),
+            ("py", "wasm-extension-py/moosync_edk/generated_api.py", "wasm-extension-py/moosync_edk/generated_dispatcher.py"),
+            ("ts", "wasm-extension-js/src/generated_api.ts", "wasm-extension-js/src/generated_events.ts"),
+        ]
+        for lang_key, api_rel, disp_rel in targets:
+            templates_lang_dir = os.path.join(args.templates_dir, lang_key)
+            out_api = os.path.join(workspace_dir, api_rel)
+            out_disp = os.path.join(workspace_dir, disp_rel)
+            render_template(templates_lang_dir, "api.jinja", metadata, out_api)
+            render_template(templates_lang_dir, "dispatcher.jinja", metadata, out_disp)
+        return
+
+    if not args.lang or not args.out_api or not args.out_dispatcher:
+        parser.error("Either --all or (--lang, --out-api, --out-dispatcher) must be specified.")
 
     lang_dir_name = "py" if args.lang == "python" else args.lang
     templates_lang_dir = os.path.join(args.templates_dir, lang_dir_name)

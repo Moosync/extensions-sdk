@@ -30,7 +30,6 @@ pub use prost_types;
 pub use serde;
 pub use serde_json;
 pub use tracing;
-pub use extension_service_proto::moosync::types::*;
 pub use extensions_proto::moosync::types::*;
 pub use preferences_proto::moosync::types::*;
 pub use songs_proto::moosync::types::*;
