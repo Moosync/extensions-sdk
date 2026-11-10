@@ -133,7 +133,13 @@ single_version_override(
 bazel_dep(name = "moosync")
 local_path_override(
     module_name = "moosync",
-    path = "../Moosync-lyrics-cover",
+    path = "../Moosync",
+)
+
+single_version_override(
+    module_name = "rules_android_ndk",
+    patch_strip = 1,
+    patches = ["//patches:rules_android_ndk_dummy.patch"],
 )
 
 

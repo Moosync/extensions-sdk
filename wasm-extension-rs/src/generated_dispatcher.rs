@@ -163,6 +163,34 @@ pub fn handle_command(
                         let res = ext.perform_account_login(req).map_err(|e| extism_pdk::Error::msg(format!("Error: {:?}", e)))?;
                         Response::PerformAccountLogin(PerformAccountLoginResponse { status: res })
                     }
+                    Event::CanPlay(req) => {
+                        let res = ext.can_play(req).map_err(|e| extism_pdk::Error::msg(format!("Error: {:?}", e)))?;
+                        Response::CanPlay(res)
+                    }
+                    Event::PlayerPlay(req) => {
+                        let res = ext.player_play(req).map_err(|e| extism_pdk::Error::msg(format!("Error: {:?}", e)))?;
+                        Response::PlayerPlay(res)
+                    }
+                    Event::PlayerPause(req) => {
+                        let res = ext.player_pause(req).map_err(|e| extism_pdk::Error::msg(format!("Error: {:?}", e)))?;
+                        Response::PlayerPause(res)
+                    }
+                    Event::PlayerStop(req) => {
+                        let res = ext.player_stop(req).map_err(|e| extism_pdk::Error::msg(format!("Error: {:?}", e)))?;
+                        Response::PlayerStop(res)
+                    }
+                    Event::PlayerSeek(req) => {
+                        let res = ext.player_seek(req).map_err(|e| extism_pdk::Error::msg(format!("Error: {:?}", e)))?;
+                        Response::PlayerSeek(res)
+                    }
+                    Event::PlayerSetVolume(req) => {
+                        let res = ext.player_set_volume(req).map_err(|e| extism_pdk::Error::msg(format!("Error: {:?}", e)))?;
+                        Response::PlayerSetVolume(res)
+                    }
+                    Event::PlayerLoadTrack(req) => {
+                        let res = ext.player_load_track(req).map_err(|e| extism_pdk::Error::msg(format!("Error: {:?}", e)))?;
+                        Response::PlayerLoadTrack(res)
+                    }
                     _ => {
                         return Err(extism_pdk::Error::msg("Unhandled event"));
                     }

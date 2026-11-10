@@ -91,6 +91,27 @@ pub trait Extension {
     fn custom_request(&self, req: CustomRequest) -> MoosyncResult<CustomRequestResponse> {
         Err("Not implemented".into())
     }
+    fn can_play(&self, req: CanPlayRequest) -> MoosyncResult<CanPlayResponse> {
+        Err("Not implemented".into())
+    }
+    fn player_play(&self, req: PlayerPlayRequest) -> MoosyncResult<PlayerPlayResponse> {
+        Err("Not implemented".into())
+    }
+    fn player_pause(&self, req: PlayerPauseRequest) -> MoosyncResult<PlayerPauseResponse> {
+        Err("Not implemented".into())
+    }
+    fn player_stop(&self, req: PlayerStopRequest) -> MoosyncResult<PlayerStopResponse> {
+        Err("Not implemented".into())
+    }
+    fn player_seek(&self, req: PlayerSeekRequest) -> MoosyncResult<PlayerSeekResponse> {
+        Err("Not implemented".into())
+    }
+    fn player_set_volume(&self, req: PlayerSetVolumeRequest) -> MoosyncResult<PlayerSetVolumeResponse> {
+        Err("Not implemented".into())
+    }
+    fn player_load_track(&self, req: PlayerLoadTrackRequest) -> MoosyncResult<PlayerLoadTrackResponse> {
+        Err("Not implemented".into())
+    }
 }
 
 #[host_fn]
@@ -601,6 +622,120 @@ pub mod host_api {
             }
 
             if let Some(main_command_response::Response::SetCache(data)) = res.response {
+                return Ok(data);
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
+    }
+    pub fn spawn_process(req: SpawnProcessRequest) -> MoosyncResult<SpawnProcessResponse> {
+        unsafe {
+            let cmd = MainCommand {
+                command: Some(main_command::Command::SpawnProcess(req)),
+            };
+            let Prost(res) = send_main_command(Prost(cmd))
+                .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+            if let Some(main_command_response::Response::Error(e)) = res.response {
+                return Err(MoosyncError::String(e.message));
+            }
+
+            if let Some(main_command_response::Response::SpawnProcess(data)) = res.response {
+                return Ok(data);
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
+    }
+    pub fn write_process_stdin(req: WriteProcessStdinRequest) -> MoosyncResult<WriteProcessStdinResponse> {
+        unsafe {
+            let cmd = MainCommand {
+                command: Some(main_command::Command::WriteProcessStdin(req)),
+            };
+            let Prost(res) = send_main_command(Prost(cmd))
+                .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+            if let Some(main_command_response::Response::Error(e)) = res.response {
+                return Err(MoosyncError::String(e.message));
+            }
+
+            if let Some(main_command_response::Response::WriteProcessStdin(data)) = res.response {
+                return Ok(data);
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
+    }
+    pub fn read_process_stdout(req: ReadProcessStdoutRequest) -> MoosyncResult<ReadProcessStdoutResponse> {
+        unsafe {
+            let cmd = MainCommand {
+                command: Some(main_command::Command::ReadProcessStdout(req)),
+            };
+            let Prost(res) = send_main_command(Prost(cmd))
+                .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+            if let Some(main_command_response::Response::Error(e)) = res.response {
+                return Err(MoosyncError::String(e.message));
+            }
+
+            if let Some(main_command_response::Response::ReadProcessStdout(data)) = res.response {
+                return Ok(data);
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
+    }
+    pub fn kill_process(req: KillProcessRequest) -> MoosyncResult<KillProcessResponse> {
+        unsafe {
+            let cmd = MainCommand {
+                command: Some(main_command::Command::KillProcess(req)),
+            };
+            let Prost(res) = send_main_command(Prost(cmd))
+                .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+            if let Some(main_command_response::Response::Error(e)) = res.response {
+                return Err(MoosyncError::String(e.message));
+            }
+
+            if let Some(main_command_response::Response::KillProcess(data)) = res.response {
+                return Ok(data);
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
+    }
+    pub fn get_process_status(req: GetProcessStatusRequest) -> MoosyncResult<GetProcessStatusResponse> {
+        unsafe {
+            let cmd = MainCommand {
+                command: Some(main_command::Command::GetProcessStatus(req)),
+            };
+            let Prost(res) = send_main_command(Prost(cmd))
+                .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+            if let Some(main_command_response::Response::Error(e)) = res.response {
+                return Err(MoosyncError::String(e.message));
+            }
+
+            if let Some(main_command_response::Response::GetProcessStatus(data)) = res.response {
+                return Ok(data);
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
+    }
+    pub fn notify_player_event(req: NotifyPlayerEventRequest) -> MoosyncResult<NotifyPlayerEventResponse> {
+        unsafe {
+            let cmd = MainCommand {
+                command: Some(main_command::Command::NotifyPlayerEvent(req)),
+            };
+            let Prost(res) = send_main_command(Prost(cmd))
+                .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+            if let Some(main_command_response::Response::Error(e)) = res.response {
+                return Err(MoosyncError::String(e.message));
+            }
+
+            if let Some(main_command_response::Response::NotifyPlayerEvent(data)) = res.response {
                 return Ok(data);
             }
 

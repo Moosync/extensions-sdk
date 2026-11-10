@@ -423,7 +423,7 @@
     },
     "@@rules_android_ndk+//:extension.bzl%android_ndk_repository_extension": {
       "general": {
-        "bzlTransitiveDigest": "j+NMXk5/a1vnDypModKL+ToEo/4o7DJeXSFhTfbJ7rI=",
+        "bzlTransitiveDigest": "xc3QMdf+3zdO7NDOoD4F2/nsRe6EQIktGSlbWnie1/8=",
         "usagesDigest": "UB25ImAx+CepJzMjyOBrLaBOwY3isGRKG04dmjifhPc=",
         "recordedInputs": [],
         "generatedRepoSpecs": {

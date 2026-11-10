@@ -18,8 +18,9 @@ import "fast-text-encoding";
 import "./request-ponyfills";
 import "./abortcontroller-ponyfills";
 
-export * from "./api";
 export * from "./generated_api";
+export * from "./api";
+export { spawnProcess, notifyPlayerEvent } from "./api";
 export * from "./generated_events";
 export * from "./protos/extension_service_pb";
 export * from "./protos/extensions_pb";
@@ -35,6 +36,7 @@ import {
   ExtensionCommandResponse,
   PlaybackDetailsRequestedResponse,
   RequestedCoverArtResponse,
+  CanPlayResponse,
 } from "./protos/extensions_pb";
 import { Message } from "@bufbuild/protobuf";
 
@@ -51,6 +53,10 @@ async function handle(
     // This matches the key used in api.on()
 
     let result = await Promise.resolve(callListener(caseStr as any, payload));
+
+    if (caseStr === "canPlay" && typeof result === "boolean") {
+      result = new CanPlayResponse({ canPlay: result });
+    }
 
     if (caseStr === "playbackDetailsRequested" && result) {
       const resObj = result as any;

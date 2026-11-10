@@ -18,6 +18,7 @@ def rust_extension(
         icon = None,
         allowed_hosts = None,
         allowed_paths = None,
+        binaries = None,
         scopes = None,
         **kwargs):
     """
@@ -45,6 +46,7 @@ def rust_extension(
         icon = icon,
         allowed_hosts = allowed_hosts,
         allowed_paths = allowed_paths,
+        binaries = binaries,
         scopes = scopes,
         data = data,
         visibility = kwargs.get("visibility"),

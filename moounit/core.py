@@ -3,6 +3,7 @@ import json
 import os
 import tempfile
 import uuid
+import warnings
 from collections.abc import Callable
 from typing import TypeVar
 
@@ -11,16 +12,42 @@ import extism
 from core.types.protos.extensions_pb2 import (
     BatchHttpRequest,
     BatchHttpResponse,
+    CanPlayRequest,
+    CanPlayResponse,
     ExtensionAccountDetail,
     ExtensionCommand,
     ExtensionCommandResponse,
     ExtensionManifest,
     ExtensionProviderScope,
+    GetProcessStatusRequest,
+    GetProcessStatusResponse,
     HttpRequest,
     HttpResult,
+    KillProcessRequest,
+    KillProcessResponse,
     MainCommand,
     MainCommandResponse,
     ManifestPermissions,
+    NotifyPlayerEventRequest,
+    NotifyPlayerEventResponse,
+    PlayerLoadTrackRequest,
+    PlayerLoadTrackResponse,
+    PlayerPauseRequest,
+    PlayerPauseResponse,
+    PlayerPlayRequest,
+    PlayerPlayResponse,
+    PlayerSeekRequest,
+    PlayerSeekResponse,
+    PlayerSetVolumeRequest,
+    PlayerSetVolumeResponse,
+    PlayerStopRequest,
+    PlayerStopResponse,
+    ReadProcessStdoutRequest,
+    ReadProcessStdoutResponse,
+    SpawnProcessRequest,
+    SpawnProcessResponse,
+    WriteProcessStdinRequest,
+    WriteProcessStdinResponse,
 )
 
 EVENT_TO_PROVIDER_SCOPE: dict[str, int] = {
@@ -46,7 +73,24 @@ EVENT_TO_PROVIDER_SCOPE: dict[str, int] = {
     "volume_changed": ExtensionProviderScope.PLAYER_UI_EVENTS,
     "song_changed": ExtensionProviderScope.PLAYER_DATA_EVENTS,
     "song_queue_changed": ExtensionProviderScope.PLAYER_DATA_EVENTS,
+    "can_play": ExtensionProviderScope.PLAYER_PROVIDER,
+    "player_play": ExtensionProviderScope.PLAYER_PROVIDER,
+    "player_pause": ExtensionProviderScope.PLAYER_PROVIDER,
+    "player_stop": ExtensionProviderScope.PLAYER_PROVIDER,
+    "player_seek": ExtensionProviderScope.PLAYER_PROVIDER,
+    "player_set_volume": ExtensionProviderScope.PLAYER_PROVIDER,
+    "player_load_track": ExtensionProviderScope.PLAYER_PROVIDER,
 }
+
+PLAYER_COMMANDS: tuple[str, ...] = (
+    "can_play",
+    "player_play",
+    "player_pause",
+    "player_stop",
+    "player_seek",
+    "player_set_volume",
+    "player_load_track",
+)
 from extism.extism import (
     HOST_FN_REGISTRY,
     CompiledPlugin,
@@ -67,6 +111,9 @@ from moounit.sanitize import (
 
 class Moounit:
     _instances: dict[uuid.UUID, "Moounit"] = {}
+    _session_called_player_commands: set[str] = set()
+    _has_player_provider_extension: bool = False
+    _called_player_commands: set[str] = set()
     package_name: str = ""
 
     def _parse_manifest(self, path: str) -> ExtensionManifest:
@@ -291,8 +338,18 @@ class Moounit:
         self.plugin = extism.Plugin(compiled_plugin)
         Moounit._instances[id_] = self
 
+    def check_player_methods(self) -> None:
+        if 0 < len(self._called_player_commands) < len(PLAYER_COMMANDS):
+            missing = [cmd for cmd in PLAYER_COMMANDS if cmd not in self._called_player_commands]
+            warnings.warn(
+                f"[Moosync Extension Warning] Not all player methods are registered or called. Missing: {', '.join(missing)}",
+                UserWarning,
+                stacklevel=2,
+            )
+
     def close(self):
         """Free plugin resources and remove from Moounit instances registry."""
+        self.check_player_methods()
         if hasattr(self, "_plugin_id") and self._plugin_id in Moounit._instances:
             del Moounit._instances[self._plugin_id]
         if hasattr(self, "plugin") and self.plugin is not None:
@@ -317,6 +374,12 @@ class Moounit:
             raise RuntimeError("Plugin not loaded")
 
         event = command.WhichOneof("event")
+        if event in PLAYER_COMMANDS:
+            if "_called_player_commands" not in self.__dict__:
+                self._called_player_commands = set()
+            self._called_player_commands.add(event)
+            Moounit._session_called_player_commands.add(event)
+
         if event in EVENT_TO_PROVIDER_SCOPE and hasattr(self, "manifest") and self.manifest is not None:
             required_scope = EVENT_TO_PROVIDER_SCOPE[event]
             scopes = set(self.manifest.scopes)
@@ -362,6 +425,9 @@ class Moounit:
 
         manifest = self._parse_manifest(path)
         self.manifest = manifest
+        self._called_player_commands: set[str] = set()
+        if ExtensionProviderScope.PLAYER_PROVIDER in self.manifest.scopes:
+            Moounit._has_player_provider_extension = True
         self.package_name = package_name or manifest.name or manifest.display_name or ""
         self.socket_manager = RealSocketManager(dict(manifest.permissions.paths))
         self._load_extension(manifest)
@@ -429,6 +495,129 @@ class Moounit:
             test_name=test_name,
         )
 
+    def can_play(self, req: CanPlayRequest) -> CanPlayResponse:
+        cmd = ExtensionCommand(package_name=self.package_name, can_play=req)
+        res = self.send_command(cmd)
+        return res.can_play
+
+    def player_play(self, req: PlayerPlayRequest | None = None) -> PlayerPlayResponse:
+        req = req or PlayerPlayRequest()
+        cmd = ExtensionCommand(package_name=self.package_name, player_play=req)
+        res = self.send_command(cmd)
+        return res.player_play
+
+    def player_pause(self, req: PlayerPauseRequest | None = None) -> PlayerPauseResponse:
+        req = req or PlayerPauseRequest()
+        cmd = ExtensionCommand(package_name=self.package_name, player_pause=req)
+        res = self.send_command(cmd)
+        return res.player_pause
+
+    def player_stop(self, req: PlayerStopRequest | None = None) -> PlayerStopResponse:
+        req = req or PlayerStopRequest()
+        cmd = ExtensionCommand(package_name=self.package_name, player_stop=req)
+        res = self.send_command(cmd)
+        return res.player_stop
+
+    def player_seek(self, req: PlayerSeekRequest) -> PlayerSeekResponse:
+        cmd = ExtensionCommand(package_name=self.package_name, player_seek=req)
+        res = self.send_command(cmd)
+        return res.player_seek
+
+    def player_set_volume(self, req: PlayerSetVolumeRequest) -> PlayerSetVolumeResponse:
+        cmd = ExtensionCommand(package_name=self.package_name, player_set_volume=req)
+        res = self.send_command(cmd)
+        return res.player_set_volume
+
+    def player_load_track(self, req: PlayerLoadTrackRequest) -> PlayerLoadTrackResponse:
+        cmd = ExtensionCommand(package_name=self.package_name, player_load_track=req)
+        res = self.send_command(cmd)
+        return res.player_load_track
+
+    def expect_spawn_process(
+        self,
+        req: SpawnProcessRequest,
+        response: SpawnProcessResponse | Callable[[], SpawnProcessResponse],
+        times: int = 1,
+    ) -> None:
+        cmd = MainCommand(spawn_process=req)
+        res = (
+            (lambda r=response: MainCommandResponse(spawn_process=r()))
+            if callable(response)
+            else MainCommandResponse(spawn_process=response)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_write_process_stdin(
+        self,
+        req: WriteProcessStdinRequest,
+        response: WriteProcessStdinResponse | Callable[[], WriteProcessStdinResponse],
+        times: int = 1,
+    ) -> None:
+        cmd = MainCommand(write_process_stdin=req)
+        res = (
+            (lambda r=response: MainCommandResponse(write_process_stdin=r()))
+            if callable(response)
+            else MainCommandResponse(write_process_stdin=response)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_read_process_stdout(
+        self,
+        req: ReadProcessStdoutRequest,
+        response: ReadProcessStdoutResponse | Callable[[], ReadProcessStdoutResponse],
+        times: int = 1,
+    ) -> None:
+        cmd = MainCommand(read_process_stdout=req)
+        res = (
+            (lambda r=response: MainCommandResponse(read_process_stdout=r()))
+            if callable(response)
+            else MainCommandResponse(read_process_stdout=response)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_kill_process(
+        self,
+        req: KillProcessRequest,
+        response: KillProcessResponse | Callable[[], KillProcessResponse],
+        times: int = 1,
+    ) -> None:
+        cmd = MainCommand(kill_process=req)
+        res = (
+            (lambda r=response: MainCommandResponse(kill_process=r()))
+            if callable(response)
+            else MainCommandResponse(kill_process=response)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_get_process_status(
+        self,
+        req: GetProcessStatusRequest,
+        response: GetProcessStatusResponse | Callable[[], GetProcessStatusResponse],
+        times: int = 1,
+    ) -> None:
+        cmd = MainCommand(get_process_status=req)
+        res = (
+            (lambda r=response: MainCommandResponse(get_process_status=r()))
+            if callable(response)
+            else MainCommandResponse(get_process_status=response)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_notify_player_event(
+        self,
+        req: NotifyPlayerEventRequest,
+        response: NotifyPlayerEventResponse | Callable[[], NotifyPlayerEventResponse] | None = None,
+        times: int = 1,
+    ) -> None:
+        cmd = MainCommand(notify_player_event=req)
+        res_val = response or NotifyPlayerEventResponse()
+        res = (
+            (lambda r=res_val: MainCommandResponse(notify_player_event=r()))
+            if callable(res_val)
+            else MainCommandResponse(notify_player_event=res_val)
+        )
+        self.expect_command(cmd, res, times=times)
+
     def clear_local_expectations(self) -> None:
         self.manager.clear_local_expectations()
 
@@ -442,6 +631,12 @@ class Moounit:
         self.manager.verify_and_clear_session_expectations()
 
     def __getattr__(self, name: str) -> object:
-        if name in ("package_name", "manifest", "plugin", "manager"):
+        if name in (
+            "package_name",
+            "manifest",
+            "plugin",
+            "manager",
+            "_called_player_commands",
+        ):
             raise AttributeError(name)
         return getattr(self.manager, name)

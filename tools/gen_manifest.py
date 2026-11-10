@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--description", default="", help="Description")
     parser.add_argument("--allowed-host", action="append", default=[], help="Allowed host")
     parser.add_argument("--allowed-path", action="append", default=[], help="Allowed path pair host:guest")
+    parser.add_argument("--binary", action="append", default=[], help="Allowed binary SHA-256 hash")
     parser.add_argument("--scope", action="append", default=[], help="Provider scope")
 
     args = parser.parse_args()
@@ -57,7 +58,7 @@ def main():
         else:
             raise ValueError(f"Unknown provider scope: '{s}'. Valid: {list(scope_map.keys())}")
 
-    if args.allowed_host or args.allowed_path:
+    if args.allowed_host or args.allowed_path or args.binary:
         perms = extensions_pb2.ManifestPermissions()
         for host in args.allowed_host:
             perms.hosts.append(host)
@@ -65,6 +66,8 @@ def main():
             if ":" in path_pair:
                 k, v = path_pair.split(":", 1)
                 perms.paths[k] = v
+        for binary in args.binary:
+            perms.binaries.append(binary.strip().lower())
         m.permissions.CopyFrom(perms)
 
     with open(args.out, "wb") as f:

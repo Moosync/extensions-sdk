@@ -44,7 +44,7 @@ pub fn parse_lrc(lrc_text: &str) -> Result<Lyrics, LrcParseError> {
                 if let Some(ms) = parse_lrc_timestamp(tag) {
                     timestamps.push(ms);
                     remaining = &remaining[close_idx + 1..];
-                } else if tag.contains(':') && !tag.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+                } else if tag.contains(':') && !tag.chars().next().is_some_and(|c| c.is_ascii_digit()) {
                     remaining = &remaining[close_idx + 1..];
                 } else {
                     break;

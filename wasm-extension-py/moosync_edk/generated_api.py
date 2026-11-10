@@ -60,6 +60,20 @@ class Extension(ABC):
         pass
     def custom_request(self, req: extensions_pb2.CustomRequest) -> extensions_pb2.CustomRequestResponse:
         raise NotImplementedError("custom_request not implemented")
+    def can_play(self, req: extensions_pb2.CanPlayRequest) -> extensions_pb2.CanPlayResponse:
+        raise NotImplementedError("can_play not implemented")
+    def player_play(self, req: extensions_pb2.PlayerPlayRequest) -> extensions_pb2.PlayerPlayResponse:
+        raise NotImplementedError("player_play not implemented")
+    def player_pause(self, req: extensions_pb2.PlayerPauseRequest) -> extensions_pb2.PlayerPauseResponse:
+        raise NotImplementedError("player_pause not implemented")
+    def player_stop(self, req: extensions_pb2.PlayerStopRequest) -> extensions_pb2.PlayerStopResponse:
+        raise NotImplementedError("player_stop not implemented")
+    def player_seek(self, req: extensions_pb2.PlayerSeekRequest) -> extensions_pb2.PlayerSeekResponse:
+        raise NotImplementedError("player_seek not implemented")
+    def player_set_volume(self, req: extensions_pb2.PlayerSetVolumeRequest) -> extensions_pb2.PlayerSetVolumeResponse:
+        raise NotImplementedError("player_set_volume not implemented")
+    def player_load_track(self, req: extensions_pb2.PlayerLoadTrackRequest) -> extensions_pb2.PlayerLoadTrackResponse:
+        raise NotImplementedError("player_load_track not implemented")
 
 
 @extism.import_fn("extism:host/user", "system_time")
@@ -352,4 +366,64 @@ def set_cache(req: extensions_pb2.SetCacheRequest) -> extensions_pb2.SetCacheRes
         raise RuntimeError(f"Host error: {res.error.message}")
     if which == "set_cache":
         return getattr(res, "set_cache")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def spawn_process(req: extensions_pb2.SpawnProcessRequest) -> extensions_pb2.SpawnProcessResponse:
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "spawn_process").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "spawn_process":
+        return getattr(res, "spawn_process")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def write_process_stdin(req: extensions_pb2.WriteProcessStdinRequest) -> extensions_pb2.WriteProcessStdinResponse:
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "write_process_stdin").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "write_process_stdin":
+        return getattr(res, "write_process_stdin")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def read_process_stdout(req: extensions_pb2.ReadProcessStdoutRequest) -> extensions_pb2.ReadProcessStdoutResponse:
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "read_process_stdout").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "read_process_stdout":
+        return getattr(res, "read_process_stdout")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def kill_process(req: extensions_pb2.KillProcessRequest) -> extensions_pb2.KillProcessResponse:
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "kill_process").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "kill_process":
+        return getattr(res, "kill_process")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def get_process_status(req: extensions_pb2.GetProcessStatusRequest) -> extensions_pb2.GetProcessStatusResponse:
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "get_process_status").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "get_process_status":
+        return getattr(res, "get_process_status")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def notify_player_event(req: extensions_pb2.NotifyPlayerEventRequest) -> extensions_pb2.NotifyPlayerEventResponse:
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "notify_player_event").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "notify_player_event":
+        return getattr(res, "notify_player_event")
     raise RuntimeError(f"Unexpected response variant: {which}")

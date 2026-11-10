@@ -3,8 +3,8 @@
 use moosync_edk::{
     RequestedSearchResultRequest, ScrobbleRequest, SearchResult,
     api::{
-        self, Accounts, ContextMenu, DatabaseEvents, Extension, PlayerEvents, PreferenceEvents,
-        Provider, extension_api::get_current_song,
+        self, Accounts, ContextMenu, DatabaseEvents, Extension, PlayerEvents, PlayerProvider,
+        PreferenceEvents, Provider, extension_api::get_current_song,
     },
     handler::register_extension,
     info,
@@ -19,6 +19,7 @@ impl DatabaseEvents for SampleExtension {}
 impl PlayerEvents for SampleExtension {}
 impl PreferenceEvents for SampleExtension {}
 impl ContextMenu for SampleExtension {}
+impl PlayerProvider for SampleExtension {}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn init() {

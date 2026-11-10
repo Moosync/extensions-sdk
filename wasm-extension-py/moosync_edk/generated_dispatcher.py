@@ -292,6 +292,88 @@ def handle_extension_command() -> int:
                 else:
                     getattr(response, "custom_request").CopyFrom(res)
         return 0
+    if which == "can_play":
+        handler = getattr(inst, "can_play", None)
+        if handler is not None:
+            res = handler(getattr(cmd, "can_play"))
+            if res is not None:
+                if hasattr(res, "to_proto"):
+                    getattr(response, "can_play").CopyFrom(res.to_proto())
+                else:
+                    getattr(response, "can_play").CopyFrom(res)
+        return 0
+    if which == "player_play":
+        handler = getattr(inst, "player_play", None)
+        if handler is None:
+            handler = getattr(inst, "on_player_play", None)
+        if handler is not None:
+            res = handler(getattr(cmd, "player_play"))
+            if res is not None:
+                if hasattr(res, "to_proto"):
+                    getattr(response, "player_play").CopyFrom(res.to_proto())
+                else:
+                    getattr(response, "player_play").CopyFrom(res)
+        return 0
+    if which == "player_pause":
+        handler = getattr(inst, "player_pause", None)
+        if handler is None:
+            handler = getattr(inst, "on_player_pause", None)
+        if handler is not None:
+            res = handler(getattr(cmd, "player_pause"))
+            if res is not None:
+                if hasattr(res, "to_proto"):
+                    getattr(response, "player_pause").CopyFrom(res.to_proto())
+                else:
+                    getattr(response, "player_pause").CopyFrom(res)
+        return 0
+    if which == "player_stop":
+        handler = getattr(inst, "player_stop", None)
+        if handler is None:
+            handler = getattr(inst, "on_player_stop", None)
+        if handler is not None:
+            res = handler(getattr(cmd, "player_stop"))
+            if res is not None:
+                if hasattr(res, "to_proto"):
+                    getattr(response, "player_stop").CopyFrom(res.to_proto())
+                else:
+                    getattr(response, "player_stop").CopyFrom(res)
+        return 0
+    if which == "player_seek":
+        handler = getattr(inst, "player_seek", None)
+        if handler is None:
+            handler = getattr(inst, "on_player_seek", None)
+        if handler is not None:
+            res = handler(getattr(cmd, "player_seek"))
+            if res is not None:
+                if hasattr(res, "to_proto"):
+                    getattr(response, "player_seek").CopyFrom(res.to_proto())
+                else:
+                    getattr(response, "player_seek").CopyFrom(res)
+        return 0
+    if which == "player_set_volume":
+        handler = getattr(inst, "player_set_volume", None)
+        if handler is None:
+            handler = getattr(inst, "on_player_set_volume", None)
+        if handler is not None:
+            res = handler(getattr(cmd, "player_set_volume"))
+            if res is not None:
+                if hasattr(res, "to_proto"):
+                    getattr(response, "player_set_volume").CopyFrom(res.to_proto())
+                else:
+                    getattr(response, "player_set_volume").CopyFrom(res)
+        return 0
+    if which == "player_load_track":
+        handler = getattr(inst, "player_load_track", None)
+        if handler is None:
+            handler = getattr(inst, "on_player_load_track", None)
+        if handler is not None:
+            res = handler(getattr(cmd, "player_load_track"))
+            if res is not None:
+                if hasattr(res, "to_proto"):
+                    getattr(response, "player_load_track").CopyFrom(res.to_proto())
+                else:
+                    getattr(response, "player_load_track").CopyFrom(res)
+        return 0
 
     extism.output_bytes(response.SerializeToString())
     return 0

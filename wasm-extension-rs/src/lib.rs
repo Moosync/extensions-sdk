@@ -38,14 +38,15 @@ pub use ui_proto::moosync::types::*;
 
 pub mod generated_api;
 pub mod generated_dispatcher;
-pub mod api;
 pub mod handler;
 pub mod http;
+pub mod process;
 pub mod response_utils;
 
-pub use response_utils::{parse_lrc, LrcParseError};
-pub use api::MoosyncResult;
+pub use generated_api::MoosyncResult;
 pub use handler::MoosyncError;
+pub use process::{spawn_process, notify_player_event, ChildProcess};
+pub use response_utils::{parse_lrc, LrcParseError};
 
 unsafe extern "C" {
     fn init();

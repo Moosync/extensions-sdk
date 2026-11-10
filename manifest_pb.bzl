@@ -45,6 +45,10 @@ def _moosync_extension_package_impl(ctx):
         for k, v in ctx.attr.allowed_paths_val.items():
             args.add("--allowed-path", "{}:{}".format(expand(k), expand(v)))
 
+    if ctx.attr.binaries_val:
+        for b in ctx.attr.binaries_val:
+            args.add("--binary", expand(b))
+
     if ctx.attr.scopes_val:
         for scope in ctx.attr.scopes_val:
             args.add("--scope", expand(scope))
@@ -76,6 +80,8 @@ moosync_extension_package = rule(
         "allowed_hosts_file": attr.label(allow_single_file = True),
         "allowed_paths_val": attr.string_dict(),
         "allowed_paths_file": attr.label(allow_single_file = True),
+        "binaries_val": attr.string_list(default = []),
+        "binaries_file": attr.label(allow_single_file = True),
         "scopes_val": attr.string_list(default = []),
         "scopes_file": attr.label(allow_single_file = True),
         "_gen_manifest": attr.label(
@@ -94,6 +100,7 @@ def generate_manifest_pb(
         icon = None,
         allowed_hosts = None,
         allowed_paths = None,
+        binaries = None,
         scopes = None,
         data = [],
         visibility = None,
@@ -151,6 +158,12 @@ def generate_manifest_pb(
             pkg_args["allowed_paths_val"] = allowed_paths
         else:
             pkg_args["allowed_paths_file"] = allowed_paths
+
+    if binaries:
+        if type(binaries) == "list":
+            pkg_args["binaries_val"] = binaries
+        else:
+            pkg_args["binaries_file"] = binaries
 
     if scopes:
         if type(scopes) == "list":

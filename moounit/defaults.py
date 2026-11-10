@@ -30,6 +30,12 @@ from core.types.protos.extensions_pb2 import (
     GetAppVersionResponse,
     GetCacheResponse,
     SetCacheResponse,
+    SpawnProcessResponse,
+    WriteProcessStdinResponse,
+    ReadProcessStdoutResponse,
+    KillProcessResponse,
+    GetProcessStatusResponse,
+    NotifyPlayerEventResponse,
     PreferenceData,
 )
 
@@ -104,6 +110,24 @@ def default_main_command_response(cmd: MainCommand) -> MainCommandResponse:
         "get_cache": lambda: MainCommandResponse(get_cache=GetCacheResponse()),
         "set_cache": lambda: MainCommandResponse(
             set_cache=SetCacheResponse(success=True)
+        ),
+        "spawn_process": lambda: MainCommandResponse(
+            spawn_process=SpawnProcessResponse(process_id=1, pid=1234)
+        ),
+        "write_process_stdin": lambda: MainCommandResponse(
+            write_process_stdin=WriteProcessStdinResponse(bytes_written=0)
+        ),
+        "read_process_stdout": lambda: MainCommandResponse(
+            read_process_stdout=ReadProcessStdoutResponse(data=b"")
+        ),
+        "kill_process": lambda: MainCommandResponse(
+            kill_process=KillProcessResponse(success=True)
+        ),
+        "get_process_status": lambda: MainCommandResponse(
+            get_process_status=GetProcessStatusResponse(is_running=True, exit_code=0)
+        ),
+        "notify_player_event": lambda: MainCommandResponse(
+            notify_player_event=NotifyPlayerEventResponse()
         ),
     }
 

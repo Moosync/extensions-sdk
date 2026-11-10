@@ -226,6 +226,7 @@ def py_extension(
         icon = None,
         allowed_hosts = None,
         allowed_paths = None,
+        binaries = None,
         scopes = None,
         main = None,
         **kwargs):
@@ -256,6 +257,7 @@ def py_extension(
         icon = icon,
         allowed_hosts = allowed_hosts,
         allowed_paths = allowed_paths,
+        binaries = binaries,
         scopes = scopes,
         data = data,
         visibility = kwargs.get("visibility"),

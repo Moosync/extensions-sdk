@@ -55,6 +55,18 @@ import {
   GetCacheResponse,
   SetCacheRequest,
   SetCacheResponse,
+  SpawnProcessRequest,
+  SpawnProcessResponse,
+  WriteProcessStdinRequest,
+  WriteProcessStdinResponse,
+  ReadProcessStdoutRequest,
+  ReadProcessStdoutResponse,
+  KillProcessRequest,
+  KillProcessResponse,
+  GetProcessStatusRequest,
+  GetProcessStatusResponse,
+  NotifyPlayerEventRequest,
+  NotifyPlayerEventResponse,
 } from "./protos/extensions_pb.js";
 import { ExtensionEventMap } from "./generated_events.js";
 
@@ -454,6 +466,90 @@ export async function setCache(req: SetCacheRequest): Promise<SetCacheResponse |
     })
   );
   if (response.response.case === "setCache") {
+    return response.response.value;
+  }
+  return undefined;
+}
+export async function spawnProcess(req: SpawnProcessRequest): Promise<SpawnProcessResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "spawnProcess",
+        value: req,
+      },
+    })
+  );
+  if (response.response.case === "spawnProcess") {
+    return response.response.value;
+  }
+  return undefined;
+}
+export async function writeProcessStdin(req: WriteProcessStdinRequest): Promise<WriteProcessStdinResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "writeProcessStdin",
+        value: req,
+      },
+    })
+  );
+  if (response.response.case === "writeProcessStdin") {
+    return response.response.value;
+  }
+  return undefined;
+}
+export async function readProcessStdout(req: ReadProcessStdoutRequest): Promise<ReadProcessStdoutResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "readProcessStdout",
+        value: req,
+      },
+    })
+  );
+  if (response.response.case === "readProcessStdout") {
+    return response.response.value;
+  }
+  return undefined;
+}
+export async function killProcess(req: KillProcessRequest): Promise<KillProcessResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "killProcess",
+        value: req,
+      },
+    })
+  );
+  if (response.response.case === "killProcess") {
+    return response.response.value;
+  }
+  return undefined;
+}
+export async function getProcessStatus(req: GetProcessStatusRequest): Promise<GetProcessStatusResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "getProcessStatus",
+        value: req,
+      },
+    })
+  );
+  if (response.response.case === "getProcessStatus") {
+    return response.response.value;
+  }
+  return undefined;
+}
+export async function notifyPlayerEvent(req: NotifyPlayerEventRequest): Promise<NotifyPlayerEventResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "notifyPlayerEvent",
+        value: req,
+      },
+    })
+  );
+  if (response.response.case === "notifyPlayerEvent") {
     return response.response.value;
   }
   return undefined;

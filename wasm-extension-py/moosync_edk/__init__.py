@@ -484,3 +484,54 @@ def parse_lrc(lrc_text: str) -> songs_pb2.Lyrics:
         lines.sort(key=lambda l: l.time_ms)
 
     return songs_pb2.Lyrics(lines=lines, is_synced=has_timestamps)
+
+
+class ChildProcess:
+    def __init__(self, process_id: int, pid: int):
+        self.id = process_id
+        self.pid = pid
+
+    def write_stdin(self, data: bytes | str) -> int:
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+        req = extensions_pb2.WriteProcessStdinRequest(process_id=self.id, data=data)
+        resp = write_process_stdin(req)
+        return resp.bytes_written if resp else 0
+
+    def read_stdout(self, max_bytes: int | None = None) -> bytes:
+        req = extensions_pb2.ReadProcessStdoutRequest(process_id=self.id, max_bytes=max_bytes)
+        resp = read_process_stdout(req)
+        return resp.data if resp else b""
+
+    def read_stdout_string(self, max_bytes: int | None = None) -> str:
+        data = self.read_stdout(max_bytes)
+        return data.decode("utf-8", errors="replace")
+
+    def kill(self) -> bool:
+        req = extensions_pb2.KillProcessRequest(process_id=self.id)
+        resp = kill_process(req)
+        return resp.success if resp else False
+
+    def get_status(self) -> tuple[bool, int | None]:
+        req = extensions_pb2.GetProcessStatusRequest(process_id=self.id)
+        resp = get_process_status(req)
+        if resp:
+            return resp.is_running, resp.exit_code if resp.HasField("exit_code") else None
+        return False, None
+
+
+def start_process(path: str, args: list[str] | None = None, env: dict[str, str] | None = None) -> ChildProcess:
+    req = extensions_pb2.SpawnProcessRequest(
+        path=path,
+        args=args or [],
+        env=env or {},
+    )
+    resp = spawn_process(req)
+    if not resp:
+        raise RuntimeError("Failed to spawn process: no response from host")
+    return ChildProcess(resp.process_id, resp.pid)
+
+
+def notify_playback_ended_api() -> None:
+    notify_playback_ended(extensions_pb2.NotifyPlaybackEndedRequest())
+

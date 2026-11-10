@@ -39,6 +39,21 @@ from core.types.protos.extensions_pb2 import (
     SetCacheRequest,
     SetPreferenceRequest,
     SetSecureRequest,
+    SpawnProcessRequest,
+    SpawnProcessResponse,
+    WriteProcessStdinRequest,
+    WriteProcessStdinResponse,
+    ReadProcessStdoutRequest,
+    ReadProcessStdoutResponse,
+    KillProcessRequest,
+    KillProcessResponse,
+    GetProcessStatusRequest,
+    GetProcessStatusResponse,
+    NotifyPlayerEventRequest,
+    NotifyPlayerEventResponse,
+    CanPlayRequest,
+    CanPlayResponse,
+    ExtensionProviderScope,
     UpdateSongRequest,
 )
 from core.types.protos.songs_pb2 import (
@@ -1168,7 +1183,6 @@ def test_expectation_manager_sanitization():
 
 def test_send_command_provider_scopes_and_login_assertions():
     from core.types.protos.extensions_pb2 import (
-        ExtensionProviderScope,
         PerformAccountLoginRequest,
         RequestedPlaylistsRequest,
     )
@@ -1228,3 +1242,75 @@ def test_send_command_provider_scopes_and_login_assertions():
         )
     )
     assert resp is not None
+
+
+def test_process_and_player_defaults():
+    spawn_cmd = MainCommand(spawn_process=SpawnProcessRequest(path="test.sh"))
+    res = default_main_command_response(spawn_cmd)
+    assert res.spawn_process.process_id == 1
+    assert res.spawn_process.pid == 1234
+
+    write_cmd = MainCommand(
+        write_process_stdin=WriteProcessStdinRequest(process_id=1, data=b"hi")
+    )
+    res = default_main_command_response(write_cmd)
+    assert res.write_process_stdin.bytes_written == 0
+
+    read_cmd = MainCommand(read_process_stdout=ReadProcessStdoutRequest(process_id=1))
+    res = default_main_command_response(read_cmd)
+    assert res.read_process_stdout.data == b""
+
+    kill_cmd = MainCommand(kill_process=KillProcessRequest(process_id=1))
+    res = default_main_command_response(kill_cmd)
+    assert res.kill_process.success is True
+
+    status_cmd = MainCommand(get_process_status=GetProcessStatusRequest(process_id=1))
+    res = default_main_command_response(status_cmd)
+    assert res.get_process_status.is_running is True
+
+    notify_cmd = MainCommand(notify_player_event=NotifyPlayerEventRequest())
+    res = default_main_command_response(notify_cmd)
+    assert res.WhichOneof("response") == "notify_player_event"
+
+
+def test_player_provider_scope_enforcement():
+    class MockPlugin:
+        def call(self, _fn, _data):
+            return ExtensionCommandResponse().SerializeToString()
+
+    moo = Moounit.__new__(Moounit)
+    moo.package_name = "test.player_scope"
+    moo.plugin = MockPlugin()
+    moo._host_exception = None
+    moo.manifest = ExtensionManifest(scopes=[])
+    moo.manager = ExpectationManager(moounit=moo)
+
+    with pytest.raises(
+        AssertionError, match="extension does not have required scope 'PLAYER_PROVIDER'"
+    ):
+        moo.can_play(CanPlayRequest(src="spotify:track:123"))
+
+    moo.manifest.scopes.append(ExtensionProviderScope.PLAYER_PROVIDER)
+    res = moo.can_play(CanPlayRequest(src="spotify:track:123"))
+    assert res is not None
+
+
+def test_player_methods_warning_when_methods_missing():
+    class MockPlugin:
+        def call(self, _fn, _data):
+            return ExtensionCommandResponse().SerializeToString()
+
+    moo = Moounit.__new__(Moounit)
+    moo.package_name = "test.player_warning"
+    moo.plugin = MockPlugin()
+    moo._host_exception = None
+    moo.manifest = ExtensionManifest(scopes=[ExtensionProviderScope.PLAYER_PROVIDER])
+    moo.manager = ExpectationManager(moounit=moo)
+
+    moo.can_play(CanPlayRequest(src="spotify:track:123"))
+
+    with pytest.warns(
+        UserWarning,
+        match=r"\[Moosync Extension Warning\] Not all player methods are registered or called\. Missing: player_play",
+    ):
+        moo.close()

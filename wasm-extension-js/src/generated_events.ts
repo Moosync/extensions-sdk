@@ -57,6 +57,20 @@ import {
   PlaylistRemovedResponse,
   CustomRequest,
   CustomRequestResponse,
+  CanPlayRequest,
+  CanPlayResponse,
+  PlayerPlayRequest,
+  PlayerPlayResponse,
+  PlayerPauseRequest,
+  PlayerPauseResponse,
+  PlayerStopRequest,
+  PlayerStopResponse,
+  PlayerSeekRequest,
+  PlayerSeekResponse,
+  PlayerSetVolumeRequest,
+  PlayerSetVolumeResponse,
+  PlayerLoadTrackRequest,
+  PlayerLoadTrackResponse,
 } from "./protos/extensions_pb.js";
 import { callListener } from "./api.js";
 
@@ -168,6 +182,34 @@ export interface ExtensionEventMap {
   "customRequest": {
     req: CustomRequest;
     resp: CustomRequestResponse;
+  };
+  "canPlay": {
+    req: CanPlayRequest;
+    resp: CanPlayResponse;
+  };
+  "playerPlay": {
+    req: PlayerPlayRequest;
+    resp: PlayerPlayResponse;
+  };
+  "playerPause": {
+    req: PlayerPauseRequest;
+    resp: PlayerPauseResponse;
+  };
+  "playerStop": {
+    req: PlayerStopRequest;
+    resp: PlayerStopResponse;
+  };
+  "playerSeek": {
+    req: PlayerSeekRequest;
+    resp: PlayerSeekResponse;
+  };
+  "playerSetVolume": {
+    req: PlayerSetVolumeRequest;
+    resp: PlayerSetVolumeResponse;
+  };
+  "playerLoadTrack": {
+    req: PlayerLoadTrackRequest;
+    resp: PlayerLoadTrackResponse;
   };
 }
 

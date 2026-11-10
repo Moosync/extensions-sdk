@@ -277,3 +277,70 @@ func HttpGet(url string, headers map[string]string) (HttpResponse, error) {
 	})
 }
 
+type ChildProcess struct {
+	ID  uint64
+	PID uint32
+}
+
+func (c *ChildProcess) WriteStdin(data []byte) (uint64, error) {
+	resp, err := WriteProcessStdin(&extensions.WriteProcessStdinRequest{
+		ProcessId: c.ID,
+		Data:      data,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return resp.BytesWritten, nil
+}
+
+func (c *ChildProcess) ReadStdout(maxBytes uint64) ([]byte, error) {
+	var max *uint64
+	if maxBytes > 0 {
+		max = &maxBytes
+	}
+	resp, err := ReadProcessStdout(&extensions.ReadProcessStdoutRequest{
+		ProcessId: c.ID,
+		MaxBytes:  max,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
+}
+
+func (c *ChildProcess) Kill() (bool, error) {
+	resp, err := KillProcess(&extensions.KillProcessRequest{
+		ProcessId: c.ID,
+	})
+	if err != nil {
+		return false, err
+	}
+	return resp.Success, nil
+}
+
+func (c *ChildProcess) GetStatus() (bool, *int32, error) {
+	resp, err := GetProcessStatus(&extensions.GetProcessStatusRequest{
+		ProcessId: c.ID,
+	})
+	if err != nil {
+		return false, nil, err
+	}
+	return resp.IsRunning, resp.ExitCode, nil
+}
+
+func StartProcess(path string, args []string, env map[string]string) (*ChildProcess, error) {
+	resp, err := SpawnProcess(&extensions.SpawnProcessRequest{
+		Path: path,
+		Args: args,
+		Env:  env,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &ChildProcess{
+		ID:  resp.ProcessId,
+		PID: resp.Pid,
+	}, nil
+}
+
+

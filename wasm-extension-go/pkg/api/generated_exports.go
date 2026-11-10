@@ -273,6 +273,69 @@ func handle_extension_command() int32 {
 		resp.Response = &extensions.ExtensionCommandResponse_CustomRequest{
 			CustomRequest: res,
 		}
+	case *extensions.ExtensionCommand_CanPlay:
+		res, err := extension.CanPlay(e.CanPlay)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_CanPlay{
+			CanPlay: res,
+		}
+	case *extensions.ExtensionCommand_PlayerPlay:
+		res, err := extension.PlayerPlay(e.PlayerPlay)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_PlayerPlay{
+			PlayerPlay: res,
+		}
+	case *extensions.ExtensionCommand_PlayerPause:
+		res, err := extension.PlayerPause(e.PlayerPause)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_PlayerPause{
+			PlayerPause: res,
+		}
+	case *extensions.ExtensionCommand_PlayerStop:
+		res, err := extension.PlayerStop(e.PlayerStop)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_PlayerStop{
+			PlayerStop: res,
+		}
+	case *extensions.ExtensionCommand_PlayerSeek:
+		res, err := extension.PlayerSeek(e.PlayerSeek)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_PlayerSeek{
+			PlayerSeek: res,
+		}
+	case *extensions.ExtensionCommand_PlayerSetVolume:
+		res, err := extension.PlayerSetVolume(e.PlayerSetVolume)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_PlayerSetVolume{
+			PlayerSetVolume: res,
+		}
+	case *extensions.ExtensionCommand_PlayerLoadTrack:
+		res, err := extension.PlayerLoadTrack(e.PlayerLoadTrack)
+		if err != nil {
+			pdk.SetError(err)
+			return 1
+		}
+		resp.Response = &extensions.ExtensionCommandResponse_PlayerLoadTrack{
+			PlayerLoadTrack: res,
+		}
 	default:
 		pdk.SetError(errors.New("Unhandled event"))
 		return 1

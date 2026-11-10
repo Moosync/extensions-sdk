@@ -41,6 +41,13 @@ type Extension interface {
 	PlaylistAdded(req *extensions.PlaylistAddedRequest) error
 	PlaylistRemoved(req *extensions.PlaylistRemovedRequest) error
 	CustomRequest(req *extensions.CustomRequest) (*extensions.CustomRequestResponse, error)
+	CanPlay(req *extensions.CanPlayRequest) (*extensions.CanPlayResponse, error)
+	PlayerPlay(req *extensions.PlayerPlayRequest) (*extensions.PlayerPlayResponse, error)
+	PlayerPause(req *extensions.PlayerPauseRequest) (*extensions.PlayerPauseResponse, error)
+	PlayerStop(req *extensions.PlayerStopRequest) (*extensions.PlayerStopResponse, error)
+	PlayerSeek(req *extensions.PlayerSeekRequest) (*extensions.PlayerSeekResponse, error)
+	PlayerSetVolume(req *extensions.PlayerSetVolumeRequest) (*extensions.PlayerSetVolumeResponse, error)
+	PlayerLoadTrack(req *extensions.PlayerLoadTrackRequest) (*extensions.PlayerLoadTrackResponse, error)
 }
 
 type DefaultExtension struct{}
@@ -124,6 +131,27 @@ func (DefaultExtension) PlaylistRemoved(req *extensions.PlaylistRemovedRequest) 
 	return nil
 }
 func (DefaultExtension) CustomRequest(req *extensions.CustomRequest) (*extensions.CustomRequestResponse, error) {
+	return nil, errors.New("Not implemented")
+}
+func (DefaultExtension) CanPlay(req *extensions.CanPlayRequest) (*extensions.CanPlayResponse, error) {
+	return nil, errors.New("Not implemented")
+}
+func (DefaultExtension) PlayerPlay(req *extensions.PlayerPlayRequest) (*extensions.PlayerPlayResponse, error) {
+	return nil, errors.New("Not implemented")
+}
+func (DefaultExtension) PlayerPause(req *extensions.PlayerPauseRequest) (*extensions.PlayerPauseResponse, error) {
+	return nil, errors.New("Not implemented")
+}
+func (DefaultExtension) PlayerStop(req *extensions.PlayerStopRequest) (*extensions.PlayerStopResponse, error) {
+	return nil, errors.New("Not implemented")
+}
+func (DefaultExtension) PlayerSeek(req *extensions.PlayerSeekRequest) (*extensions.PlayerSeekResponse, error) {
+	return nil, errors.New("Not implemented")
+}
+func (DefaultExtension) PlayerSetVolume(req *extensions.PlayerSetVolumeRequest) (*extensions.PlayerSetVolumeResponse, error) {
+	return nil, errors.New("Not implemented")
+}
+func (DefaultExtension) PlayerLoadTrack(req *extensions.PlayerLoadTrackRequest) (*extensions.PlayerLoadTrackResponse, error) {
 	return nil, errors.New("Not implemented")
 }
 
@@ -582,6 +610,96 @@ func SetCache(req *extensions.SetCacheRequest) (*extensions.SetCacheResponse, er
 	}
 	if v, ok := res.Response.(*extensions.MainCommandResponse_SetCache); ok {
 		return v.SetCache, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+func SpawnProcess(req *extensions.SpawnProcessRequest) (*extensions.SpawnProcessResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_SpawnProcess{
+			SpawnProcess: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_SpawnProcess); ok {
+		return v.SpawnProcess, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+func WriteProcessStdin(req *extensions.WriteProcessStdinRequest) (*extensions.WriteProcessStdinResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_WriteProcessStdin{
+			WriteProcessStdin: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_WriteProcessStdin); ok {
+		return v.WriteProcessStdin, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+func ReadProcessStdout(req *extensions.ReadProcessStdoutRequest) (*extensions.ReadProcessStdoutResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_ReadProcessStdout{
+			ReadProcessStdout: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_ReadProcessStdout); ok {
+		return v.ReadProcessStdout, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+func KillProcess(req *extensions.KillProcessRequest) (*extensions.KillProcessResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_KillProcess{
+			KillProcess: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_KillProcess); ok {
+		return v.KillProcess, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+func GetProcessStatus(req *extensions.GetProcessStatusRequest) (*extensions.GetProcessStatusResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_GetProcessStatus{
+			GetProcessStatus: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_GetProcessStatus); ok {
+		return v.GetProcessStatus, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+func NotifyPlayerEvent(req *extensions.NotifyPlayerEventRequest) (*extensions.NotifyPlayerEventResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_NotifyPlayerEvent{
+			NotifyPlayerEvent: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_NotifyPlayerEvent); ok {
+		return v.NotifyPlayerEvent, nil
 	}
 	return nil, errors.New("Invalid response type from host")
 }
