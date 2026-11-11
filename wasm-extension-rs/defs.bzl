@@ -60,7 +60,6 @@ def rust_extension(
         data = data,
         platform = "@rules_rust//rust/platform:wasi",
         edition = edition,
-        tags = ["manual"],
         visibility = ["//visibility:private"],
         **kwargs
     )

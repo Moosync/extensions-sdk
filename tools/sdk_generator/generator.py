@@ -135,9 +135,18 @@ def extract_metadata(pool: descriptor_pool.DescriptorPool) -> Dict[str, Any]:
                 "resp_oneof_variant": host_resp_to_oneof.get(resp_name, to_snake_case(m.name)),
             })
 
+    guest_services = []
     guest_methods = []
-    if guest_service:
-        for m in guest_service.methods:
+    for service_name, s in service_file.services_by_name.items():
+        if service_name == "ExtensionHostService":
+            continue
+
+        trait_name = service_name
+        if trait_name.endswith("Service"):
+            trait_name = trait_name[:-len("Service")]
+
+        methods_in_service = []
+        for m in s.methods:
             raw_opts = m.GetOptions().SerializeToString()
             custom_opts = decode_method_options(raw_opts)
 
@@ -146,7 +155,7 @@ def extract_metadata(pool: descriptor_pool.DescriptorPool) -> Dict[str, Any]:
             req_name = m.input_type.name
             resp_name = m.output_type.name
 
-            guest_methods.append({
+            method_info = {
                 "name": m.name,
                 "snake_name": to_snake_case(m.name),
                 "camel_name": to_camel_case(m.name),
@@ -156,11 +165,21 @@ def extract_metadata(pool: descriptor_pool.DescriptorPool) -> Dict[str, Any]:
                 "is_event": is_event_val,
                 "oneof_variant": guest_req_to_oneof.get(req_name, to_snake_case(m.name)),
                 "resp_oneof_variant": guest_resp_to_oneof.get(resp_name, to_snake_case(m.name)),
-            })
+                "service_trait": trait_name,
+            }
+            methods_in_service.append(method_info)
+            guest_methods.append(method_info)
+
+        guest_services.append({
+            "name": service_name,
+            "trait_name": trait_name,
+            "methods": methods_in_service,
+        })
 
     return {
         "host_methods": host_methods,
         "guest_methods": guest_methods,
+        "guest_services": guest_services,
     }
 
 
@@ -223,6 +242,11 @@ def main():
             out_disp = os.path.join(workspace_dir, disp_rel)
             render_template(templates_lang_dir, "api.jinja", metadata, out_api)
             render_template(templates_lang_dir, "dispatcher.jinja", metadata, out_disp)
+
+        # Generate moounit
+        moounit_templates_dir = os.path.join(args.templates_dir, "moounit")
+        moounit_out = os.path.join(workspace_dir, "moounit/generated.py")
+        render_template(moounit_templates_dir, "client.jinja", metadata, moounit_out)
         return
 
     if not args.lang or not args.out_api or not args.out_dispatcher:

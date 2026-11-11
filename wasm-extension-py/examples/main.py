@@ -13,7 +13,7 @@ def entry():
 
 # ANCHOR: provider
 class SearchProviderExtension(Extension):
-    def search(self, req):
+    def requested_search_result(self, req: extensions_pb2.RequestedSearchResultRequest) -> extensions_pb2.RequestedSearchResultResponse:
         print(f"Search query: {req.query}")
 
         url = f"https://api.spotify.com/v1/search?q={req.query}&type=track"
@@ -21,21 +21,20 @@ class SearchProviderExtension(Extension):
         if resp.ok:
             print(f"Search response: {resp.text}")
 
-        return songs_pb2.SearchResult(
+        return extensions_pb2.RequestedSearchResultResponse(
             songs=[],
             artists=[],
             playlists=[],
             albums=[],
-            genres=[]
         )
 # ANCHOR_END: provider
 
 # ANCHOR: api_usage
 class ScrobbleExtension(Extension):
-    def scrobble(self, req):
+    def scrobble(self, req: extensions_pb2.ScrobbleRequest):
         song = self.api.get_current_song()
-        if song and song.song:
-            print(f"Currently playing: {song.song.title}")
+        if song and song.song and song.song.song:
+            print(f"Currently playing: {song.song.song.title}")
 # ANCHOR_END: api_usage
 
 # ANCHOR: http_usage

@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import test from "node:test";
-import { parseLrc, parseLrcTimestamp } from "../lib/src/api.js";
+import { parseLrc, parseLrcTimestamp } from "../lib/src/lrc.js";
 
 test("parseLrc empty input returns error", () => {
     assert.throws(() => parseLrc(""), /Empty LRC text/);

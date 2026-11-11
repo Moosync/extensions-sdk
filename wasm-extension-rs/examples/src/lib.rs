@@ -1,13 +1,13 @@
 #![no_main]
 
 use moosync_edk::{
-    RequestedSearchResultRequest, ScrobbleRequest, SearchResult,
-    api::{
-        self, Accounts, ContextMenu, DatabaseEvents, Extension, PlayerEvents, PlayerProvider,
-        PreferenceEvents, Provider, extension_api::get_current_song,
+    generated_api::{
+        host_api::get_current_song, Accounts, ContextMenu, DatabaseEvents, Extension,
+        GetCurrentSongRequest, PlayerEvents, PlayerProvider, PreferenceEvents, Provider,
+        RequestedSearchResultRequest, RequestedSearchResultResponse, ScrobbleRequest,
     },
     handler::register_extension,
-    info,
+    info, MoosyncResult,
 };
 
 // ANCHOR: first_extension
@@ -15,11 +15,45 @@ struct SampleExtension;
 
 impl Extension for SampleExtension {}
 impl Accounts for SampleExtension {}
-impl DatabaseEvents for SampleExtension {}
-impl PlayerEvents for SampleExtension {}
-impl PreferenceEvents for SampleExtension {}
 impl ContextMenu for SampleExtension {}
+impl PlayerEvents for SampleExtension {}
+impl DatabaseEvents for SampleExtension {}
+impl PreferenceEvents for SampleExtension {}
 impl PlayerProvider for SampleExtension {}
+
+impl Provider for SampleExtension {
+// ANCHOR: provider
+    fn requested_search_result(
+        &self,
+        req: RequestedSearchResultRequest,
+    ) -> MoosyncResult<RequestedSearchResultResponse> {
+        info!("Search requested for query: {}", req.query);
+
+        let url = format!("https://api.spotify.com/v1/search?q={}&type=track", req.query);
+        let resp = moosync_edk::http::get(&url, None)?;
+        if resp.is_success() {
+            info!("Search API response: {}", resp.text().unwrap_or_default());
+        }
+
+        Ok(RequestedSearchResultResponse {
+            songs: vec![],
+            artists: vec![],
+            playlists: vec![],
+            albums: vec![],
+        })
+    }
+// ANCHOR_END: provider
+
+// ANCHOR: api_usage
+    fn scrobble(&self, _req: ScrobbleRequest) -> MoosyncResult<()> {
+        let resp = get_current_song(GetCurrentSongRequest {})?;
+        if let Some(song) = resp.song.and_then(|s| s.song).and_then(|i| i.title) {
+            info!("Currently playing song: {}", song);
+        }
+        Ok(())
+    }
+// ANCHOR_END: api_usage
+}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn init() {
@@ -29,40 +63,8 @@ pub extern "C" fn init() {
 }
 // ANCHOR_END: first_extension
 
-impl Provider for SampleExtension {
-// ANCHOR: provider
-    fn search(&self, req: RequestedSearchResultRequest) -> api::MoosyncResult<SearchResult> {
-        info!("Search requested for query: {}", req.query);
-
-        let url = format!("https://api.spotify.com/v1/search?q={}&type=track", req.query);
-        let resp = moosync_edk::http::get(&url, None)?;
-        if resp.is_success() {
-            info!("Search API response: {}", resp.text().unwrap_or_default());
-        }
-
-        Ok(SearchResult {
-            songs: vec![],
-            artists: vec![],
-            playlists: vec![],
-            albums: vec![],
-            genres: vec![],
-        })
-    }
-// ANCHOR_END: provider
-
-// ANCHOR: api_usage
-    fn scrobble(&self, _req: ScrobbleRequest) -> api::MoosyncResult<()> {
-        let song = get_current_song()?;
-        if let Some(title) = song.and_then(|s| s.song).and_then(|i| i.title) {
-            info!("Currently playing song: {}", title);
-        }
-        Ok(())
-    }
-// ANCHOR_END: api_usage
-}
-
 // ANCHOR: http_usage
-pub fn search_and_fetch_details(query: &str) -> api::MoosyncResult<()> {
+pub fn search_and_fetch_details(query: &str) -> MoosyncResult<()> {
     use moosync_edk::http::{self, HttpRequest};
 
     let url = format!("https://api.spotify.com/v1/search?q={}&type=track", query);

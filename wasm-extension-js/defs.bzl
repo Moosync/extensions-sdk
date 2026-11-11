@@ -31,7 +31,7 @@ def js_wasm_extension(
     """
 
     if node_modules == None:
-        node_modules = ":node_modules"
+        node_modules = Label("//wasm-extension-js:node_modules")
 
     pnpm_runner_script = name + "_run_pnpm.sh"
 

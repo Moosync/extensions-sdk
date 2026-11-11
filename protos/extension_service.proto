@@ -195,9 +195,11 @@ service ExtensionHostService {
 }
 
 // -----------------------------------------------------------------
-// Guest Service: All commands & events handled by the Extension
+// Guest Services: Commands & events handled by Extensions
 // -----------------------------------------------------------------
-service ExtensionGuestService {
+service ProviderService {
+  rpc GetProviderScopes(GetProviderScopesRequest) returns (GetProviderScopesResponse);
+  rpc GetRemoteUrl(GetRemoteUrlRequest) returns (GetRemoteUrlResponse);
   rpc RequestedSearchResult(RequestedSearchResultRequest) returns (RequestedSearchResultResponse);
   rpc RequestedPlaylists(RequestedPlaylistsRequest) returns (RequestedPlaylistsResponse);
   rpc RequestedPlaylistSongs(RequestedPlaylistSongsRequest) returns (RequestedPlaylistSongsResponse);
@@ -208,13 +210,24 @@ service ExtensionGuestService {
   rpc PlaybackDetailsRequested(PlaybackDetailsRequestedRequest) returns (PlaybackDetailsRequestedResponse);
   rpc RequestedLyrics(RequestedLyricsRequest) returns (RequestedLyricsResponse);
   rpc RequestedCoverArt(RequestedCoverArtRequest) returns (RequestedCoverArtResponse);
+  rpc Scrobble(ScrobbleRequest) returns (ScrobbleResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+  rpc CustomRequest(moosync.types.CustomRequest) returns (moosync.types.CustomRequestResponse);
+}
 
+service AccountsService {
   rpc PerformAccountLogin(PerformAccountLoginRequest) returns (PerformAccountLoginResponse);
   rpc OauthCallback(OauthCallbackRequest) returns (OauthCallbackResponse);
+}
+
+service ContextMenuService {
   rpc RequestedSongContextMenu(RequestedSongContextMenuRequest) returns (RequestedSongContextMenuResponse);
   rpc RequestedPlaylistContextMenu(RequestedPlaylistContextMenuRequest) returns (RequestedPlaylistContextMenuResponse);
   rpc ContextMenuAction(ContextMenuActionRequest) returns (ContextMenuActionResponse);
+}
 
+service PlayerEventsService {
   rpc SongQueueChanged(SongQueueChangedRequest) returns (SongQueueChangedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
@@ -230,12 +243,9 @@ service ExtensionGuestService {
   rpc SongChanged(SongChangedRequest) returns (SongChangedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
-  rpc PreferenceChanged(PreferenceChangedRequest) returns (PreferenceChangedResponse) {
-    option (moosync.types.is_event_notification) = true;
-  }
-  rpc Scrobble(ScrobbleRequest) returns (ScrobbleResponse) {
-    option (moosync.types.is_event_notification) = true;
-  }
+}
+
+service DatabaseEventsService {
   rpc SongAdded(SongAddedRequest) returns (SongAddedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
@@ -248,8 +258,15 @@ service ExtensionGuestService {
   rpc PlaylistRemoved(PlaylistRemovedRequest) returns (PlaylistRemovedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
-  rpc CustomRequest(moosync.types.CustomRequest) returns (moosync.types.CustomRequestResponse);
+}
 
+service PreferenceEventsService {
+  rpc PreferenceChanged(PreferenceChangedRequest) returns (PreferenceChangedResponse) {
+    option (moosync.types.is_event_notification) = true;
+  }
+}
+
+service PlayerProviderService {
   rpc CanPlay(CanPlayRequest) returns (CanPlayResponse);
   rpc PlayerPlay(PlayerPlayRequest) returns (PlayerPlayResponse);
   rpc PlayerPause(PlayerPauseRequest) returns (PlayerPauseResponse);

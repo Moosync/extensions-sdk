@@ -63,6 +63,19 @@ class GeneratorTest(unittest.TestCase):
                 self.assertGreater(os.path.getsize(out_api), 100)
                 self.assertGreater(os.path.getsize(out_disp), 100)
 
+            # Test rendering moounit
+            moounit_dir = os.path.join(templates_base, "moounit")
+            out_moounit = os.path.join(tmp_dir, "moounit_generated.py")
+            render_template(moounit_dir, "client.jinja", metadata, out_moounit)
+            self.assertTrue(os.path.exists(out_moounit))
+            self.assertGreater(os.path.getsize(out_moounit), 100)
+            with open(out_moounit, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("class GeneratedMoounitGuestClient:", content)
+            self.assertIn("def requested_cover_art(", content)
+            self.assertIn("def can_play(", content)
+            self.assertIn("def player_play(", content)
+
 
 if __name__ == "__main__":
     unittest.main()

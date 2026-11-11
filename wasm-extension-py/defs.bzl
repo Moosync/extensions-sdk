@@ -3,6 +3,7 @@ Wasm extension rules for Python.
 """
 
 load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("@pypi_moounit//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "PyInfo")
 load("//:manifest_pb.bzl", "generate_manifest_pb")
 load("//:package_extension.bzl", "package_extension")
@@ -283,6 +284,7 @@ def py_extension(
         deps = deps + [
             Label("//wasm-extension-py:moosync_edk"),
             Label("//protos:moosync_python_root"),
+            requirement("pytest"),
             ":" + name + "_pyi",
         ],
         data = [

@@ -19,9 +19,12 @@ import "./request-ponyfills";
 import "./abortcontroller-ponyfills";
 
 export * from "./generated_api";
-export * from "./api";
-export { spawnProcess, notifyPlayerEvent } from "./api";
 export * from "./generated_events";
+export type { Extension } from "./generated_events";
+export { ChildProcess, spawnProcess, notifyPlayerEvent } from "./process";
+export * from "./lrc";
+export * from "./http";
+export * from "./utils";
 export * from "./protos/extension_service_pb";
 export * from "./protos/extensions_pb";
 export * from "./protos/preferences_pb";
@@ -30,15 +33,22 @@ export * from "./protos/ui_pb";
 export * from "./protos/themes_pb";
 export * from "@bufbuild/protobuf";
 
-import { callListener, durationToProto } from "./api";
+import * as generatedApi from "./generated_api";
+import { on, callListener, registerExtension, getRegisteredExtension } from "./generated_events";
+import { fetch, batchFetch } from "./http";
 import {
   ExtensionCommand,
   ExtensionCommandResponse,
-  PlaybackDetailsRequestedResponse,
-  RequestedCoverArtResponse,
-  CanPlayResponse,
 } from "./protos/extensions_pb";
-import { Message } from "@bufbuild/protobuf";
+
+export function getApi() {
+  return {
+    ...generatedApi,
+    on,
+    fetch,
+    batchFetch,
+  };
+}
 
 async function handle(
   command: ExtensionCommand,
@@ -49,50 +59,7 @@ async function handle(
   const payload = command.event.value;
 
   if (payload) {
-    // payload.constructor is the Message Class (e.g. RequestedPlaylistsRequest)
-    // This matches the key used in api.on()
-
-    let result = await Promise.resolve(callListener(caseStr as any, payload));
-
-    if (caseStr === "canPlay" && typeof result === "boolean") {
-      result = new CanPlayResponse({ canPlay: result });
-    }
-
-    if (caseStr === "playbackDetailsRequested" && result) {
-      const resObj = result as any;
-      if (!(resObj instanceof PlaybackDetailsRequestedResponse)) {
-        let duration = resObj.duration;
-        if (typeof duration === "number") {
-          duration = durationToProto(duration);
-        }
-        result = new PlaybackDetailsRequestedResponse({
-          url: resObj.url,
-          duration: duration,
-          decryptionKey: resObj.decryption_key ?? resObj.decryptionKey,
-        });
-      }
-    }
-
-    if (caseStr === "requestedCoverArt" && result) {
-      const resObj = result as any;
-      if (!(resObj instanceof RequestedCoverArtResponse)) {
-        let urls: string[] = [];
-        if (typeof resObj === "string") {
-          urls = [resObj];
-        } else if (Array.isArray(resObj)) {
-          urls = resObj.filter((u: any) => typeof u === "string");
-        } else if (resObj && typeof resObj === "object") {
-          if (Array.isArray(resObj.coverUrls)) {
-            urls = resObj.coverUrls;
-          } else if (typeof resObj.coverUrl === "string") {
-            urls = [resObj.coverUrl];
-          }
-        }
-        result = new RequestedCoverArtResponse({
-          coverUrls: urls,
-        });
-      }
-    }
+    const result = await Promise.resolve(callListener(caseStr as any, payload));
 
     // Construct response based on responseField
     if (result !== undefined) {

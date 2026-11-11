@@ -22,7 +22,7 @@ func main() {}
 // ANCHOR_END: first_extension
 
 // ANCHOR: provider
-func (s *SampleExtension) Search(req *extensions.RequestedSearchResultRequest) (*songs.SearchResult, error) {
+func (s *SampleExtension) RequestedSearchResult(req *extensions.RequestedSearchResultRequest) (*extensions.RequestedSearchResultResponse, error) {
 	api.LogInfo("Search called with query: %s", req.GetQuery())
 
 	url := "https://api.spotify.com/v1/search?q=" + req.GetQuery() + "&type=track"
@@ -34,12 +34,11 @@ func (s *SampleExtension) Search(req *extensions.RequestedSearchResultRequest) (
 		api.LogInfo("Search response: %s", resp.Text())
 	}
 
-	return &songs.SearchResult{
+	return &extensions.RequestedSearchResultResponse{
 		Songs:     []*songs.Song{},
 		Playlists: []*songs.Playlist{},
 		Artists:   []*songs.Artist{},
 		Albums:    []*songs.Album{},
-		Genres:    []*songs.Genre{},
 	}, nil
 }
 // ANCHOR_END: provider

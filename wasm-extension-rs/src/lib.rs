@@ -37,6 +37,7 @@ pub use themes_proto::moosync::types::*;
 pub use ui_proto::moosync::types::*;
 
 pub mod generated_api;
+pub use generated_api as api;
 pub mod generated_dispatcher;
 pub mod handler;
 pub mod http;

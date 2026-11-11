@@ -18,6 +18,7 @@ py_library(
         "core.py",
         "defaults.py",
         "expectations.py",
+        "generated.py",
         "matcher.py",
         "models.py",
         "passthrough.py",

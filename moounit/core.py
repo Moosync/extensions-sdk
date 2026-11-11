@@ -101,6 +101,7 @@ from extism.extism import (
 )
 
 from moounit.expectations import ExpectationManager, current_scope
+from moounit.generated import GeneratedMoounitGuestClient
 from moounit.passthrough import RealSocketManager
 from moounit.recorder import Recorder
 from moounit.sanitize import (
@@ -109,7 +110,7 @@ from moounit.sanitize import (
 )
 
 
-class Moounit:
+class Moounit(GeneratedMoounitGuestClient):
     _instances: dict[uuid.UUID, "Moounit"] = {}
     _session_called_player_commands: set[str] = set()
     _has_player_provider_extension: bool = False
@@ -494,44 +495,6 @@ class Moounit:
             regex=regex,
             test_name=test_name,
         )
-
-    def can_play(self, req: CanPlayRequest) -> CanPlayResponse:
-        cmd = ExtensionCommand(package_name=self.package_name, can_play=req)
-        res = self.send_command(cmd)
-        return res.can_play
-
-    def player_play(self, req: PlayerPlayRequest | None = None) -> PlayerPlayResponse:
-        req = req or PlayerPlayRequest()
-        cmd = ExtensionCommand(package_name=self.package_name, player_play=req)
-        res = self.send_command(cmd)
-        return res.player_play
-
-    def player_pause(self, req: PlayerPauseRequest | None = None) -> PlayerPauseResponse:
-        req = req or PlayerPauseRequest()
-        cmd = ExtensionCommand(package_name=self.package_name, player_pause=req)
-        res = self.send_command(cmd)
-        return res.player_pause
-
-    def player_stop(self, req: PlayerStopRequest | None = None) -> PlayerStopResponse:
-        req = req or PlayerStopRequest()
-        cmd = ExtensionCommand(package_name=self.package_name, player_stop=req)
-        res = self.send_command(cmd)
-        return res.player_stop
-
-    def player_seek(self, req: PlayerSeekRequest) -> PlayerSeekResponse:
-        cmd = ExtensionCommand(package_name=self.package_name, player_seek=req)
-        res = self.send_command(cmd)
-        return res.player_seek
-
-    def player_set_volume(self, req: PlayerSetVolumeRequest) -> PlayerSetVolumeResponse:
-        cmd = ExtensionCommand(package_name=self.package_name, player_set_volume=req)
-        res = self.send_command(cmd)
-        return res.player_set_volume
-
-    def player_load_track(self, req: PlayerLoadTrackRequest) -> PlayerLoadTrackResponse:
-        cmd = ExtensionCommand(package_name=self.package_name, player_load_track=req)
-        res = self.send_command(cmd)
-        return res.player_load_track
 
     def expect_spawn_process(
         self,

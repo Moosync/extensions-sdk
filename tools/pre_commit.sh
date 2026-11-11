@@ -5,7 +5,7 @@ WORKSPACE_DIR="$(git rev-parse --show-toplevel 2>/dev/null || jj root 2>/dev/nul
 cd "$WORKSPACE_DIR"
 
 echo "=== Updating Moosync SDKs from Protobuf RPC definitions ==="
-bazel run //tools/sdk_generator:update
+ANDROID_HOME="" ANDROID_SDK_ROOT="" bazel run //tools/sdk_generator:update
 
 # If git repo and index has changes, stage them
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -17,5 +17,6 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     wasm-extension-py/moosync_edk/generated_api.py \
     wasm-extension-py/moosync_edk/generated_dispatcher.py \
     wasm-extension-js/src/generated_api.ts \
-    wasm-extension-js/src/generated_events.ts 2>/dev/null || true
+    wasm-extension-js/src/generated_events.ts \
+    moounit/generated.py 2>/dev/null || true
 fi
