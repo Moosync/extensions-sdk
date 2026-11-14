@@ -13,6 +13,8 @@ exports_files([
     "api.go",
     "generated_api.go",
     "generated_exports.go",
+    "platform.go",
+    "websocket.go",
 ])
 
 go_library(
@@ -21,6 +23,8 @@ go_library(
         "api.go",
         "generated_api.go",
         "generated_exports.go",
+        "platform.go",
+        "websocket.go",
     ],
     importpath = "github.com/Moosync/extensions-sdk/wasm-extension-go/pkg/api",
     visibility = ["//visibility:public"],

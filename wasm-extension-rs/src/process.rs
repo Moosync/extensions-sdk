@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
-use crate::generated_api::MoosyncResult;
+use crate::api::MoosyncResult;
 
 pub struct ChildProcess {
     pub id: usize,
@@ -28,7 +28,7 @@ impl ChildProcess {
             process_id: self.id as u64,
             data: data.to_vec(),
         };
-        let resp = crate::generated_api::host_api::write_process_stdin(req)?;
+        let resp = crate::api::host_api::write_process_stdin(req)?;
         Ok(resp.bytes_written)
     }
 
@@ -37,7 +37,7 @@ impl ChildProcess {
             process_id: self.id as u64,
             max_bytes,
         };
-        let resp = crate::generated_api::host_api::read_process_stdout(req)?;
+        let resp = crate::api::host_api::read_process_stdout(req)?;
         Ok(resp.data)
     }
 
@@ -45,7 +45,7 @@ impl ChildProcess {
         let req = extensions_proto::moosync::types::KillProcessRequest {
             process_id: self.id as u64,
         };
-        let resp = crate::generated_api::host_api::kill_process(req)?;
+        let resp = crate::api::host_api::kill_process(req)?;
         Ok(resp.success)
     }
 
@@ -53,7 +53,7 @@ impl ChildProcess {
         let req = extensions_proto::moosync::types::GetProcessStatusRequest {
             process_id: self.id as u64,
         };
-        let resp = crate::generated_api::host_api::get_process_status(req)?;
+        let resp = crate::api::host_api::get_process_status(req)?;
         Ok((resp.is_running, resp.exit_code))
     }
 }
@@ -68,7 +68,7 @@ pub fn spawn_process(
         args: args.iter().map(|s| s.as_ref().to_string()).collect(),
         env: env.clone(),
     };
-    let resp = crate::generated_api::host_api::spawn_process(req)?;
+    let resp = crate::api::host_api::spawn_process(req)?;
     Ok(ChildProcess {
         id: resp.process_id as usize,
         pid: resp.pid,
@@ -78,6 +78,6 @@ pub fn spawn_process(
 pub fn notify_player_event(
     req: extensions_proto::moosync::types::NotifyPlayerEventRequest,
 ) -> MoosyncResult<()> {
-    crate::generated_api::host_api::notify_player_event(req)?;
+    crate::api::host_api::notify_player_event(req)?;
     Ok(())
 }

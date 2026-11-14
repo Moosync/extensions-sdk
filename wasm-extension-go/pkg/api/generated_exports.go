@@ -12,9 +12,9 @@ import (
 	extensions "github.com/moosync/moosync/types/extensions"
 )
 
-var extension Extension
+var extension any
 
-func RegisterExtension(ext Extension) {
+func RegisterExtension(ext any) {
 	extension = ext
 }
 
@@ -31,329 +31,565 @@ func handle_extension_command() int32 {
 	resp := &extensions.ExtensionCommandResponse{}
 
 	switch e := cmd.Event.(type) {
-	case *extensions.ExtensionCommand_GetProviderScopes:
-		res, err := extension.GetProviderScopes(e.GetProviderScopes)
-		if err != nil {
-			pdk.SetError(err)
-			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_GetProviderScopes{
-			GetProviderScopes: res,
-		}
 	case *extensions.ExtensionCommand_GetRemoteUrl:
-		res, err := extension.GetRemoteUrl(e.GetRemoteUrl)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			GetRemoteUrl(req *extensions.GetRemoteUrlRequest) (*extensions.GetRemoteUrlResponse, error)
+		}); ok {
+			res, err := h.GetRemoteUrl(e.GetRemoteUrl)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_GetRemoteUrl{
+				GetRemoteUrl: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_GetRemoteUrl{
-			GetRemoteUrl: res,
 		}
 	case *extensions.ExtensionCommand_RequestedSearchResult:
-		res, err := extension.RequestedSearchResult(e.RequestedSearchResult)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			RequestedSearchResult(req *extensions.RequestedSearchResultRequest) (*extensions.RequestedSearchResultResponse, error)
+		}); ok {
+			res, err := h.RequestedSearchResult(e.RequestedSearchResult)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_RequestedSearchResult{
+				RequestedSearchResult: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedSearchResult{
-			RequestedSearchResult: res,
 		}
 	case *extensions.ExtensionCommand_RequestedPlaylists:
-		res, err := extension.RequestedPlaylists(e.RequestedPlaylists)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			RequestedPlaylists(req *extensions.RequestedPlaylistsRequest) (*extensions.RequestedPlaylistsResponse, error)
+		}); ok {
+			res, err := h.RequestedPlaylists(e.RequestedPlaylists)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_RequestedPlaylists{
+				RequestedPlaylists: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedPlaylists{
-			RequestedPlaylists: res,
 		}
 	case *extensions.ExtensionCommand_RequestedPlaylistSongs:
-		res, err := extension.RequestedPlaylistSongs(e.RequestedPlaylistSongs)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			RequestedPlaylistSongs(req *extensions.RequestedPlaylistSongsRequest) (*extensions.RequestedPlaylistSongsResponse, error)
+		}); ok {
+			res, err := h.RequestedPlaylistSongs(e.RequestedPlaylistSongs)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_RequestedPlaylistSongs{
+				RequestedPlaylistSongs: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedPlaylistSongs{
-			RequestedPlaylistSongs: res,
 		}
 	case *extensions.ExtensionCommand_RequestedArtistSongs:
-		res, err := extension.RequestedArtistSongs(e.RequestedArtistSongs)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			RequestedArtistSongs(req *extensions.RequestedArtistSongsRequest) (*extensions.RequestedArtistSongsResponse, error)
+		}); ok {
+			res, err := h.RequestedArtistSongs(e.RequestedArtistSongs)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_RequestedArtistSongs{
+				RequestedArtistSongs: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedArtistSongs{
-			RequestedArtistSongs: res,
 		}
 	case *extensions.ExtensionCommand_RequestedAlbumSongs:
-		res, err := extension.RequestedAlbumSongs(e.RequestedAlbumSongs)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			RequestedAlbumSongs(req *extensions.RequestedAlbumSongsRequest) (*extensions.RequestedAlbumSongsResponse, error)
+		}); ok {
+			res, err := h.RequestedAlbumSongs(e.RequestedAlbumSongs)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_RequestedAlbumSongs{
+				RequestedAlbumSongs: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedAlbumSongs{
-			RequestedAlbumSongs: res,
 		}
 	case *extensions.ExtensionCommand_RequestedRecommendations:
-		res, err := extension.RequestedRecommendations(e.RequestedRecommendations)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			RequestedRecommendations(req *extensions.RequestedRecommendationsRequest) (*extensions.RequestedRecommendationsResponse, error)
+		}); ok {
+			res, err := h.RequestedRecommendations(e.RequestedRecommendations)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_RequestedRecommendations{
+				RequestedRecommendations: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedRecommendations{
-			RequestedRecommendations: res,
 		}
 	case *extensions.ExtensionCommand_RequestedSongFromId:
-		res, err := extension.RequestedSongFromId(e.RequestedSongFromId)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			RequestedSongFromId(req *extensions.RequestedSongFromIdRequest) (*extensions.RequestedSongFromIdResponse, error)
+		}); ok {
+			res, err := h.RequestedSongFromId(e.RequestedSongFromId)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_RequestedSongFromId{
+				RequestedSongFromId: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedSongFromId{
-			RequestedSongFromId: res,
 		}
 	case *extensions.ExtensionCommand_PlaybackDetailsRequested:
-		res, err := extension.PlaybackDetailsRequested(e.PlaybackDetailsRequested)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PlaybackDetailsRequested(req *extensions.PlaybackDetailsRequestedRequest) (*extensions.PlaybackDetailsRequestedResponse, error)
+		}); ok {
+			res, err := h.PlaybackDetailsRequested(e.PlaybackDetailsRequested)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PlaybackDetailsRequested{
+				PlaybackDetailsRequested: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PlaybackDetailsRequested{
-			PlaybackDetailsRequested: res,
 		}
 	case *extensions.ExtensionCommand_RequestedLyrics:
-		res, err := extension.RequestedLyrics(e.RequestedLyrics)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			RequestedLyrics(req *extensions.RequestedLyricsRequest) (*extensions.RequestedLyricsResponse, error)
+		}); ok {
+			res, err := h.RequestedLyrics(e.RequestedLyrics)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_RequestedLyrics{
+				RequestedLyrics: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedLyrics{
-			RequestedLyrics: res,
 		}
 	case *extensions.ExtensionCommand_RequestedCoverArt:
-		res, err := extension.RequestedCoverArt(e.RequestedCoverArt)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			RequestedCoverArt(req *extensions.RequestedCoverArtRequest) (*extensions.RequestedCoverArtResponse, error)
+		}); ok {
+			res, err := h.RequestedCoverArt(e.RequestedCoverArt)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_RequestedCoverArt{
+				RequestedCoverArt: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedCoverArt{
-			RequestedCoverArt: res,
 		}
 	case *extensions.ExtensionCommand_Scrobble:
-		err := extension.Scrobble(e.Scrobble)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			Scrobble(req *extensions.ScrobbleRequest) error
+		}); ok {
+			err := h.Scrobble(e.Scrobble)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_Scrobble{
+				Scrobble: &extensions.ScrobbleResponse{},
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_Scrobble{
-			Scrobble: &extensions.ScrobbleResponse{},
 		}
 	case *extensions.ExtensionCommand_CustomRequest:
-		res, err := extension.CustomRequest(e.CustomRequest)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			CustomRequest(req *extensions.CustomRequest) (*extensions.CustomRequestResponse, error)
+		}); ok {
+			res, err := h.CustomRequest(e.CustomRequest)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_CustomRequest{
+				CustomRequest: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_CustomRequest{
-			CustomRequest: res,
 		}
 	case *extensions.ExtensionCommand_PerformAccountLogin:
-		res, err := extension.PerformAccountLogin(e.PerformAccountLogin)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PerformAccountLogin(req *extensions.PerformAccountLoginRequest) (*extensions.PerformAccountLoginResponse, error)
+		}); ok {
+			res, err := h.PerformAccountLogin(e.PerformAccountLogin)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PerformAccountLogin{
+				PerformAccountLogin: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PerformAccountLogin{
-			PerformAccountLogin: res,
 		}
 	case *extensions.ExtensionCommand_OauthCallback:
-		res, err := extension.OauthCallback(e.OauthCallback)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			OauthCallback(req *extensions.OauthCallbackRequest) (*extensions.OauthCallbackResponse, error)
+		}); ok {
+			res, err := h.OauthCallback(e.OauthCallback)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_OauthCallback{
+				OauthCallback: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_OauthCallback{
-			OauthCallback: res,
 		}
 	case *extensions.ExtensionCommand_RequestedSongContextMenu:
-		res, err := extension.RequestedSongContextMenu(e.RequestedSongContextMenu)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			RequestedSongContextMenu(req *extensions.RequestedSongContextMenuRequest) (*extensions.RequestedSongContextMenuResponse, error)
+		}); ok {
+			res, err := h.RequestedSongContextMenu(e.RequestedSongContextMenu)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_RequestedSongContextMenu{
+				RequestedSongContextMenu: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedSongContextMenu{
-			RequestedSongContextMenu: res,
 		}
 	case *extensions.ExtensionCommand_RequestedPlaylistContextMenu:
-		res, err := extension.RequestedPlaylistContextMenu(e.RequestedPlaylistContextMenu)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			RequestedPlaylistContextMenu(req *extensions.RequestedPlaylistContextMenuRequest) (*extensions.RequestedPlaylistContextMenuResponse, error)
+		}); ok {
+			res, err := h.RequestedPlaylistContextMenu(e.RequestedPlaylistContextMenu)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_RequestedPlaylistContextMenu{
+				RequestedPlaylistContextMenu: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_RequestedPlaylistContextMenu{
-			RequestedPlaylistContextMenu: res,
 		}
 	case *extensions.ExtensionCommand_ContextMenuAction:
-		res, err := extension.ContextMenuAction(e.ContextMenuAction)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			ContextMenuAction(req *extensions.ContextMenuActionRequest) (*extensions.ContextMenuActionResponse, error)
+		}); ok {
+			res, err := h.ContextMenuAction(e.ContextMenuAction)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_ContextMenuAction{
+				ContextMenuAction: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_ContextMenuAction{
-			ContextMenuAction: res,
 		}
 	case *extensions.ExtensionCommand_SongQueueChanged:
-		err := extension.SongQueueChanged(e.SongQueueChanged)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			SongQueueChanged(req *extensions.SongQueueChangedRequest) error
+		}); ok {
+			err := h.SongQueueChanged(e.SongQueueChanged)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_SongQueueChanged{
+				SongQueueChanged: &extensions.SongQueueChangedResponse{},
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_SongQueueChanged{
-			SongQueueChanged: &extensions.SongQueueChangedResponse{},
 		}
 	case *extensions.ExtensionCommand_Seeked:
-		err := extension.Seeked(e.Seeked)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			Seeked(req *extensions.SeekedRequest) error
+		}); ok {
+			err := h.Seeked(e.Seeked)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_Seeked{
+				Seeked: &extensions.SeekedResponse{},
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_Seeked{
-			Seeked: &extensions.SeekedResponse{},
 		}
 	case *extensions.ExtensionCommand_VolumeChanged:
-		err := extension.VolumeChanged(e.VolumeChanged)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			VolumeChanged(req *extensions.VolumeChangedRequest) error
+		}); ok {
+			err := h.VolumeChanged(e.VolumeChanged)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_VolumeChanged{
+				VolumeChanged: &extensions.VolumeChangedResponse{},
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_VolumeChanged{
-			VolumeChanged: &extensions.VolumeChangedResponse{},
 		}
 	case *extensions.ExtensionCommand_PlayerStateChanged:
-		err := extension.PlayerStateChanged(e.PlayerStateChanged)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PlayerStateChanged(req *extensions.PlayerStateChangedRequest) error
+		}); ok {
+			err := h.PlayerStateChanged(e.PlayerStateChanged)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PlayerStateChanged{
+				PlayerStateChanged: &extensions.PlayerStateChangedResponse{},
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PlayerStateChanged{
-			PlayerStateChanged: &extensions.PlayerStateChangedResponse{},
 		}
 	case *extensions.ExtensionCommand_SongChanged:
-		err := extension.SongChanged(e.SongChanged)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			SongChanged(req *extensions.SongChangedRequest) error
+		}); ok {
+			err := h.SongChanged(e.SongChanged)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_SongChanged{
+				SongChanged: &extensions.SongChangedResponse{},
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_SongChanged{
-			SongChanged: &extensions.SongChangedResponse{},
 		}
 	case *extensions.ExtensionCommand_SongAdded:
-		err := extension.SongAdded(e.SongAdded)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			SongAdded(req *extensions.SongAddedRequest) error
+		}); ok {
+			err := h.SongAdded(e.SongAdded)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_SongAdded{
+				SongAdded: &extensions.SongAddedResponse{},
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_SongAdded{
-			SongAdded: &extensions.SongAddedResponse{},
 		}
 	case *extensions.ExtensionCommand_SongRemoved:
-		err := extension.SongRemoved(e.SongRemoved)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			SongRemoved(req *extensions.SongRemovedRequest) error
+		}); ok {
+			err := h.SongRemoved(e.SongRemoved)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_SongRemoved{
+				SongRemoved: &extensions.SongRemovedResponse{},
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_SongRemoved{
-			SongRemoved: &extensions.SongRemovedResponse{},
 		}
 	case *extensions.ExtensionCommand_PlaylistAdded:
-		err := extension.PlaylistAdded(e.PlaylistAdded)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PlaylistAdded(req *extensions.PlaylistAddedRequest) error
+		}); ok {
+			err := h.PlaylistAdded(e.PlaylistAdded)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PlaylistAdded{
+				PlaylistAdded: &extensions.PlaylistAddedResponse{},
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PlaylistAdded{
-			PlaylistAdded: &extensions.PlaylistAddedResponse{},
 		}
 	case *extensions.ExtensionCommand_PlaylistRemoved:
-		err := extension.PlaylistRemoved(e.PlaylistRemoved)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PlaylistRemoved(req *extensions.PlaylistRemovedRequest) error
+		}); ok {
+			err := h.PlaylistRemoved(e.PlaylistRemoved)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PlaylistRemoved{
+				PlaylistRemoved: &extensions.PlaylistRemovedResponse{},
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PlaylistRemoved{
-			PlaylistRemoved: &extensions.PlaylistRemovedResponse{},
 		}
 	case *extensions.ExtensionCommand_PreferenceChanged:
-		err := extension.PreferenceChanged(e.PreferenceChanged)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PreferenceChanged(req *extensions.PreferenceChangedRequest) error
+		}); ok {
+			err := h.PreferenceChanged(e.PreferenceChanged)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PreferenceChanged{
+				PreferenceChanged: &extensions.PreferenceChangedResponse{},
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PreferenceChanged{
-			PreferenceChanged: &extensions.PreferenceChangedResponse{},
 		}
 	case *extensions.ExtensionCommand_CanPlay:
-		res, err := extension.CanPlay(e.CanPlay)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			CanPlay(req *extensions.CanPlayRequest) (*extensions.CanPlayResponse, error)
+		}); ok {
+			res, err := h.CanPlay(e.CanPlay)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_CanPlay{
+				CanPlay: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_CanPlay{
-			CanPlay: res,
 		}
 	case *extensions.ExtensionCommand_PlayerPlay:
-		res, err := extension.PlayerPlay(e.PlayerPlay)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PlayerPlay(req *extensions.PlayerPlayRequest) (*extensions.PlayerPlayResponse, error)
+		}); ok {
+			res, err := h.PlayerPlay(e.PlayerPlay)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PlayerPlay{
+				PlayerPlay: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PlayerPlay{
-			PlayerPlay: res,
 		}
 	case *extensions.ExtensionCommand_PlayerPause:
-		res, err := extension.PlayerPause(e.PlayerPause)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PlayerPause(req *extensions.PlayerPauseRequest) (*extensions.PlayerPauseResponse, error)
+		}); ok {
+			res, err := h.PlayerPause(e.PlayerPause)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PlayerPause{
+				PlayerPause: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PlayerPause{
-			PlayerPause: res,
 		}
 	case *extensions.ExtensionCommand_PlayerStop:
-		res, err := extension.PlayerStop(e.PlayerStop)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PlayerStop(req *extensions.PlayerStopRequest) (*extensions.PlayerStopResponse, error)
+		}); ok {
+			res, err := h.PlayerStop(e.PlayerStop)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PlayerStop{
+				PlayerStop: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PlayerStop{
-			PlayerStop: res,
 		}
 	case *extensions.ExtensionCommand_PlayerSeek:
-		res, err := extension.PlayerSeek(e.PlayerSeek)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PlayerSeek(req *extensions.PlayerSeekRequest) (*extensions.PlayerSeekResponse, error)
+		}); ok {
+			res, err := h.PlayerSeek(e.PlayerSeek)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PlayerSeek{
+				PlayerSeek: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PlayerSeek{
-			PlayerSeek: res,
 		}
 	case *extensions.ExtensionCommand_PlayerSetVolume:
-		res, err := extension.PlayerSetVolume(e.PlayerSetVolume)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PlayerSetVolume(req *extensions.PlayerSetVolumeRequest) (*extensions.PlayerSetVolumeResponse, error)
+		}); ok {
+			res, err := h.PlayerSetVolume(e.PlayerSetVolume)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PlayerSetVolume{
+				PlayerSetVolume: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PlayerSetVolume{
-			PlayerSetVolume: res,
 		}
 	case *extensions.ExtensionCommand_PlayerLoadTrack:
-		res, err := extension.PlayerLoadTrack(e.PlayerLoadTrack)
-		if err != nil {
-			pdk.SetError(err)
+		if h, ok := extension.(interface {
+			PlayerLoadTrack(req *extensions.PlayerLoadTrackRequest) (*extensions.PlayerLoadTrackResponse, error)
+		}); ok {
+			res, err := h.PlayerLoadTrack(e.PlayerLoadTrack)
+			if err != nil {
+				pdk.SetError(err)
+				return 1
+			}
+			resp.Response = &extensions.ExtensionCommandResponse_PlayerLoadTrack{
+				PlayerLoadTrack: res,
+			}
+		} else {
+			pdk.SetError(errors.New("Not implemented"))
 			return 1
-		}
-		resp.Response = &extensions.ExtensionCommandResponse_PlayerLoadTrack{
-			PlayerLoadTrack: res,
 		}
 	default:
 		pdk.SetError(errors.New("Unhandled event"))

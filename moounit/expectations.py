@@ -299,6 +299,7 @@ class ExpectationManager:
             if resp is not None:
                 return resp
             if err and not self.recorder.has_replay_expectations(Scope.SESSION):
+                print(f"DEBUG MISMATCH: call_type={call_type}, req={request_obj}, err={err}", flush=True)
                 raise AssertionError(err)
 
         if scope == Scope.LOCAL and self.recorder.has_replay_expectations(
@@ -536,6 +537,28 @@ class ExpectationManager:
                     "send_main_command", command, resp, current_scope.get()
                 )
                 return resp.SerializeToString()
+        which = command.WhichOneof("command")
+        passthrough_fn = None
+        if which in ("ws_connect", "ws_send", "ws_receive", "ws_close"):
+            ws_mgr = getattr(self.moounit, "ws_manager", None)
+            if ws_mgr:
+                if which == "ws_connect":
+                    passthrough_fn = lambda: MainCommandResponse(
+                        ws_connect=ws_mgr.ws_connect(command.ws_connect)
+                    )
+                elif which == "ws_send":
+                    passthrough_fn = lambda: MainCommandResponse(
+                        ws_send=ws_mgr.ws_send(command.ws_send)
+                    )
+                elif which == "ws_receive":
+                    passthrough_fn = lambda: MainCommandResponse(
+                        ws_receive=ws_mgr.ws_receive(command.ws_receive)
+                    )
+                elif which == "ws_close":
+                    passthrough_fn = lambda: MainCommandResponse(
+                        ws_close=ws_mgr.ws_close(command.ws_close)
+                    )
+
         resp = self._dispatch(
             "send_main_command",
             self.local_expectations,
@@ -547,7 +570,7 @@ class ExpectationManager:
                 root_call="send_main_command",
             )[0],
             command,
-            None,
+            passthrough_fn,
             lambda: default_main_command_response(command),
             "send_main_command",
             f"Unexpected command: {command}. If this command is expected, please ensure you have set an expectation using expect_command.",

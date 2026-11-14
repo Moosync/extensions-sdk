@@ -8,9 +8,7 @@ import (
 )
 
 // ANCHOR: first_extension
-type SampleExtension struct {
-	api.DefaultExtension
-}
+type SampleExtension struct{}
 
 //go:wasmexport entry
 func entry() {

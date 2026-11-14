@@ -32,16 +32,6 @@ def handle_extension_command() -> int:
 
     response = extensions_pb2.ExtensionCommandResponse()
 
-    if which == "get_provider_scopes":
-        handler = getattr(inst, "get_provider_scopes", None)
-        if handler is not None:
-            res = handler(getattr(cmd, "get_provider_scopes"))
-            if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "get_provider_scopes").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "get_provider_scopes").CopyFrom(res)
-        return 0
     if which == "get_remote_url":
         handler = getattr(inst, "get_remote_url", None)
         if handler is not None:

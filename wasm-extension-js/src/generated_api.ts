@@ -68,6 +68,14 @@ import {
   GetProcessStatusResponse,
   NotifyPlayerEventRequest,
   NotifyPlayerEventResponse,
+  WsConnectRequest,
+  WsConnectResponse,
+  WsSendRequest,
+  WsSendResponse,
+  WsReceiveRequest,
+  WsReceiveResponse,
+  WsCloseRequest,
+  WsCloseResponse,
 } from "./protos/extensions_pb.js";
 
 export async function sendMainCommand(command: MainCommand): Promise<MainCommandResponse> {
@@ -531,6 +539,62 @@ export async function notifyPlayerEvent(req?: NotifyPlayerEventRequest): Promise
     })
   );
   if (response.response.case === "notifyPlayerEvent") {
+    return response.response.value;
+  }
+  return undefined;
+}
+export async function wsConnect(req?: WsConnectRequest): Promise<WsConnectResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "wsConnect",
+        value: req ?? new WsConnectRequest(),
+      },
+    })
+  );
+  if (response.response.case === "wsConnect") {
+    return response.response.value;
+  }
+  return undefined;
+}
+export async function wsSend(req?: WsSendRequest): Promise<WsSendResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "wsSend",
+        value: req ?? new WsSendRequest(),
+      },
+    })
+  );
+  if (response.response.case === "wsSend") {
+    return response.response.value;
+  }
+  return undefined;
+}
+export async function wsReceive(req?: WsReceiveRequest): Promise<WsReceiveResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "wsReceive",
+        value: req ?? new WsReceiveRequest(),
+      },
+    })
+  );
+  if (response.response.case === "wsReceive") {
+    return response.response.value;
+  }
+  return undefined;
+}
+export async function wsClose(req?: WsCloseRequest): Promise<WsCloseResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "wsClose",
+        value: req ?? new WsCloseRequest(),
+      },
+    })
+  );
+  if (response.response.case === "wsClose") {
     return response.response.value;
   }
   return undefined;

@@ -71,7 +71,10 @@ class GeneratorTest(unittest.TestCase):
             self.assertGreater(os.path.getsize(out_moounit), 100)
             with open(out_moounit, "r", encoding="utf-8") as f:
                 content = f.read()
-            self.assertIn("class GeneratedMoounitGuestClient:", content)
+            self.assertIn("class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):", content)
+            self.assertIn("class GeneratedMoounitExpectationClient:", content)
+            self.assertIn("def default_main_command_response(", content)
+            self.assertIn("def expect_spawn_process(", content)
             self.assertIn("def requested_cover_art(", content)
             self.assertIn("def can_play(", content)
             self.assertIn("def player_play(", content)

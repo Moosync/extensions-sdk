@@ -192,13 +192,24 @@ service ExtensionHostService {
   rpc NotifyPlayerEvent(NotifyPlayerEventRequest) returns (NotifyPlayerEventResponse) {
     option (transport) = MAIN_COMMAND;
   }
+  rpc WsConnect(WsConnectRequest) returns (WsConnectResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc WsSend(WsSendRequest) returns (WsSendResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc WsReceive(WsReceiveRequest) returns (WsReceiveResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
+  rpc WsClose(WsCloseRequest) returns (WsCloseResponse) {
+    option (transport) = MAIN_COMMAND;
+  }
 }
 
 // -----------------------------------------------------------------
 // Guest Services: Commands & events handled by Extensions
 // -----------------------------------------------------------------
 service ProviderService {
-  rpc GetProviderScopes(GetProviderScopesRequest) returns (GetProviderScopesResponse);
   rpc GetRemoteUrl(GetRemoteUrlRequest) returns (GetRemoteUrlResponse);
   rpc RequestedSearchResult(RequestedSearchResultRequest) returns (RequestedSearchResultResponse);
   rpc RequestedPlaylists(RequestedPlaylistsRequest) returns (RequestedPlaylistsResponse);

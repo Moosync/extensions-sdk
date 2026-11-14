@@ -24,33 +24,7 @@ type {{ s.trait_name }} interface {
 {% endif %}
 {% endfor %}
 }
-
-type Default{{ s.trait_name }} struct{}
-
-{% for m in s.methods %}
-{% if m.is_event %}
-func (Default{{ s.trait_name }}) {{ m.pascal_name }}(req *extensions.{{ m.req_type }}) error {
-	return nil
-}
-{% else %}
-func (Default{{ s.trait_name }}) {{ m.pascal_name }}(req *extensions.{{ m.req_type }}) (*extensions.{{ m.resp_type }}, error) {
-	return nil, errors.New("Not implemented")
-}
-{% endif %}
 {% endfor %}
-{% endfor %}
-
-type Extension interface {
-{% for s in guest_services %}
-	{{ s.trait_name }}
-{% endfor %}
-}
-
-type DefaultExtension struct {
-{% for s in guest_services %}
-	Default{{ s.trait_name }}
-{% endfor %}
-}
 
 //go:wasmimport extism:host/user send_main_command
 func send_main_command(uint64) uint64

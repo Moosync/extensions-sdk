@@ -6,8 +6,6 @@ import extism
 from core.types.protos import extensions_pb2
 
 class Provider(ABC):
-    def get_provider_scopes(self, req: extensions_pb2.GetProviderScopesRequest) -> extensions_pb2.GetProviderScopesResponse:
-        raise NotImplementedError("get_provider_scopes not implemented")
     def get_remote_url(self, req: extensions_pb2.GetRemoteUrlRequest) -> extensions_pb2.GetRemoteUrlResponse:
         raise NotImplementedError("get_remote_url not implemented")
     def requested_search_result(self, req: extensions_pb2.RequestedSearchResultRequest) -> extensions_pb2.RequestedSearchResultResponse:
@@ -504,6 +502,54 @@ def notify_player_event(req: extensions_pb2.NotifyPlayerEventRequest | None = No
     if which == "notify_player_event":
         return getattr(res, "notify_player_event")
     raise RuntimeError(f"Unexpected response variant: {which}")
+def ws_connect(req: extensions_pb2.WsConnectRequest | None = None) -> extensions_pb2.WsConnectResponse:
+    if req is None:
+        req = extensions_pb2.WsConnectRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "ws_connect").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "ws_connect":
+        return getattr(res, "ws_connect")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def ws_send(req: extensions_pb2.WsSendRequest | None = None) -> extensions_pb2.WsSendResponse:
+    if req is None:
+        req = extensions_pb2.WsSendRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "ws_send").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "ws_send":
+        return getattr(res, "ws_send")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def ws_receive(req: extensions_pb2.WsReceiveRequest | None = None) -> extensions_pb2.WsReceiveResponse:
+    if req is None:
+        req = extensions_pb2.WsReceiveRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "ws_receive").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "ws_receive":
+        return getattr(res, "ws_receive")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def ws_close(req: extensions_pb2.WsCloseRequest | None = None) -> extensions_pb2.WsCloseResponse:
+    if req is None:
+        req = extensions_pb2.WsCloseRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "ws_close").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "ws_close":
+        return getattr(res, "ws_close")
+    raise RuntimeError(f"Unexpected response variant: {which}")
 
 
 class ExtensionApi:
@@ -570,6 +616,14 @@ class ExtensionApi:
         return get_process_status(req)
     def notify_player_event(self, req: extensions_pb2.NotifyPlayerEventRequest | None = None) -> extensions_pb2.NotifyPlayerEventResponse:
         return notify_player_event(req)
+    def ws_connect(self, req: extensions_pb2.WsConnectRequest | None = None) -> extensions_pb2.WsConnectResponse:
+        return ws_connect(req)
+    def ws_send(self, req: extensions_pb2.WsSendRequest | None = None) -> extensions_pb2.WsSendResponse:
+        return ws_send(req)
+    def ws_receive(self, req: extensions_pb2.WsReceiveRequest | None = None) -> extensions_pb2.WsReceiveResponse:
+        return ws_receive(req)
+    def ws_close(self, req: extensions_pb2.WsCloseRequest | None = None) -> extensions_pb2.WsCloseResponse:
+        return ws_close(req)
 
 
 class Extension(Provider, Accounts, ContextMenu, PlayerEvents, DatabaseEvents, PreferenceEvents, PlayerProvider, ABC):

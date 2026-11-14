@@ -1,6 +1,8 @@
 # pylint: disable=duplicate-code
 import json
 import os
+import platform
+import sys
 import tempfile
 import uuid
 import warnings
@@ -9,45 +11,24 @@ from typing import TypeVar
 
 from google.protobuf.message import Message
 import extism
+from extism.extism import (
+    HOST_FN_REGISTRY,
+    CompiledPlugin,
+    ExplicitFunction,
+    Function,
+    TypeInferredFunction,
+    ValType,
+)
 from core.types.protos.extensions_pb2 import (
     BatchHttpRequest,
     BatchHttpResponse,
-    CanPlayRequest,
-    CanPlayResponse,
     ExtensionAccountDetail,
     ExtensionCommand,
     ExtensionCommandResponse,
     ExtensionManifest,
     ExtensionProviderScope,
-    GetProcessStatusRequest,
-    GetProcessStatusResponse,
-    HttpRequest,
-    HttpResult,
-    KillProcessRequest,
-    KillProcessResponse,
     MainCommand,
     MainCommandResponse,
-    ManifestPermissions,
-    NotifyPlayerEventRequest,
-    NotifyPlayerEventResponse,
-    PlayerLoadTrackRequest,
-    PlayerLoadTrackResponse,
-    PlayerPauseRequest,
-    PlayerPauseResponse,
-    PlayerPlayRequest,
-    PlayerPlayResponse,
-    PlayerSeekRequest,
-    PlayerSeekResponse,
-    PlayerSetVolumeRequest,
-    PlayerSetVolumeResponse,
-    PlayerStopRequest,
-    PlayerStopResponse,
-    ReadProcessStdoutRequest,
-    ReadProcessStdoutResponse,
-    SpawnProcessRequest,
-    SpawnProcessResponse,
-    WriteProcessStdinRequest,
-    WriteProcessStdinResponse,
 )
 
 EVENT_TO_PROVIDER_SCOPE: dict[str, int] = {
@@ -82,27 +63,9 @@ EVENT_TO_PROVIDER_SCOPE: dict[str, int] = {
     "player_load_track": ExtensionProviderScope.PLAYER_PROVIDER,
 }
 
-PLAYER_COMMANDS: tuple[str, ...] = (
-    "can_play",
-    "player_play",
-    "player_pause",
-    "player_stop",
-    "player_seek",
-    "player_set_volume",
-    "player_load_track",
-)
-from extism.extism import (
-    HOST_FN_REGISTRY,
-    CompiledPlugin,
-    ExplicitFunction,
-    Function,
-    TypeInferredFunction,
-    ValType,
-)
-
 from moounit.expectations import ExpectationManager, current_scope
-from moounit.generated import GeneratedMoounitGuestClient
-from moounit.passthrough import RealSocketManager
+from moounit.generated import PLAYER_COMMANDS, GeneratedMoounitGuestClient
+from moounit.passthrough import RealSocketManager, RealWebSocketManager
 from moounit.recorder import Recorder
 from moounit.sanitize import (
     sanitize_extension_command,
@@ -315,6 +278,17 @@ class Moounit(GeneratedMoounitGuestClient):
             allowed_paths[temp_dir.name] = dest
             self._mapped_paths[src] = temp_dir.name
 
+        target_os = "linux" if sys.platform.startswith("linux") else ("macos" if sys.platform == "darwin" else ("windows" if sys.platform in ("win32", "cygwin") else sys.platform))
+        machine = platform.machine().lower()
+        if machine in ("x86_64", "amd64"):
+            target_arch = "x86_64"
+        elif machine in ("aarch64", "arm64"):
+            target_arch = "aarch64"
+        elif machine in ("i386", "i686", "x86"):
+            target_arch = "x86"
+        else:
+            target_arch = machine
+
         compiled = CompiledPlugin(
             {
                 "wasm": [
@@ -325,7 +299,11 @@ class Moounit(GeneratedMoounitGuestClient):
                 ],
                 "allowed_hosts": manifest.permissions.hosts._values,
                 "allowed_paths": allowed_paths,
-                "config": {"pid": str(os.getpid())},
+                "config": {
+                    "pid": str(os.getpid()),
+                    "os": target_os,
+                    "arch": target_arch,
+                },
             },
             wasi=True,
             functions=fns,
@@ -431,6 +409,7 @@ class Moounit(GeneratedMoounitGuestClient):
             Moounit._has_player_provider_extension = True
         self.package_name = package_name or manifest.name or manifest.display_name or ""
         self.socket_manager = RealSocketManager(dict(manifest.permissions.paths))
+        self.ws_manager = RealWebSocketManager(list(manifest.permissions.hosts._values))
         self._load_extension(manifest)
 
     @property
@@ -495,91 +474,6 @@ class Moounit(GeneratedMoounitGuestClient):
             regex=regex,
             test_name=test_name,
         )
-
-    def expect_spawn_process(
-        self,
-        req: SpawnProcessRequest,
-        response: SpawnProcessResponse | Callable[[], SpawnProcessResponse],
-        times: int = 1,
-    ) -> None:
-        cmd = MainCommand(spawn_process=req)
-        res = (
-            (lambda r=response: MainCommandResponse(spawn_process=r()))
-            if callable(response)
-            else MainCommandResponse(spawn_process=response)
-        )
-        self.expect_command(cmd, res, times=times)
-
-    def expect_write_process_stdin(
-        self,
-        req: WriteProcessStdinRequest,
-        response: WriteProcessStdinResponse | Callable[[], WriteProcessStdinResponse],
-        times: int = 1,
-    ) -> None:
-        cmd = MainCommand(write_process_stdin=req)
-        res = (
-            (lambda r=response: MainCommandResponse(write_process_stdin=r()))
-            if callable(response)
-            else MainCommandResponse(write_process_stdin=response)
-        )
-        self.expect_command(cmd, res, times=times)
-
-    def expect_read_process_stdout(
-        self,
-        req: ReadProcessStdoutRequest,
-        response: ReadProcessStdoutResponse | Callable[[], ReadProcessStdoutResponse],
-        times: int = 1,
-    ) -> None:
-        cmd = MainCommand(read_process_stdout=req)
-        res = (
-            (lambda r=response: MainCommandResponse(read_process_stdout=r()))
-            if callable(response)
-            else MainCommandResponse(read_process_stdout=response)
-        )
-        self.expect_command(cmd, res, times=times)
-
-    def expect_kill_process(
-        self,
-        req: KillProcessRequest,
-        response: KillProcessResponse | Callable[[], KillProcessResponse],
-        times: int = 1,
-    ) -> None:
-        cmd = MainCommand(kill_process=req)
-        res = (
-            (lambda r=response: MainCommandResponse(kill_process=r()))
-            if callable(response)
-            else MainCommandResponse(kill_process=response)
-        )
-        self.expect_command(cmd, res, times=times)
-
-    def expect_get_process_status(
-        self,
-        req: GetProcessStatusRequest,
-        response: GetProcessStatusResponse | Callable[[], GetProcessStatusResponse],
-        times: int = 1,
-    ) -> None:
-        cmd = MainCommand(get_process_status=req)
-        res = (
-            (lambda r=response: MainCommandResponse(get_process_status=r()))
-            if callable(response)
-            else MainCommandResponse(get_process_status=response)
-        )
-        self.expect_command(cmd, res, times=times)
-
-    def expect_notify_player_event(
-        self,
-        req: NotifyPlayerEventRequest,
-        response: NotifyPlayerEventResponse | Callable[[], NotifyPlayerEventResponse] | None = None,
-        times: int = 1,
-    ) -> None:
-        cmd = MainCommand(notify_player_event=req)
-        res_val = response or NotifyPlayerEventResponse()
-        res = (
-            (lambda r=res_val: MainCommandResponse(notify_player_event=r()))
-            if callable(res_val)
-            else MainCommandResponse(notify_player_event=res_val)
-        )
-        self.expect_command(cmd, res, times=times)
 
     def clear_local_expectations(self) -> None:
         self.manager.clear_local_expectations()

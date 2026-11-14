@@ -31,6 +31,7 @@ if "moosync_edk" not in sys.modules:
 
 from .generated_api import *
 from .generated_dispatcher import *
+from .process import ChildProcess, notify_player_event, spawn_process
 
 open_sock = open_clientfd
 batch_http_request_host = batch_http_request
@@ -335,3 +336,67 @@ def start_process(path: str, args: list[str] | None = None, env: dict[str, str] 
     if not resp:
         raise RuntimeError("Failed to spawn process: no response from host")
     return ChildProcess(resp.process_id, resp.pid)
+
+
+class WebSocketMessage:
+    def __init__(self, text: Optional[str] = None, binary: Optional[bytes] = None):
+        self.text = text
+        self.binary = binary
+
+    @property
+    def is_binary(self) -> bool:
+        return self.binary is not None
+
+
+class WebSocketClient:
+    def __init__(self, connection_id: int):
+        self.connection_id = connection_id
+
+    @classmethod
+    def connect(cls, url: str) -> "WebSocketClient":
+        req = extensions_pb2.WsConnectRequest(url=url)
+        resp = ws_connect(req)
+        if not resp:
+            raise RuntimeError("Failed to connect websocket: no response from host")
+        return cls(resp.connection_id)
+
+    def send_text(self, text: str) -> None:
+        req = extensions_pb2.WsSendRequest(connection_id=self.connection_id, text=text)
+        ws_send(req)
+
+    def send_binary(self, data: bytes) -> None:
+        req = extensions_pb2.WsSendRequest(connection_id=self.connection_id, binary=data)
+        ws_send(req)
+
+    def receive(self, timeout_ms: Optional[int] = None) -> Optional[WebSocketMessage]:
+        req = extensions_pb2.WsReceiveRequest(connection_id=self.connection_id, timeout_ms=timeout_ms)
+        resp = ws_receive(req)
+        if not resp:
+            return None
+        field = resp.WhichOneof("payload")
+        if field == "text":
+            return WebSocketMessage(text=resp.text)
+        elif field == "binary":
+            return WebSocketMessage(binary=resp.binary)
+        return None
+
+    def close(self, code: Optional[int] = None, reason: Optional[str] = None) -> None:
+        req = extensions_pb2.WsCloseRequest(connection_id=self.connection_id, code=code, reason=reason)
+        ws_close(req)
+
+
+def get_platform() -> tuple[str, str]:
+    try:
+        os_val = extism.get_config("os")
+    except Exception:
+        os_val = None
+    try:
+        arch_val = extism.get_config("arch")
+    except Exception:
+        arch_val = None
+    return os_val or "unknown", arch_val or "unknown"
+
+
+ExtensionApi.get_platform = staticmethod(get_platform)
+
+

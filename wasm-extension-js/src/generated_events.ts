@@ -4,8 +4,6 @@
 import {
   ExtensionCommand,
   ExtensionCommandResponse,
-  GetProviderScopesRequest,
-  GetProviderScopesResponse,
   GetRemoteUrlRequest,
   GetRemoteUrlResponse,
   RequestedSearchResultRequest,
@@ -79,7 +77,6 @@ import {
 } from "./protos/extensions_pb.js";
 
 export interface Provider {
-  getProviderScopes?(req: GetProviderScopesRequest): Promise<GetProviderScopesResponse> | GetProviderScopesResponse;
   getRemoteUrl?(req: GetRemoteUrlRequest): Promise<GetRemoteUrlResponse> | GetRemoteUrlResponse;
   requestedSearchResult?(req: RequestedSearchResultRequest): Promise<RequestedSearchResultResponse> | RequestedSearchResultResponse;
   requestedPlaylists?(req: RequestedPlaylistsRequest): Promise<RequestedPlaylistsResponse> | RequestedPlaylistsResponse;
@@ -96,10 +93,6 @@ export interface Provider {
 }
 
 export interface ProviderEvents {
-  "getProviderScopes": {
-    req: GetProviderScopesRequest;
-    resp: GetProviderScopesResponse;
-  };
   "getRemoteUrl": {
     req: GetRemoteUrlRequest;
     resp: GetRemoteUrlResponse;

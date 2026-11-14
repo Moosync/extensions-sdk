@@ -11,9 +11,6 @@ pub type MoosyncResult<T> = Result<T, crate::handler::MoosyncError>;
 
 #[allow(unused_variables)]
 pub trait Provider {
-    fn get_provider_scopes(&self, req: GetProviderScopesRequest) -> MoosyncResult<GetProviderScopesResponse> {
-        Err("Not implemented".into())
-    }
     fn get_remote_url(&self, req: GetRemoteUrlRequest) -> MoosyncResult<GetRemoteUrlResponse> {
         Err("Not implemented".into())
     }
@@ -771,6 +768,82 @@ pub mod host_api {
             }
 
             if let Some(main_command_response::Response::NotifyPlayerEvent(data)) = res.response {
+                return Ok(data);
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
+    }
+    pub fn ws_connect(req: WsConnectRequest) -> MoosyncResult<WsConnectResponse> {
+        unsafe {
+            let cmd = MainCommand {
+                command: Some(main_command::Command::WsConnect(req)),
+            };
+            let Prost(res) = send_main_command(Prost(cmd))
+                .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+            if let Some(main_command_response::Response::Error(e)) = res.response {
+                return Err(MoosyncError::String(e.message));
+            }
+
+            if let Some(main_command_response::Response::WsConnect(data)) = res.response {
+                return Ok(data);
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
+    }
+    pub fn ws_send(req: WsSendRequest) -> MoosyncResult<WsSendResponse> {
+        unsafe {
+            let cmd = MainCommand {
+                command: Some(main_command::Command::WsSend(req)),
+            };
+            let Prost(res) = send_main_command(Prost(cmd))
+                .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+            if let Some(main_command_response::Response::Error(e)) = res.response {
+                return Err(MoosyncError::String(e.message));
+            }
+
+            if let Some(main_command_response::Response::WsSend(data)) = res.response {
+                return Ok(data);
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
+    }
+    pub fn ws_receive(req: WsReceiveRequest) -> MoosyncResult<WsReceiveResponse> {
+        unsafe {
+            let cmd = MainCommand {
+                command: Some(main_command::Command::WsReceive(req)),
+            };
+            let Prost(res) = send_main_command(Prost(cmd))
+                .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+            if let Some(main_command_response::Response::Error(e)) = res.response {
+                return Err(MoosyncError::String(e.message));
+            }
+
+            if let Some(main_command_response::Response::WsReceive(data)) = res.response {
+                return Ok(data);
+            }
+
+            Err(MoosyncError::String("Host returned invalid response".into()))
+        }
+    }
+    pub fn ws_close(req: WsCloseRequest) -> MoosyncResult<WsCloseResponse> {
+        unsafe {
+            let cmd = MainCommand {
+                command: Some(main_command::Command::WsClose(req)),
+            };
+            let Prost(res) = send_main_command(Prost(cmd))
+                .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+            if let Some(main_command_response::Response::Error(e)) = res.response {
+                return Err(MoosyncError::String(e.message));
+            }
+
+            if let Some(main_command_response::Response::WsClose(data)) = res.response {
                 return Ok(data);
             }
 

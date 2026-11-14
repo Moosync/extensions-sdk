@@ -25,7 +25,7 @@ The scaffolding tool generates a `BUILD` file using `go_extension`:
 
 ### Implementation
 
-Extensions are represented by embedding `api.DefaultExtension`. You need to register your extension through the `entry` function:
+Extensions implement service interfaces (such as `api.Provider`, `api.Accounts`, etc.). You register your extension instance through the `entry` function:
 
 ```go
 {{#include ../../wasm-extension-go/examples/main.go:first_extension}}

@@ -17,11 +17,16 @@
 import "fast-text-encoding";
 import "./request-ponyfills";
 import "./abortcontroller-ponyfills";
+import "./platform";
 
 export * from "./generated_api";
 export * from "./generated_events";
 export type { Extension } from "./generated_events";
 export { ChildProcess, spawnProcess, notifyPlayerEvent } from "./process";
+export { WebSocketClient } from "./websocket";
+export type { WebSocketMessage } from "./websocket";
+export { getPlatform } from "./platform";
+export type { PlatformInfo } from "./platform";
 export * from "./lrc";
 export * from "./http";
 export * from "./utils";

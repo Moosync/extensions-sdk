@@ -58,7 +58,7 @@ py_binary(
 )
 
 py_test(
-    name = "generator_test",
+    name = "generator_unit_test",
     srcs = ["generator_test.py"],
     data = [
         ":all_templates",

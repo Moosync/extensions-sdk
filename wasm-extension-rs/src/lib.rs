@@ -36,18 +36,24 @@ pub use songs_proto::moosync::types::*;
 pub use themes_proto::moosync::types::*;
 pub use ui_proto::moosync::types::*;
 
-pub mod generated_api;
-pub use generated_api as api;
+#[path = "generated_api.rs"]
+pub mod api;
+pub mod cache;
 pub mod generated_dispatcher;
 pub mod handler;
 pub mod http;
+pub mod platform;
 pub mod process;
 pub mod response_utils;
+pub mod websocket;
 
-pub use generated_api::MoosyncResult;
+pub use api::MoosyncResult;
+pub use cache::{get_cache, set_cache, set_cache_with_ttl};
 pub use handler::MoosyncError;
+pub use platform::{get_platform, PlatformInfo};
 pub use process::{spawn_process, notify_player_event, ChildProcess};
 pub use response_utils::{parse_lrc, LrcParseError};
+pub use websocket::{WebSocketClient, WebSocketMessage};
 
 unsafe extern "C" {
     fn init();

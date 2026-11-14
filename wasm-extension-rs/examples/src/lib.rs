@@ -1,7 +1,7 @@
 #![no_main]
 
 use moosync_edk::{
-    generated_api::{
+    api::{
         host_api::get_current_song, Accounts, ContextMenu, DatabaseEvents, Extension,
         GetCurrentSongRequest, PlayerEvents, PlayerProvider, PreferenceEvents, Provider,
         RequestedSearchResultRequest, RequestedSearchResultResponse, ScrobbleRequest,

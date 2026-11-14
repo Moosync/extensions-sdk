@@ -15,7 +15,6 @@ import (
 )
 
 type Provider interface {
-	GetProviderScopes(req *extensions.GetProviderScopesRequest) (*extensions.GetProviderScopesResponse, error)
 	GetRemoteUrl(req *extensions.GetRemoteUrlRequest) (*extensions.GetRemoteUrlResponse, error)
 	RequestedSearchResult(req *extensions.RequestedSearchResultRequest) (*extensions.RequestedSearchResultResponse, error)
 	RequestedPlaylists(req *extensions.RequestedPlaylistsRequest) (*extensions.RequestedPlaylistsResponse, error)
@@ -30,80 +29,14 @@ type Provider interface {
 	Scrobble(req *extensions.ScrobbleRequest) error
 	CustomRequest(req *extensions.CustomRequest) (*extensions.CustomRequestResponse, error)
 }
-
-type DefaultProvider struct{}
-
-func (DefaultProvider) GetProviderScopes(req *extensions.GetProviderScopesRequest) (*extensions.GetProviderScopesResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) GetRemoteUrl(req *extensions.GetRemoteUrlRequest) (*extensions.GetRemoteUrlResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) RequestedSearchResult(req *extensions.RequestedSearchResultRequest) (*extensions.RequestedSearchResultResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) RequestedPlaylists(req *extensions.RequestedPlaylistsRequest) (*extensions.RequestedPlaylistsResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) RequestedPlaylistSongs(req *extensions.RequestedPlaylistSongsRequest) (*extensions.RequestedPlaylistSongsResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) RequestedArtistSongs(req *extensions.RequestedArtistSongsRequest) (*extensions.RequestedArtistSongsResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) RequestedAlbumSongs(req *extensions.RequestedAlbumSongsRequest) (*extensions.RequestedAlbumSongsResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) RequestedRecommendations(req *extensions.RequestedRecommendationsRequest) (*extensions.RequestedRecommendationsResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) RequestedSongFromId(req *extensions.RequestedSongFromIdRequest) (*extensions.RequestedSongFromIdResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) PlaybackDetailsRequested(req *extensions.PlaybackDetailsRequestedRequest) (*extensions.PlaybackDetailsRequestedResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) RequestedLyrics(req *extensions.RequestedLyricsRequest) (*extensions.RequestedLyricsResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) RequestedCoverArt(req *extensions.RequestedCoverArtRequest) (*extensions.RequestedCoverArtResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultProvider) Scrobble(req *extensions.ScrobbleRequest) error {
-	return nil
-}
-func (DefaultProvider) CustomRequest(req *extensions.CustomRequest) (*extensions.CustomRequestResponse, error) {
-	return nil, errors.New("Not implemented")
-}
 type Accounts interface {
 	PerformAccountLogin(req *extensions.PerformAccountLoginRequest) (*extensions.PerformAccountLoginResponse, error)
 	OauthCallback(req *extensions.OauthCallbackRequest) (*extensions.OauthCallbackResponse, error)
-}
-
-type DefaultAccounts struct{}
-
-func (DefaultAccounts) PerformAccountLogin(req *extensions.PerformAccountLoginRequest) (*extensions.PerformAccountLoginResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultAccounts) OauthCallback(req *extensions.OauthCallbackRequest) (*extensions.OauthCallbackResponse, error) {
-	return nil, errors.New("Not implemented")
 }
 type ContextMenu interface {
 	RequestedSongContextMenu(req *extensions.RequestedSongContextMenuRequest) (*extensions.RequestedSongContextMenuResponse, error)
 	RequestedPlaylistContextMenu(req *extensions.RequestedPlaylistContextMenuRequest) (*extensions.RequestedPlaylistContextMenuResponse, error)
 	ContextMenuAction(req *extensions.ContextMenuActionRequest) (*extensions.ContextMenuActionResponse, error)
-}
-
-type DefaultContextMenu struct{}
-
-func (DefaultContextMenu) RequestedSongContextMenu(req *extensions.RequestedSongContextMenuRequest) (*extensions.RequestedSongContextMenuResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultContextMenu) RequestedPlaylistContextMenu(req *extensions.RequestedPlaylistContextMenuRequest) (*extensions.RequestedPlaylistContextMenuResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultContextMenu) ContextMenuAction(req *extensions.ContextMenuActionRequest) (*extensions.ContextMenuActionResponse, error) {
-	return nil, errors.New("Not implemented")
 }
 type PlayerEvents interface {
 	SongQueueChanged(req *extensions.SongQueueChangedRequest) error
@@ -112,53 +45,14 @@ type PlayerEvents interface {
 	PlayerStateChanged(req *extensions.PlayerStateChangedRequest) error
 	SongChanged(req *extensions.SongChangedRequest) error
 }
-
-type DefaultPlayerEvents struct{}
-
-func (DefaultPlayerEvents) SongQueueChanged(req *extensions.SongQueueChangedRequest) error {
-	return nil
-}
-func (DefaultPlayerEvents) Seeked(req *extensions.SeekedRequest) error {
-	return nil
-}
-func (DefaultPlayerEvents) VolumeChanged(req *extensions.VolumeChangedRequest) error {
-	return nil
-}
-func (DefaultPlayerEvents) PlayerStateChanged(req *extensions.PlayerStateChangedRequest) error {
-	return nil
-}
-func (DefaultPlayerEvents) SongChanged(req *extensions.SongChangedRequest) error {
-	return nil
-}
 type DatabaseEvents interface {
 	SongAdded(req *extensions.SongAddedRequest) error
 	SongRemoved(req *extensions.SongRemovedRequest) error
 	PlaylistAdded(req *extensions.PlaylistAddedRequest) error
 	PlaylistRemoved(req *extensions.PlaylistRemovedRequest) error
 }
-
-type DefaultDatabaseEvents struct{}
-
-func (DefaultDatabaseEvents) SongAdded(req *extensions.SongAddedRequest) error {
-	return nil
-}
-func (DefaultDatabaseEvents) SongRemoved(req *extensions.SongRemovedRequest) error {
-	return nil
-}
-func (DefaultDatabaseEvents) PlaylistAdded(req *extensions.PlaylistAddedRequest) error {
-	return nil
-}
-func (DefaultDatabaseEvents) PlaylistRemoved(req *extensions.PlaylistRemovedRequest) error {
-	return nil
-}
 type PreferenceEvents interface {
 	PreferenceChanged(req *extensions.PreferenceChangedRequest) error
-}
-
-type DefaultPreferenceEvents struct{}
-
-func (DefaultPreferenceEvents) PreferenceChanged(req *extensions.PreferenceChangedRequest) error {
-	return nil
 }
 type PlayerProvider interface {
 	CanPlay(req *extensions.CanPlayRequest) (*extensions.CanPlayResponse, error)
@@ -168,50 +62,6 @@ type PlayerProvider interface {
 	PlayerSeek(req *extensions.PlayerSeekRequest) (*extensions.PlayerSeekResponse, error)
 	PlayerSetVolume(req *extensions.PlayerSetVolumeRequest) (*extensions.PlayerSetVolumeResponse, error)
 	PlayerLoadTrack(req *extensions.PlayerLoadTrackRequest) (*extensions.PlayerLoadTrackResponse, error)
-}
-
-type DefaultPlayerProvider struct{}
-
-func (DefaultPlayerProvider) CanPlay(req *extensions.CanPlayRequest) (*extensions.CanPlayResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultPlayerProvider) PlayerPlay(req *extensions.PlayerPlayRequest) (*extensions.PlayerPlayResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultPlayerProvider) PlayerPause(req *extensions.PlayerPauseRequest) (*extensions.PlayerPauseResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultPlayerProvider) PlayerStop(req *extensions.PlayerStopRequest) (*extensions.PlayerStopResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultPlayerProvider) PlayerSeek(req *extensions.PlayerSeekRequest) (*extensions.PlayerSeekResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultPlayerProvider) PlayerSetVolume(req *extensions.PlayerSetVolumeRequest) (*extensions.PlayerSetVolumeResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-func (DefaultPlayerProvider) PlayerLoadTrack(req *extensions.PlayerLoadTrackRequest) (*extensions.PlayerLoadTrackResponse, error) {
-	return nil, errors.New("Not implemented")
-}
-
-type Extension interface {
-	Provider
-	Accounts
-	ContextMenu
-	PlayerEvents
-	DatabaseEvents
-	PreferenceEvents
-	PlayerProvider
-}
-
-type DefaultExtension struct {
-	DefaultProvider
-	DefaultAccounts
-	DefaultContextMenu
-	DefaultPlayerEvents
-	DefaultDatabaseEvents
-	DefaultPreferenceEvents
-	DefaultPlayerProvider
 }
 
 //go:wasmimport extism:host/user send_main_command
@@ -759,6 +609,66 @@ func NotifyPlayerEvent(req *extensions.NotifyPlayerEventRequest) (*extensions.No
 	}
 	if v, ok := res.Response.(*extensions.MainCommandResponse_NotifyPlayerEvent); ok {
 		return v.NotifyPlayerEvent, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+func WsConnect(req *extensions.WsConnectRequest) (*extensions.WsConnectResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_WsConnect{
+			WsConnect: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_WsConnect); ok {
+		return v.WsConnect, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+func WsSend(req *extensions.WsSendRequest) (*extensions.WsSendResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_WsSend{
+			WsSend: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_WsSend); ok {
+		return v.WsSend, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+func WsReceive(req *extensions.WsReceiveRequest) (*extensions.WsReceiveResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_WsReceive{
+			WsReceive: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_WsReceive); ok {
+		return v.WsReceive, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+func WsClose(req *extensions.WsCloseRequest) (*extensions.WsCloseResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_WsClose{
+			WsClose: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_WsClose); ok {
+		return v.WsClose, nil
 	}
 	return nil, errors.New("Invalid response type from host")
 }
