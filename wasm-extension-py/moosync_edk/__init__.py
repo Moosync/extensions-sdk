@@ -1,24 +1,18 @@
 # Moosync Python Extension SDK (moosync_edk)
-# Handcrafted entrypoint package for runtime utilities and generated RPC modules.
 
-from enum import Enum
 import os
 import sys
 from datetime import timedelta
-from typing import Any, Dict, List, Optional, Sequence, Type, TypeVar, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Type, TypeVar, Union
 
 import extism
 from core.types.protos import extensions_pb2, preferences_pb2, songs_pb2, themes_pb2, ui_pb2
-
-# Re-export protos
 from core.types.protos.extensions_pb2 import *
 from core.types.protos.preferences_pb2 import *
 from core.types.protos.songs_pb2 import *
 from core.types.protos.ui_pb2 import *
 from google.protobuf.duration_pb2 import Duration
 from google.protobuf.message import Message
-
-T = TypeVar("T", bound=Message)
 
 edk_paths = [p + "/moosync_edk" for p in sys.path if p.endswith("wasm-extension-py")]
 if "__file__" in globals():
@@ -29,13 +23,56 @@ __path__ = edk_paths
 if "moosync_edk" not in sys.modules:
     sys.modules["moosync_edk"] = sys.modules[__name__]
 
+
+@extism.import_fn("extism:host/user", "send_main_command")
+def send_main_command_raw(data: int) -> int: ...
+
+
+def send_main_command(command: extensions_pb2.MainCommand) -> extensions_pb2.MainCommandResponse:
+    serialized = command.SerializeToString()
+    mem = extism.memory.alloc(serialized)
+    if mem is None:
+        raise RuntimeError("Failed to allocate memory for main command")
+    res_offset = send_main_command_raw(mem.offset)
+    res_handle = extism.memory.find(res_offset)
+    if res_handle is None:
+        raise RuntimeError(f"Failed to find memory for response at offset {res_offset}")
+    res_bytes = extism.memory.bytes(res_handle)
+    extism.memory.free(mem)
+    res = extensions_pb2.MainCommandResponse()
+    res.ParseFromString(res_bytes)
+    return res
+
+
+_extension_instance = None
+
+
+def register_extension(instance):
+    global _extension_instance
+    _extension_instance = instance
+
+
+def get_extension():
+    return _extension_instance
+
+
 from .generated_api import *
 from .generated_dispatcher import *
-from .process import ChildProcess, notify_player_event, spawn_process
-
-open_sock = open_clientfd
-batch_http_request_host = batch_http_request
-
+from .platform import PlatformInfo, get_platform
+from .cache import get_cache, set_cache
+from .socket import SocketClient
+from .websocket import WebSocketClient, WebSocketMessage
+from .lrc import parse_lrc
+from .http import (
+    HttpRequest,
+    HttpResponse,
+    HttpResult,
+    http_batch_request,
+    http_batch_get,
+    http_request,
+    http_get,
+)
+from .process import ChildProcess, spawn_process
 
 class CustomPrint:
     buf = ""
@@ -48,179 +85,23 @@ class CustomPrint:
         extism.log(extism.LogLevel.Debug, self.buf)
         self.buf = ""
 
+def duration_to_proto(td: timedelta) -> Duration:
+    """Convert datetime.timedelta to google.protobuf.Duration."""
+    duration = Duration()
+    duration.seconds = int(td.total_seconds())
+    duration.nanos = int((td.microseconds % 1000000) * 1000)
+    return duration
 
-class HttpRequest:
-    def __init__(
-        self,
-        url: str,
-        method: str = "GET",
-        headers: Optional[Dict[str, str]] = None,
-        body: Optional[Union[bytes, str]] = None,
-        timeout_ms: Optional[int] = None,
-    ):
-        self.url = url
-        self.method = method
-        self.headers = headers or {}
-        if isinstance(body, str):
-            self.body = body.encode("utf-8")
-        else:
-            self.body = body
-        self.timeout_ms = timeout_ms
-
-    def to_proto(self) -> extensions_pb2.HttpRequest:
-        return extensions_pb2.HttpRequest(
-            url=self.url,
-            method=self.method.upper(),
-            headers=self.headers,
-            body=self.body,
-            timeout_ms=self.timeout_ms,
-        )
-
-
-class HttpResponse:
-    def __init__(self, proto: extensions_pb2.HttpResponse):
-        self.status_code: int = proto.status_code
-        self.status_text: str = proto.status_text
-        self.headers: dict = dict(proto.headers)
-        self.body: bytes = proto.body
-
-    @property
-    def ok(self) -> bool:
-        return 200 <= self.status_code < 300
-
-    @property
-    def text(self) -> str:
-        return self.body.decode("utf-8", errors="replace")
-
-    def json(self) -> Any:
-        import json
-        return json.loads(self.text)
-
-
-class HttpResult:
-    def __init__(self, proto: extensions_pb2.HttpResult):
-        which = proto.WhichOneof("result")
-        if which == "response":
-            self.response: Optional[HttpResponse] = HttpResponse(proto.response)
-            self.error: Optional[str] = None
-        elif which == "error":
-            self.response = None
-            self.error = proto.error
-        else:
-            self.response = None
-            self.error = "Empty HTTP result"
-
-
-class PlaybackDetailsReturnType:
-    def __init__(
-        self,
-        url: str,
-        duration: Optional[timedelta] = None,
-    ):
-        self.url = url
-        self.duration = duration
-
-    def to_proto(self) -> extensions_pb2.PlaybackDetailsRequestedResponse:
-        proto_duration = None
-        if self.duration is not None:
-            proto_duration = duration_to_proto(self.duration)
-        return extensions_pb2.PlaybackDetailsRequestedResponse(
-            url=self.url,
-            duration=proto_duration,
-        )
-
-
-def http_batch_request(requests: Sequence[Union[HttpRequest, Dict[str, Any]]]) -> List[HttpResponse]:
-    if not requests:
-        return []
-    proto_reqs = []
-    for r in requests:
-        if isinstance(r, HttpRequest):
-            proto_reqs.append(r.to_proto())
-        elif isinstance(r, dict):
-            req_obj = HttpRequest(**r)
-            proto_reqs.append(req_obj.to_proto())
-        else:
-            raise ValueError(f"Invalid request type: {type(r)}")
-
-    batch = extensions_pb2.BatchHttpRequest(requests=proto_reqs)
-    data = batch.SerializeToString()
-    mem = extism.memory.alloc(data)
-    if mem is None:
-        raise Exception("Failed to allocate memory for HTTP batch request")
-    res_offset = batch_http_request_host(mem.offset)
-
-    res_mem_handle = extism.memory.find(res_offset)
-    if res_mem_handle is None:
-        raise Exception(f"Failed to find memory for batch HTTP response at offset {res_offset}")
-
-    res_bytes = extism.memory.bytes(res_mem_handle)
-    extism.memory.free(mem)
-
-    batch_resp = extensions_pb2.BatchHttpResponse()
-    batch_resp.ParseFromString(res_bytes)
-
-    if batch_resp.HasField("error") and batch_resp.error:
-        raise Exception(batch_resp.error)
-
-    responses = []
-    for idx, item in enumerate(batch_resp.responses):
-        which = item.WhichOneof("result")
-        if which == "response":
-            responses.append(HttpResponse(item.response))
-        elif which == "error":
-            raise Exception(f"Request #{idx} failed: {item.error}")
-        else:
-            raise Exception(f"Request #{idx} returned empty HTTP result")
-    return responses
-
-
-def http_batch_get(
-    urls: List[str],
-    headers: Optional[Dict[str, str]] = None,
-    timeout_ms: Optional[int] = None,
-) -> List[HttpResponse]:
-    reqs = [HttpRequest(url=u, method="GET", headers=headers, timeout_ms=timeout_ms) for u in urls]
-    return http_batch_request(reqs)
-
-
-def http_request(
-    url: str,
-    method: str = "GET",
-    body: Optional[Union[bytes, str]] = None,
-    headers: Optional[Dict[str, str]] = None,
-    timeout_ms: Optional[int] = None,
-) -> HttpResponse:
-    req = HttpRequest(
-        url=url,
-        method=method,
-        headers=headers,
-        body=body,
-        timeout_ms=timeout_ms,
-    )
-    resps = http_batch_request([req])
-    if not resps:
-        raise Exception("Host runner returned empty response")
-    return resps[0]
-
-
-def http_get(
-    url: str,
-    headers: Optional[Dict[str, str]] = None,
-    timeout_ms: Optional[int] = None,
-) -> HttpResponse:
-    return http_request(url=url, method="GET", headers=headers, timeout_ms=timeout_ms)
-
+def proto_to_duration(d: Duration) -> timedelta:
+    """Convert google.protobuf.Duration to datetime.timedelta."""
+    return timedelta(seconds=d.seconds, microseconds=int(d.nanos / 1000))
 
 # Import extension module at the end to avoid circular dependency issues
-# and ensure SDK classes are defined before extension tries to use them.
-# The extension module is expected to be named 'main' (main.py).
 extension_module = None
 try:
     import sdk_main as extension_module
 except ImportError as e:
     print(f"WARNING: Could not import 'main' module: {e}")
-
 
 @extism.plugin_fn
 def entry():
@@ -235,168 +116,4 @@ def entry():
     else:
         raise Exception("Extension module not loaded")
 
-
-def duration_to_proto(td: timedelta) -> Duration:
-    """Convert datetime.timedelta to google.protobuf.Duration."""
-    duration = Duration()
-    duration.seconds = int(td.total_seconds())
-    duration.nanos = int((td.microseconds % 1000000) * 1000)
-    return duration
-
-
-def parse_lrc(lrc_text: str) -> songs_pb2.Lyrics:
-    """Parses standard LRC content into a Lyrics proto."""
-    import re
-    trimmed = lrc_text.strip()
-    if not trimmed:
-        raise ValueError("Empty LRC text")
-
-    lines = []
-    has_timestamps = False
-
-    time_re = re.compile(r"\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]")
-
-    for raw_line in trimmed.splitlines():
-        line = raw_line.strip()
-        if not line:
-            continue
-
-        matches = list(time_re.finditer(line))
-        if matches:
-            has_timestamps = True
-            last_match = matches[-1]
-            text = line[last_match.end():].strip()
-
-            for m in matches:
-                minutes = int(m.group(1))
-                seconds = int(m.group(2))
-                frac_str = m.group(3) or "0"
-                if len(frac_str) == 1:
-                    millis = int(frac_str) * 100
-                elif len(frac_str) == 2:
-                    millis = int(frac_str) * 10
-                elif len(frac_str) == 3:
-                    millis = int(frac_str)
-                else:
-                    millis = int(frac_str[:3])
-
-                time_ms = minutes * 60000 + seconds * 1000 + millis
-                lines.append(songs_pb2.LyricLine(text=text, time_ms=time_ms))
-        elif not has_timestamps:
-            if not line.startswith("[") or not line.endswith("]"):
-                lines.append(songs_pb2.LyricLine(text=line, time_ms=0))
-
-    if has_timestamps:
-        lines.sort(key=lambda l: l.time_ms)
-
-    return songs_pb2.Lyrics(lines=lines, is_synced=has_timestamps)
-
-
-class ChildProcess:
-    def __init__(self, process_id: int, pid: int):
-        self.id = process_id
-        self.pid = pid
-
-    def write_stdin(self, data: bytes | str) -> int:
-        if isinstance(data, str):
-            data = data.encode("utf-8")
-        req = extensions_pb2.WriteProcessStdinRequest(process_id=self.id, data=data)
-        resp = write_process_stdin(req)
-        return resp.bytes_written if resp else 0
-
-    def read_stdout(self, max_bytes: int | None = None) -> bytes:
-        req = extensions_pb2.ReadProcessStdoutRequest(process_id=self.id, max_bytes=max_bytes)
-        resp = read_process_stdout(req)
-        return resp.data if resp else b""
-
-    def read_stdout_string(self, max_bytes: int | None = None) -> str:
-        data = self.read_stdout(max_bytes)
-        return data.decode("utf-8", errors="replace")
-
-    def kill(self) -> bool:
-        req = extensions_pb2.KillProcessRequest(process_id=self.id)
-        resp = kill_process(req)
-        return resp.success if resp else False
-
-    def get_status(self) -> tuple[bool, int | None]:
-        req = extensions_pb2.GetProcessStatusRequest(process_id=self.id)
-        resp = get_process_status(req)
-        if resp:
-            return resp.is_running, resp.exit_code if resp.HasField("exit_code") else None
-        return False, None
-
-
-def start_process(path: str, args: list[str] | None = None, env: dict[str, str] | None = None) -> ChildProcess:
-    req = extensions_pb2.SpawnProcessRequest(
-        path=path,
-        args=args or [],
-        env=env or {},
-    )
-    resp = spawn_process(req)
-    if not resp:
-        raise RuntimeError("Failed to spawn process: no response from host")
-    return ChildProcess(resp.process_id, resp.pid)
-
-
-class WebSocketMessage:
-    def __init__(self, text: Optional[str] = None, binary: Optional[bytes] = None):
-        self.text = text
-        self.binary = binary
-
-    @property
-    def is_binary(self) -> bool:
-        return self.binary is not None
-
-
-class WebSocketClient:
-    def __init__(self, connection_id: int):
-        self.connection_id = connection_id
-
-    @classmethod
-    def connect(cls, url: str) -> "WebSocketClient":
-        req = extensions_pb2.WsConnectRequest(url=url)
-        resp = ws_connect(req)
-        if not resp:
-            raise RuntimeError("Failed to connect websocket: no response from host")
-        return cls(resp.connection_id)
-
-    def send_text(self, text: str) -> None:
-        req = extensions_pb2.WsSendRequest(connection_id=self.connection_id, text=text)
-        ws_send(req)
-
-    def send_binary(self, data: bytes) -> None:
-        req = extensions_pb2.WsSendRequest(connection_id=self.connection_id, binary=data)
-        ws_send(req)
-
-    def receive(self, timeout_ms: Optional[int] = None) -> Optional[WebSocketMessage]:
-        req = extensions_pb2.WsReceiveRequest(connection_id=self.connection_id, timeout_ms=timeout_ms)
-        resp = ws_receive(req)
-        if not resp:
-            return None
-        field = resp.WhichOneof("payload")
-        if field == "text":
-            return WebSocketMessage(text=resp.text)
-        elif field == "binary":
-            return WebSocketMessage(binary=resp.binary)
-        return None
-
-    def close(self, code: Optional[int] = None, reason: Optional[str] = None) -> None:
-        req = extensions_pb2.WsCloseRequest(connection_id=self.connection_id, code=code, reason=reason)
-        ws_close(req)
-
-
-def get_platform() -> tuple[str, str]:
-    try:
-        os_val = extism.get_config("os")
-    except Exception:
-        os_val = None
-    try:
-        arch_val = extism.get_config("arch")
-    except Exception:
-        arch_val = None
-    return os_val or "unknown", arch_val or "unknown"
-
-
 ExtensionApi.get_platform = staticmethod(get_platform)
-
-

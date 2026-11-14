@@ -2,6 +2,21 @@ use extensions_proto::moosync::types::PlayerState;
 use extensions_proto::moosync::types::*;
 use songs_proto::moosync::types::{EntityResult, LyricLine, Lyrics, Song};
 
+/// Converts a standard Rust `Duration` into a protobuf `Duration`.
+pub fn duration_to_proto(d: std::time::Duration) -> duration_proto::google::protobuf::Duration {
+    duration_proto::google::protobuf::Duration {
+        seconds: d.as_secs() as i64,
+        nanos: d.subsec_nanos() as i32,
+    }
+}
+
+/// Converts a protobuf `Duration` into a standard Rust `Duration`.
+pub fn proto_to_duration(d: &duration_proto::google::protobuf::Duration) -> std::time::Duration {
+    let secs = if d.seconds >= 0 { d.seconds as u64 } else { 0 };
+    let nanos = if d.nanos >= 0 { d.nanos as u32 } else { 0 };
+    std::time::Duration::new(secs, nanos)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LrcParseError {
     Empty,

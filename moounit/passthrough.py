@@ -203,10 +203,12 @@ def is_host_allowed(host: str, allowed_hosts: list[str] | None) -> bool:
 class RealWebSocketManager:
     def __init__(self, allowed_hosts: list[str] | None = None):
         self.allowed_hosts = allowed_hosts
-        self.connections: dict[int, socket.socket] = {}
+        self.connections: dict[int, Any] = {}
         self.next_id = 1
 
     def ws_connect(self, req: WsConnectRequest) -> WsConnectResponse:
+        import websocket
+
         url = req.url
         parsed = urllib.parse.urlparse(url)
         host = parsed.hostname or ""
@@ -215,86 +217,43 @@ class RealWebSocketManager:
                 f"Host '{host}' is not allowed by extension manifest permissions.hosts"
             )
 
-        scheme = (parsed.scheme or "ws").lower()
-        port = parsed.port or (443 if scheme == "wss" else 80)
-        sock = socket.create_connection((host, port), timeout=5.0)
-        if scheme == "wss":
-            ctx = ssl.create_default_context()
-            sock = ctx.wrap_socket(sock, server_hostname=host)
+        header_list = [f"{k}: {v}" for k, v in req.headers.items()]
+        subprotocols = list(req.protocols) if req.protocols else None
 
-        sec_key = base64.b64encode(os.urandom(16)).decode("ascii")
-        path = parsed.path or "/"
-        if parsed.query:
-            path += f"?{parsed.query}"
-
-        handshake = (
-            f"GET {path} HTTP/1.1\r\n"
-            f"Host: {parsed.netloc}\r\n"
-            f"Upgrade: websocket\r\n"
-            f"Connection: Upgrade\r\n"
-            f"Sec-WebSocket-Key: {sec_key}\r\n"
-            f"Sec-WebSocket-Version: 13\r\n\r\n"
+        ws = websocket.create_connection(
+            url,
+            timeout=5.0,
+            header=header_list,
+            subprotocols=subprotocols,
         )
-        sock.sendall(handshake.encode("ascii"))
-
-        resp_data = bytearray()
-        while b"\r\n\r\n" not in resp_data:
-            chunk = sock.recv(4096)
-            if not chunk:
-                break
-            resp_data.extend(chunk)
-
-        header_text = resp_data.decode("latin1", errors="replace")
-        status_line = header_text.split("\r\n")[0]
-        if "101" not in status_line:
-            sock.close()
-            raise ConnectionError(f"WebSocket handshake failed: {status_line}")
 
         conn_id = self.next_id
         self.next_id += 1
-        self.connections[conn_id] = sock
+        self.connections[conn_id] = ws
         return WsConnectResponse(connection_id=conn_id)
 
     def ws_send(self, req: WsSendRequest) -> WsSendResponse:
+        import websocket
+
         conn_id = req.connection_id
-        sock = self.connections.get(conn_id)
-        if not sock:
+        ws = self.connections.get(conn_id)
+        if not ws:
             raise ConnectionError(f"WebSocket connection {conn_id} not found")
 
         field = req.WhichOneof("payload")
         if field == "text":
-            data = req.text.encode("utf-8")
-            opcode = 1
+            ws.send(req.text, opcode=websocket.ABNF.OPCODE_TEXT)
         elif field == "binary":
-            data = req.binary
-            opcode = 2
-        else:
-            data = b""
-            opcode = 1
+            ws.send_binary(req.binary)
 
-        mask = os.urandom(4)
-        masked_data = bytearray(data[i] ^ mask[i % 4] for i in range(len(data)))
-        length = len(data)
-
-        header = bytearray([0x80 | opcode])
-        if length < 126:
-            header.append(0x80 | length)
-        elif length <= 0xFFFF:
-            header.append(0x80 | 126)
-            header.extend(struct.pack("!H", length))
-        else:
-            header.append(0x80 | 127)
-            header.extend(struct.pack("!Q", length))
-
-        header.extend(mask)
-        header.extend(masked_data)
-        sock.sendall(header)
         return WsSendResponse(success=True)
 
     def ws_receive(self, req: WsReceiveRequest) -> WsReceiveResponse:
+        import websocket
+
         conn_id = req.connection_id
-        sock = self.connections.get(conn_id)
-        if not sock:
+        ws = self.connections.get(conn_id)
+        if not ws:
             raise ConnectionError(f"WebSocket connection {conn_id} not found")
 
         timeout_s = (
@@ -302,51 +261,24 @@ class RealWebSocketManager:
             if req.HasField("timeout_ms") and req.timeout_ms > 0
             else 1.0
         )
-        sock.settimeout(timeout_s)
+        ws.settimeout(timeout_s)
 
         try:
-            head = sock.recv(2)
-            if not head or len(head) < 2:
-                return WsReceiveResponse()
-            byte1, byte2 = head[0], head[1]
-            opcode = byte1 & 0x0F
-            is_masked = bool(byte2 & 0x80)
-            payload_len = byte2 & 0x7F
-
-            if payload_len == 126:
-                ext_len = sock.recv(2)
-                payload_len = struct.unpack("!H", ext_len)[0]
-            elif payload_len == 127:
-                ext_len = sock.recv(8)
-                payload_len = struct.unpack("!Q", ext_len)[0]
-
-            mask_key = sock.recv(4) if is_masked else b""
-
-            payload = bytearray()
-            while len(payload) < payload_len:
-                chunk = sock.recv(min(payload_len - len(payload), 4096))
-                if not chunk:
-                    break
-                payload.extend(chunk)
-
-            if is_masked and mask_key:
-                payload = bytearray(
-                    payload[i] ^ mask_key[i % 4] for i in range(len(payload))
-                )
-
-            if opcode == 1:
-                return WsReceiveResponse(
-                    text=payload.decode("utf-8", errors="replace")
-                )
-            elif opcode == 2:
-                return WsReceiveResponse(binary=bytes(payload))
-            elif opcode == 8:
+            opcode, data = ws.recv_data()
+            if opcode == websocket.ABNF.OPCODE_TEXT:
+                text_str = data.decode("utf-8", errors="replace")
+                return WsReceiveResponse(text=text_str)
+            elif opcode == websocket.ABNF.OPCODE_BINARY:
+                return WsReceiveResponse(binary=data)
+            elif opcode == websocket.ABNF.OPCODE_CLOSE:
                 self.ws_close(WsCloseRequest(connection_id=conn_id))
                 return WsReceiveResponse()
-            elif opcode == 9:
-                sock.sendall(bytearray([0x8A, 0x00]))
+            elif opcode == websocket.ABNF.OPCODE_PING:
+                ws.pong(data)
                 return self.ws_receive(req)
-        except socket.timeout:
+        except (websocket.WebSocketTimeoutException, socket.timeout):
+            return WsReceiveResponse()
+        except (websocket.WebSocketConnectionClosedException, ConnectionError):
             return WsReceiveResponse()
         except Exception:
             return WsReceiveResponse()
@@ -355,20 +287,141 @@ class RealWebSocketManager:
 
     def ws_close(self, req: WsCloseRequest) -> WsCloseResponse:
         conn_id = req.connection_id
-        sock = self.connections.pop(conn_id, None)
-        if sock:
+        ws = self.connections.pop(conn_id, None)
+        if ws:
             try:
-                sock.sendall(bytearray([0x88, 0x00]))
-                sock.close()
+                code = req.code if req.HasField("code") else 1000
+                reason = req.reason.encode("utf-8") if req.HasField("reason") else b""
+                ws.close(status=code, reason=reason)
             except Exception:
                 pass
         return WsCloseResponse(success=True)
 
     def close_all(self):
-        for s in list(self.connections.values()):
+        for ws in list(self.connections.values()):
             try:
-                s.close()
+                ws.close()
             except Exception:
                 pass
         self.connections.clear()
 
+
+import subprocess
+import select
+from core.types.protos.extensions_pb2 import (
+    SpawnProcessRequest,
+    SpawnProcessResponse,
+    WriteProcessStdinRequest,
+    WriteProcessStdinResponse,
+    ReadProcessStdoutRequest,
+    ReadProcessStdoutResponse,
+    KillProcessRequest,
+    KillProcessResponse,
+    GetProcessStatusRequest,
+    GetProcessStatusResponse,
+)
+
+
+class RealProcessManager:
+    def __init__(self):
+        self.processes: dict[int, subprocess.Popen] = {}
+        self.mapped_paths: dict[str, str] = {}
+        self.next_id = 1
+
+    def resolve_path(self, path: str) -> str:
+        for guest_path, host_path in self.mapped_paths.items():
+            if path == guest_path:
+                return host_path
+            if path.startswith(guest_path.rstrip('/') + '/'):
+                rel = path[len(guest_path.rstrip('/') + '/'):]
+                return os.path.join(host_path, rel)
+        return path
+
+    def spawn_process(self, req: SpawnProcessRequest) -> SpawnProcessResponse:
+        resolved_bin = self.resolve_path(req.path)
+        if os.path.isfile(resolved_bin):
+            try:
+                os.chmod(resolved_bin, 0o755)
+            except Exception:
+                pass
+        resolved_args = [self.resolve_path(arg) for arg in req.args]
+        cmd = [resolved_bin] + resolved_args
+        env = dict(os.environ)
+        env.update(req.env)
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            env=env,
+        )
+        proc_id = self.next_id
+        self.next_id += 1
+        self.processes[proc_id] = proc
+        return SpawnProcessResponse(
+            process_id=proc_id,
+            pid=proc.pid,
+        )
+
+    def write_process_stdin(self, req: WriteProcessStdinRequest) -> WriteProcessStdinResponse:
+        proc = self.processes.get(req.process_id)
+        if not proc or not proc.stdin or proc.poll() is not None:
+            return WriteProcessStdinResponse(bytes_written=0)
+        try:
+            proc.stdin.write(req.data)
+            proc.stdin.flush()
+            return WriteProcessStdinResponse(bytes_written=len(req.data))
+        except Exception:
+            return WriteProcessStdinResponse(bytes_written=0)
+
+    def read_process_stdout(self, req: ReadProcessStdoutRequest) -> ReadProcessStdoutResponse:
+        proc = self.processes.get(req.process_id)
+        if not proc or not proc.stdout:
+            return ReadProcessStdoutResponse(data=b)
+        max_bytes = req.max_bytes if req.HasField(max_bytes) and req.max_bytes > 0 else 4096
+        try:
+            rlist, _, _ = select.select([proc.stdout], [], [], 0.1)
+            if rlist:
+                data = os.read(proc.stdout.fileno(), max_bytes)
+                return ReadProcessStdoutResponse(data=data)
+        except Exception:
+            pass
+        return ReadProcessStdoutResponse(data=b)
+
+    def kill_process(self, req: KillProcessRequest) -> KillProcessResponse:
+        proc = self.processes.get(req.process_id)
+        if not proc:
+            return KillProcessResponse(success=False)
+        try:
+            proc.terminate()
+            proc.wait(timeout=1.0)
+            return KillProcessResponse(success=True)
+        except Exception:
+            try:
+                proc.kill()
+                return KillProcessResponse(success=True)
+            except Exception:
+                return KillProcessResponse(success=False)
+
+    def get_process_status(self, req: GetProcessStatusRequest) -> GetProcessStatusResponse:
+        proc = self.processes.get(req.process_id)
+        if not proc:
+            return GetProcessStatusResponse(is_running=False)
+        exit_code = proc.poll()
+        is_running = exit_code is None
+        return GetProcessStatusResponse(
+            is_running=is_running,
+            exit_code=exit_code if exit_code is not None else None,
+        )
+
+    def close_all(self):
+        for proc in list(self.processes.values()):
+            try:
+                proc.terminate()
+                proc.wait(timeout=0.5)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+        self.processes.clear()

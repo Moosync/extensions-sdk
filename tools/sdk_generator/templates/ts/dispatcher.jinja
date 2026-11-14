@@ -2,8 +2,6 @@
 // Regenerate with: bazel run //tools/sdk_generator:update
 
 import {
-  ExtensionCommand,
-  ExtensionCommandResponse,
 {% for m in guest_methods %}
   {{ m.req_type }},
   {{ m.resp_type }},
@@ -13,6 +11,9 @@ import {
 {% for s in guest_services %}
 export interface {{ s.trait_name }} {
 {% for m in s.methods %}
+{% if m.doc %}
+{{ m.doc | format_doc("jsdoc", 2) }}
+{% endif %}
 {% if m.is_event %}
   {{ m.camel_name }}?(req: {{ m.req_type }}): Promise<void> | void;
 {% else %}
@@ -23,6 +24,9 @@ export interface {{ s.trait_name }} {
 
 export interface {{ s.trait_name }}Events {
 {% for m in s.methods %}
+{% if m.doc %}
+{{ m.doc | format_doc("jsdoc", 2) }}
+{% endif %}
   "{{ m.camel_name }}": {
     req: {{ m.req_type }};
     resp: {{ m.resp_type }};
@@ -42,64 +46,3 @@ export interface ExtensionEventMap extends
   {{ s.trait_name }}Events{% if not loop.last %},{% endif %}
 {% endfor %}
 {}
-
-let registeredExtension: Extension | undefined;
-
-export function registerExtension(ext: Extension): void {
-  registeredExtension = ext;
-}
-
-export function getRegisteredExtension(): Extension | undefined {
-  return registeredExtension;
-}
-
-const listeners: Map<keyof ExtensionEventMap, Function> = new Map();
-
-export function on<K extends keyof ExtensionEventMap>(
-  event: K,
-  handler: (
-    req: ExtensionEventMap[K]["req"]
-  ) => Promise<ExtensionEventMap[K]["resp"] | void> | ExtensionEventMap[K]["resp"] | void
-): void {
-  listeners.set(event, handler);
-}
-
-export function callListener(event: string, payload: any): any {
-  if (registeredExtension && typeof (registeredExtension as any)[event] === "function") {
-    return (registeredExtension as any)[event](payload);
-  }
-  const handler = listeners.get(event as keyof ExtensionEventMap);
-  if (handler) {
-    return handler(payload);
-  }
-  return undefined;
-}
-
-export async function handle(
-  command: ExtensionCommand
-): Promise<ExtensionCommandResponse | undefined> {
-  if (!command.event.case) return undefined;
-
-  const caseStr = command.event.case;
-  const payload = command.event.value;
-
-  if (payload) {
-    const result = await Promise.resolve(callListener(caseStr as any, payload));
-    if (result !== undefined) {
-      return new ExtensionCommandResponse({
-        response: {
-          case: caseStr as any,
-          value: result,
-        },
-      });
-    } else {
-      return new ExtensionCommandResponse({
-        response: {
-          case: caseStr as any,
-          value: {},
-        },
-      });
-    }
-  }
-  return undefined;
-}

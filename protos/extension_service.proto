@@ -30,11 +30,8 @@ extend google.protobuf.MethodOptions {
   optional bool is_event_notification = 60001;
   optional TransportType transport = 60002;
   optional string wasm_symbol = 60003;
+  optional bool has_wrapper = 60004;
 }
-
-// -------------------------------------------------------------
-// Primitives & Scalar message wrappers for WASM Host Functions
-// -------------------------------------------------------------
 
 message SystemTimeRequest {}
 
@@ -43,7 +40,7 @@ message SystemTimeResponse {
 }
 
 message OpenClientFdRequest {
-  string socket_path = 1;
+  string path = 1;
 }
 
 message OpenClientFdResponse {
@@ -51,8 +48,8 @@ message OpenClientFdResponse {
 }
 
 message WriteSockRequest {
-  int64 fd = 1;
-  bytes data = 2;
+  int64 sock_id = 1;
+  bytes buf = 2;
 }
 
 message WriteSockResponse {
@@ -60,229 +57,361 @@ message WriteSockResponse {
 }
 
 message ReadSockRequest {
-  int64 fd = 1;
-  uint64 max_bytes = 2;
+  int64 sock_id = 1;
+  uint64 read_len = 2;
 }
 
 message ReadSockResponse {
   bytes data = 1;
 }
 
-// -------------------------------------------------------------
-// Host Service: All functions provided by the Host to Extensions
-// -------------------------------------------------------------
 service ExtensionHostService {
-  // Low-level WASM Host Functions
+  // Returns current host system time in seconds since Unix epoch.
   rpc SystemTime(SystemTimeRequest) returns (SystemTimeResponse) {
     option (moosync.types.transport) = DIRECT_HOST_FN;
     option (moosync.types.wasm_symbol) = "system_time";
   }
 
+  // Opens a client socket at the specified path and returns a file descriptor handle.
   rpc OpenClientFd(OpenClientFdRequest) returns (OpenClientFdResponse) {
     option (moosync.types.transport) = DIRECT_HOST_FN;
     option (moosync.types.wasm_symbol) = "open_clientfd";
   }
 
+  // Writes a byte buffer to the socket associated with the given file descriptor handle.
   rpc WriteSock(WriteSockRequest) returns (WriteSockResponse) {
     option (moosync.types.transport) = DIRECT_HOST_FN;
     option (moosync.types.wasm_symbol) = "write_sock";
   }
 
+  // Reads up to max_bytes from the socket associated with the given file descriptor handle.
   rpc ReadSock(ReadSockRequest) returns (ReadSockResponse) {
     option (moosync.types.transport) = DIRECT_HOST_FN;
     option (moosync.types.wasm_symbol) = "read_sock";
   }
 
+  // Executes a batch of HTTP requests via the host network runner.
   rpc BatchHttpRequest(moosync.types.BatchHttpRequest) returns (moosync.types.BatchHttpResponse) {
     option (moosync.types.transport) = DIRECT_HOST_FN;
     option (moosync.types.wasm_symbol) = "batch_http_request";
   }
 
-  // Multiplexed MainCommands (Transport: MAIN_COMMAND)
+  // Queries and retrieves song entities matching the given criteria from the host database.
   rpc GetSong(GetSongRequest) returns (GetSongResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Retrieves detailed entity information (such as artist or album) from the host database.
   rpc GetEntity(GetEntityRequest) returns (GetEntityResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Retrieves the currently playing song from the active player session.
   rpc GetCurrentSong(GetCurrentSongRequest) returns (GetCurrentSongResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Retrieves the current playback state (e.g. playing, paused, stopped) of the player.
   rpc GetPlayerState(GetPlayerStateRequest) returns (GetPlayerStateResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Retrieves the current master playback volume level (0.0 to 1.0).
   rpc GetVolume(GetVolumeRequest) returns (GetVolumeResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Retrieves the current playback position timestamp in seconds.
   rpc GetTime(GetTimeRequest) returns (GetTimeResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Retrieves the current player queue state and list of queued tracks.
   rpc GetQueue(GetQueueRequest) returns (GetQueueResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Retrieves an extension preference value by key.
   rpc GetPreference(GetPreferenceRequest) returns (GetPreferenceResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Stores an extension preference value by key.
   rpc SetPreference(SetPreferenceRequest) returns (SetPreferenceResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Retrieves a securely stored credential or secret by key from the host keyring.
   rpc GetSecure(GetSecureRequest) returns (GetSecureResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Stores a credential or secret securely in the host keyring/vault.
   rpc SetSecure(SetSecureRequest) returns (SetSecureResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Inserts one or more songs into the host music database.
   rpc AddSongs(AddSongsRequest) returns (AddSongsResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Removes a song from the host music database by its ID.
   rpc RemoveSong(RemoveSongRequest) returns (RemoveSongResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Updates metadata for an existing song in the host database.
   rpc UpdateSong(UpdateSongRequest) returns (UpdateSongResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Creates a new playlist in the host database.
   rpc AddPlaylist(AddPlaylistRequest) returns (AddPlaylistResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Appends songs to an existing playlist in the host database.
   rpc AddToPlaylist(AddToPlaylistRequest) returns (AddToPlaylistResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Registers OAuth configuration details for account authentication flows.
   rpc RegisterOauth(RegisterOauthRequest) returns (RegisterOauthResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Requests the host to open a URL in the user's default system browser.
   rpc OpenExternalUrl(OpenExternalUrlRequest) returns (OpenExternalUrlResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Updates account login credentials and details for this extension.
   rpc SetAccount(SetAccountRequest) returns (SetAccountResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Registers dynamic preference schema entries shown in user settings.
   rpc RegisterUserPreference(RegisterUserPreferenceRequest) returns (RegisterUserPreferenceResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Unregisters dynamic preference schema entries previously registered.
   rpc UnregisterUserPreference(UnregisterUserPreferenceRequest) returns (UnregisterUserPreferenceResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Notifies the host that extension configuration or available extensions changed.
   rpc ExtensionsUpdated(ExtensionsUpdatedRequest) returns (ExtensionsUpdatedResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Retrieves the host application version string.
   rpc GetAppVersion(GetAppVersionRequest) returns (GetAppVersionResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Retrieves cached binary data associated with the specified cache key.
   rpc GetCache(GetCacheRequest) returns (GetCacheResponse) {
     option (transport) = MAIN_COMMAND;
+    option (has_wrapper) = true;
   }
+
+  // Stores binary data in the host cache with an optional time-to-live (TTL).
   rpc SetCache(SetCacheRequest) returns (SetCacheResponse) {
     option (transport) = MAIN_COMMAND;
+    option (has_wrapper) = true;
   }
+
+  // Spawns a child process on the host system within permitted binary limits.
   rpc SpawnProcess(SpawnProcessRequest) returns (SpawnProcessResponse) {
     option (transport) = MAIN_COMMAND;
+    option (has_wrapper) = true;
   }
+
+  // Writes input data to standard input of an active spawned child process.
   rpc WriteProcessStdin(WriteProcessStdinRequest) returns (WriteProcessStdinResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Reads standard output or standard error data from an active spawned child process.
   rpc ReadProcessStdout(ReadProcessStdoutRequest) returns (ReadProcessStdoutResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Terminates an active spawned child process.
   rpc KillProcess(KillProcessRequest) returns (KillProcessResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Checks whether a spawned child process is still running and gets its exit code.
   rpc GetProcessStatus(GetProcessStatusRequest) returns (GetProcessStatusResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Notifies the host player of custom playback events or state overrides.
   rpc NotifyPlayerEvent(NotifyPlayerEventRequest) returns (NotifyPlayerEventResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Establishes a WebSocket client connection to a remote WebSocket server.
   rpc WsConnect(WsConnectRequest) returns (WsConnectResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Sends a text or binary message through an active WebSocket connection.
   rpc WsSend(WsSendRequest) returns (WsSendResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Receives the next incoming message frame from an active WebSocket connection.
   rpc WsReceive(WsReceiveRequest) returns (WsReceiveResponse) {
     option (transport) = MAIN_COMMAND;
   }
+
+  // Closes an active WebSocket connection with an optional code and reason.
   rpc WsClose(WsCloseRequest) returns (WsCloseResponse) {
     option (transport) = MAIN_COMMAND;
   }
 }
 
-// -----------------------------------------------------------------
-// Guest Services: Commands & events handled by Extensions
-// -----------------------------------------------------------------
 service ProviderService {
+  // Resolves playback streaming URL or resource location for a remote track.
   rpc GetRemoteUrl(GetRemoteUrlRequest) returns (GetRemoteUrlResponse);
+
+  // Performs search query for songs, albums, artists, or playlists.
   rpc RequestedSearchResult(RequestedSearchResultRequest) returns (RequestedSearchResultResponse);
+
+  // Fetches user playlists or remote playlists available from this provider.
   rpc RequestedPlaylists(RequestedPlaylistsRequest) returns (RequestedPlaylistsResponse);
+
+  // Fetches songs contained within a specified playlist.
   rpc RequestedPlaylistSongs(RequestedPlaylistSongsRequest) returns (RequestedPlaylistSongsResponse);
+
+  // Fetches songs associated with a specified artist.
   rpc RequestedArtistSongs(RequestedArtistSongsRequest) returns (RequestedArtistSongsResponse);
+
+  // Fetches songs belonging to a specified album.
   rpc RequestedAlbumSongs(RequestedAlbumSongsRequest) returns (RequestedAlbumSongsResponse);
+
+  // Fetches recommended tracks based on listening history or seed items.
   rpc RequestedRecommendations(RequestedRecommendationsRequest) returns (RequestedRecommendationsResponse);
+
+  // Fetches full song metadata for a provider-specific track ID.
   rpc RequestedSongFromId(RequestedSongFromIdRequest) returns (RequestedSongFromIdResponse);
+
+  // Fetches detailed playback streaming information (URL, duration, keys).
   rpc PlaybackDetailsRequested(PlaybackDetailsRequestedRequest) returns (PlaybackDetailsRequestedResponse);
+
+  // Fetches synchronized or plain lyrics for a given song.
   rpc RequestedLyrics(RequestedLyricsRequest) returns (RequestedLyricsResponse);
+
+  // Fetches album artwork or cover image URLs for a given entity.
   rpc RequestedCoverArt(RequestedCoverArtRequest) returns (RequestedCoverArtResponse);
+
+  // Receives track scrobble notification when playback reaches threshold.
   rpc Scrobble(ScrobbleRequest) returns (ScrobbleResponse) {
     option (moosync.types.is_event_notification) = true;
   }
+
+  // Handles generic or provider-specific custom extension RPC requests.
   rpc CustomRequest(moosync.types.CustomRequest) returns (moosync.types.CustomRequestResponse);
 }
 
 service AccountsService {
+  // Initiates user login or credentials prompt for extension account.
   rpc PerformAccountLogin(PerformAccountLoginRequest) returns (PerformAccountLoginResponse);
+
+  // Handles OAuth authorization redirection callback token exchange.
   rpc OauthCallback(OauthCallbackRequest) returns (OauthCallbackResponse);
 }
 
 service ContextMenuService {
+  // Provides custom contextual menu items for a selected song.
   rpc RequestedSongContextMenu(RequestedSongContextMenuRequest) returns (RequestedSongContextMenuResponse);
+
+  // Provides custom contextual menu items for a selected playlist.
   rpc RequestedPlaylistContextMenu(RequestedPlaylistContextMenuRequest) returns (RequestedPlaylistContextMenuResponse);
+
+  // Invoked when a user selects a custom context menu item.
   rpc ContextMenuAction(ContextMenuActionRequest) returns (ContextMenuActionResponse);
 }
 
 service PlayerEventsService {
+  // Notified when the playback queue order or track list changes.
   rpc SongQueueChanged(SongQueueChangedRequest) returns (SongQueueChangedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
+
+  // Notified when playback position is seeked to a new timestamp.
   rpc Seeked(SeekedRequest) returns (SeekedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
+
+  // Notified when playback volume level changes.
   rpc VolumeChanged(VolumeChangedRequest) returns (VolumeChangedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
+
+  // Notified when player transitions between play, pause, and stop states.
   rpc PlayerStateChanged(PlayerStateChangedRequest) returns (PlayerStateChangedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
+
+  // Notified when the currently playing track changes.
   rpc SongChanged(SongChangedRequest) returns (SongChangedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
 }
 
 service DatabaseEventsService {
+  // Notified when a new song is added to the host database.
   rpc SongAdded(SongAddedRequest) returns (SongAddedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
+
+  // Notified when a song is removed from the host database.
   rpc SongRemoved(SongRemovedRequest) returns (SongRemovedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
+
+  // Notified when a new playlist is created in the host database.
   rpc PlaylistAdded(PlaylistAddedRequest) returns (PlaylistAddedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
+
+  // Notified when a playlist is deleted from the host database.
   rpc PlaylistRemoved(PlaylistRemovedRequest) returns (PlaylistRemovedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
 }
 
 service PreferenceEventsService {
+  // Notified when an extension preference value is modified by user.
   rpc PreferenceChanged(PreferenceChangedRequest) returns (PreferenceChangedResponse) {
     option (moosync.types.is_event_notification) = true;
   }
 }
 
 service PlayerProviderService {
+  // Determines whether this player provider is capable of playing the given track.
   rpc CanPlay(CanPlayRequest) returns (CanPlayResponse);
+
+  // Commands the custom player engine to resume playback.
   rpc PlayerPlay(PlayerPlayRequest) returns (PlayerPlayResponse);
+
+  // Commands the custom player engine to pause playback.
   rpc PlayerPause(PlayerPauseRequest) returns (PlayerPauseResponse);
+
+  // Commands the custom player engine to stop playback.
   rpc PlayerStop(PlayerStopRequest) returns (PlayerStopResponse);
+
+  // Commands the custom player engine to seek to a given position.
   rpc PlayerSeek(PlayerSeekRequest) returns (PlayerSeekResponse);
+
+  // Commands the custom player engine to set playback volume.
   rpc PlayerSetVolume(PlayerSetVolumeRequest) returns (PlayerSetVolumeResponse);
+
+  // Commands the custom player engine to load a track for playback.
   rpc PlayerLoadTrack(PlayerLoadTrackRequest) returns (PlayerLoadTrackResponse);
 }

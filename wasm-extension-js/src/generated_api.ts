@@ -3,7 +3,6 @@
 
 import {
   MainCommand,
-  MainCommandResponse,
   BatchHttpRequest,
   BatchHttpResponse,
   GetSongRequest,
@@ -77,38 +76,71 @@ import {
   WsCloseRequest,
   WsCloseResponse,
 } from "./protos/extensions_pb.js";
+import { sendMainCommand } from "./utils.js";
 
-export async function sendMainCommand(command: MainCommand): Promise<MainCommandResponse> {
-  const binary = command.toBinary();
-  const res = (Host as any).call("send_main_command", binary);
-  return MainCommandResponse.fromBinary(new Uint8Array(res));
-}
-
-// Low-level WASM Host functions
+/**
+ * Returns current host system time in seconds since Unix epoch.
+ */
 export function systemTime(): number {
-  return (Host as any).call("system_time");
+  const fns = Host.getFunctions() as any;
+  const { system_time } = fns;
+  return Number(system_time());
 }
 
+/**
+ * Opens a client socket at the specified path and returns a file descriptor handle.
+ */
 export function openClientFd(path: string): number {
-  return (Host as any).call("open_clientfd", path);
+  const fns = Host.getFunctions() as any;
+  const { open_clientfd } = fns;
+  // @ts-ignore
+  const pathMem = Memory.fromString(path);
+  return Number(open_clientfd(pathMem.offset));
 }
 
+/**
+ * Writes a byte buffer to the socket associated with the given file descriptor handle.
+ */
 export function writeSock(sockId: number, buf: Uint8Array): number {
-  return (Host as any).call("write_sock", sockId, buf);
+  const fns = Host.getFunctions() as any;
+  const { write_sock } = fns;
+  // @ts-ignore
+  const bufMem = Memory.fromBuffer(buf.buffer);
+  return Number(write_sock(sockId, bufMem.offset));
 }
 
+/**
+ * Reads up to max_bytes from the socket associated with the given file descriptor handle.
+ */
 export function readSock(sockId: number, readLen: number): Uint8Array {
-  return (Host as any).call("read_sock", sockId, readLen);
+  const fns = Host.getFunctions() as any;
+  const { read_sock } = fns;
+  const resOffset = read_sock(sockId, BigInt(readLen));
+  // @ts-ignore
+  const resMem = Memory.find(resOffset);
+  return new Uint8Array(resMem.readBytes());
 }
 
+/**
+ * Executes a batch of HTTP requests via the host network runner.
+ */
 export async function batchHttpRequest(
   req: BatchHttpRequest
 ): Promise<BatchHttpResponse> {
-  const res = (Host as any).call("batch_http_request", req.toBinary());
-  return BatchHttpResponse.fromBinary(new Uint8Array(res));
+  const fns = Host.getFunctions() as any;
+  const { batch_http_request } = fns;
+  const bytes = req.toBinary();
+  // @ts-ignore
+  const mem = Memory.fromBuffer(bytes.buffer);
+  const resOffset = batch_http_request(mem.offset);
+  // @ts-ignore
+  const resMem = Memory.find(resOffset);
+  return BatchHttpResponse.fromBinary(new Uint8Array(resMem.readBytes()));
 }
 
-// Multiplexed MainCommands
+/**
+ * Queries and retrieves song entities matching the given criteria from the host database.
+ */
 export async function getSong(req?: GetSongRequest): Promise<GetSongResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -123,6 +155,10 @@ export async function getSong(req?: GetSongRequest): Promise<GetSongResponse | u
   }
   return undefined;
 }
+
+/**
+ * Retrieves detailed entity information (such as artist or album) from the host database.
+ */
 export async function getEntity(req?: GetEntityRequest): Promise<GetEntityResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -137,6 +173,10 @@ export async function getEntity(req?: GetEntityRequest): Promise<GetEntityRespon
   }
   return undefined;
 }
+
+/**
+ * Retrieves the currently playing song from the active player session.
+ */
 export async function getCurrentSong(req?: GetCurrentSongRequest): Promise<GetCurrentSongResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -151,6 +191,10 @@ export async function getCurrentSong(req?: GetCurrentSongRequest): Promise<GetCu
   }
   return undefined;
 }
+
+/**
+ * Retrieves the current playback state (e.g. playing, paused, stopped) of the player.
+ */
 export async function getPlayerState(req?: GetPlayerStateRequest): Promise<GetPlayerStateResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -165,6 +209,10 @@ export async function getPlayerState(req?: GetPlayerStateRequest): Promise<GetPl
   }
   return undefined;
 }
+
+/**
+ * Retrieves the current master playback volume level (0.0 to 1.0).
+ */
 export async function getVolume(req?: GetVolumeRequest): Promise<GetVolumeResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -179,6 +227,10 @@ export async function getVolume(req?: GetVolumeRequest): Promise<GetVolumeRespon
   }
   return undefined;
 }
+
+/**
+ * Retrieves the current playback position timestamp in seconds.
+ */
 export async function getTime(req?: GetTimeRequest): Promise<GetTimeResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -193,6 +245,10 @@ export async function getTime(req?: GetTimeRequest): Promise<GetTimeResponse | u
   }
   return undefined;
 }
+
+/**
+ * Retrieves the current player queue state and list of queued tracks.
+ */
 export async function getQueue(req?: GetQueueRequest): Promise<GetQueueResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -207,6 +263,10 @@ export async function getQueue(req?: GetQueueRequest): Promise<GetQueueResponse 
   }
   return undefined;
 }
+
+/**
+ * Retrieves an extension preference value by key.
+ */
 export async function getPreference(req?: GetPreferenceRequest): Promise<GetPreferenceResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -221,6 +281,10 @@ export async function getPreference(req?: GetPreferenceRequest): Promise<GetPref
   }
   return undefined;
 }
+
+/**
+ * Stores an extension preference value by key.
+ */
 export async function setPreference(req?: SetPreferenceRequest): Promise<SetPreferenceResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -235,6 +299,10 @@ export async function setPreference(req?: SetPreferenceRequest): Promise<SetPref
   }
   return undefined;
 }
+
+/**
+ * Retrieves a securely stored credential or secret by key from the host keyring.
+ */
 export async function getSecure(req?: GetSecureRequest): Promise<GetSecureResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -249,6 +317,10 @@ export async function getSecure(req?: GetSecureRequest): Promise<GetSecureRespon
   }
   return undefined;
 }
+
+/**
+ * Stores a credential or secret securely in the host keyring/vault.
+ */
 export async function setSecure(req?: SetSecureRequest): Promise<SetSecureResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -263,6 +335,10 @@ export async function setSecure(req?: SetSecureRequest): Promise<SetSecureRespon
   }
   return undefined;
 }
+
+/**
+ * Inserts one or more songs into the host music database.
+ */
 export async function addSongs(req?: AddSongsRequest): Promise<AddSongsResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -277,6 +353,10 @@ export async function addSongs(req?: AddSongsRequest): Promise<AddSongsResponse 
   }
   return undefined;
 }
+
+/**
+ * Removes a song from the host music database by its ID.
+ */
 export async function removeSong(req?: RemoveSongRequest): Promise<RemoveSongResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -291,6 +371,10 @@ export async function removeSong(req?: RemoveSongRequest): Promise<RemoveSongRes
   }
   return undefined;
 }
+
+/**
+ * Updates metadata for an existing song in the host database.
+ */
 export async function updateSong(req?: UpdateSongRequest): Promise<UpdateSongResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -305,6 +389,10 @@ export async function updateSong(req?: UpdateSongRequest): Promise<UpdateSongRes
   }
   return undefined;
 }
+
+/**
+ * Creates a new playlist in the host database.
+ */
 export async function addPlaylist(req?: AddPlaylistRequest): Promise<AddPlaylistResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -319,6 +407,10 @@ export async function addPlaylist(req?: AddPlaylistRequest): Promise<AddPlaylist
   }
   return undefined;
 }
+
+/**
+ * Appends songs to an existing playlist in the host database.
+ */
 export async function addToPlaylist(req?: AddToPlaylistRequest): Promise<AddToPlaylistResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -333,6 +425,10 @@ export async function addToPlaylist(req?: AddToPlaylistRequest): Promise<AddToPl
   }
   return undefined;
 }
+
+/**
+ * Registers OAuth configuration details for account authentication flows.
+ */
 export async function registerOauth(req?: RegisterOauthRequest): Promise<RegisterOauthResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -347,6 +443,10 @@ export async function registerOauth(req?: RegisterOauthRequest): Promise<Registe
   }
   return undefined;
 }
+
+/**
+ * Requests the host to open a URL in the user's default system browser.
+ */
 export async function openExternalUrl(req?: OpenExternalUrlRequest): Promise<OpenExternalUrlResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -361,6 +461,10 @@ export async function openExternalUrl(req?: OpenExternalUrlRequest): Promise<Ope
   }
   return undefined;
 }
+
+/**
+ * Updates account login credentials and details for this extension.
+ */
 export async function setAccount(req?: SetAccountRequest): Promise<SetAccountResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -375,6 +479,10 @@ export async function setAccount(req?: SetAccountRequest): Promise<SetAccountRes
   }
   return undefined;
 }
+
+/**
+ * Registers dynamic preference schema entries shown in user settings.
+ */
 export async function registerUserPreference(req?: RegisterUserPreferenceRequest): Promise<RegisterUserPreferenceResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -389,6 +497,10 @@ export async function registerUserPreference(req?: RegisterUserPreferenceRequest
   }
   return undefined;
 }
+
+/**
+ * Unregisters dynamic preference schema entries previously registered.
+ */
 export async function unregisterUserPreference(req?: UnregisterUserPreferenceRequest): Promise<UnregisterUserPreferenceResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -403,6 +515,10 @@ export async function unregisterUserPreference(req?: UnregisterUserPreferenceReq
   }
   return undefined;
 }
+
+/**
+ * Notifies the host that extension configuration or available extensions changed.
+ */
 export async function extensionsUpdated(req?: ExtensionsUpdatedRequest): Promise<ExtensionsUpdatedResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -417,6 +533,10 @@ export async function extensionsUpdated(req?: ExtensionsUpdatedRequest): Promise
   }
   return undefined;
 }
+
+/**
+ * Retrieves the host application version string.
+ */
 export async function getAppVersion(req?: GetAppVersionRequest): Promise<GetAppVersionResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -431,7 +551,11 @@ export async function getAppVersion(req?: GetAppVersionRequest): Promise<GetAppV
   }
   return undefined;
 }
-export async function getCache(req?: GetCacheRequest): Promise<GetCacheResponse | undefined> {
+
+/**
+ * Retrieves cached binary data associated with the specified cache key.
+ */
+export async function hostGetCache(req?: GetCacheRequest): Promise<GetCacheResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
       command: {
@@ -445,7 +569,11 @@ export async function getCache(req?: GetCacheRequest): Promise<GetCacheResponse 
   }
   return undefined;
 }
-export async function setCache(req?: SetCacheRequest): Promise<SetCacheResponse | undefined> {
+
+/**
+ * Stores binary data in the host cache with an optional time-to-live (TTL).
+ */
+export async function hostSetCache(req?: SetCacheRequest): Promise<SetCacheResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
       command: {
@@ -459,7 +587,11 @@ export async function setCache(req?: SetCacheRequest): Promise<SetCacheResponse 
   }
   return undefined;
 }
-export async function spawnProcess(req?: SpawnProcessRequest): Promise<SpawnProcessResponse | undefined> {
+
+/**
+ * Spawns a child process on the host system within permitted binary limits.
+ */
+export async function hostSpawnProcess(req?: SpawnProcessRequest): Promise<SpawnProcessResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
       command: {
@@ -473,6 +605,10 @@ export async function spawnProcess(req?: SpawnProcessRequest): Promise<SpawnProc
   }
   return undefined;
 }
+
+/**
+ * Writes input data to standard input of an active spawned child process.
+ */
 export async function writeProcessStdin(req?: WriteProcessStdinRequest): Promise<WriteProcessStdinResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -487,6 +623,10 @@ export async function writeProcessStdin(req?: WriteProcessStdinRequest): Promise
   }
   return undefined;
 }
+
+/**
+ * Reads standard output or standard error data from an active spawned child process.
+ */
 export async function readProcessStdout(req?: ReadProcessStdoutRequest): Promise<ReadProcessStdoutResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -501,6 +641,10 @@ export async function readProcessStdout(req?: ReadProcessStdoutRequest): Promise
   }
   return undefined;
 }
+
+/**
+ * Terminates an active spawned child process.
+ */
 export async function killProcess(req?: KillProcessRequest): Promise<KillProcessResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -515,6 +659,10 @@ export async function killProcess(req?: KillProcessRequest): Promise<KillProcess
   }
   return undefined;
 }
+
+/**
+ * Checks whether a spawned child process is still running and gets its exit code.
+ */
 export async function getProcessStatus(req?: GetProcessStatusRequest): Promise<GetProcessStatusResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -529,6 +677,10 @@ export async function getProcessStatus(req?: GetProcessStatusRequest): Promise<G
   }
   return undefined;
 }
+
+/**
+ * Notifies the host player of custom playback events or state overrides.
+ */
 export async function notifyPlayerEvent(req?: NotifyPlayerEventRequest): Promise<NotifyPlayerEventResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -543,6 +695,10 @@ export async function notifyPlayerEvent(req?: NotifyPlayerEventRequest): Promise
   }
   return undefined;
 }
+
+/**
+ * Establishes a WebSocket client connection to a remote WebSocket server.
+ */
 export async function wsConnect(req?: WsConnectRequest): Promise<WsConnectResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -557,6 +713,10 @@ export async function wsConnect(req?: WsConnectRequest): Promise<WsConnectRespon
   }
   return undefined;
 }
+
+/**
+ * Sends a text or binary message through an active WebSocket connection.
+ */
 export async function wsSend(req?: WsSendRequest): Promise<WsSendResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -571,6 +731,10 @@ export async function wsSend(req?: WsSendRequest): Promise<WsSendResponse | unde
   }
   return undefined;
 }
+
+/**
+ * Receives the next incoming message frame from an active WebSocket connection.
+ */
 export async function wsReceive(req?: WsReceiveRequest): Promise<WsReceiveResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -585,6 +749,10 @@ export async function wsReceive(req?: WsReceiveRequest): Promise<WsReceiveRespon
   }
   return undefined;
 }
+
+/**
+ * Closes an active WebSocket connection with an optional code and reason.
+ */
 export async function wsClose(req?: WsCloseRequest): Promise<WsCloseResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
@@ -599,3 +767,4 @@ export async function wsClose(req?: WsCloseRequest): Promise<WsCloseResponse | u
   }
   return undefined;
 }
+

@@ -31,6 +31,22 @@ from core.types.protos.extensions_pb2 import (
     MainCommandResponse,
 )
 
+from moounit.expectations import ExpectationManager, current_scope
+from moounit.generated import (
+    PLAYER_COMMANDS,
+    GeneratedMoounitGuestClient,
+)
+from moounit.passthrough import (
+    RealProcessManager,
+    RealSocketManager,
+    RealWebSocketManager,
+)
+from moounit.recorder import Recorder
+from moounit.sanitize import (
+    sanitize_extension_command,
+    sanitize_extension_response,
+)
+
 EVENT_TO_PROVIDER_SCOPE: dict[str, int] = {
     "requested_search_result": ExtensionProviderScope.SEARCH,
     "requested_playlists": ExtensionProviderScope.PLAYLISTS,
@@ -41,6 +57,7 @@ EVENT_TO_PROVIDER_SCOPE: dict[str, int] = {
     "scrobble": ExtensionProviderScope.SCROBBLE,
     "playback_details_requested": ExtensionProviderScope.PLAYBACK_DETAILS,
     "requested_lyrics": ExtensionProviderScope.LYRICS,
+    "requested_cover_art": ExtensionProviderScope.COVER_ART,
     "requested_song_context_menu": ExtensionProviderScope.SONG_CONTEXT_MENU,
     "requested_playlist_context_menu": ExtensionProviderScope.PLAYLIST_CONTEXT_MENU,
     "perform_account_login": ExtensionProviderScope.ACCOUNTS,
@@ -62,15 +79,6 @@ EVENT_TO_PROVIDER_SCOPE: dict[str, int] = {
     "player_set_volume": ExtensionProviderScope.PLAYER_PROVIDER,
     "player_load_track": ExtensionProviderScope.PLAYER_PROVIDER,
 }
-
-from moounit.expectations import ExpectationManager, current_scope
-from moounit.generated import PLAYER_COMMANDS, GeneratedMoounitGuestClient
-from moounit.passthrough import RealSocketManager, RealWebSocketManager
-from moounit.recorder import Recorder
-from moounit.sanitize import (
-    sanitize_extension_command,
-    sanitize_extension_response,
-)
 
 
 class Moounit(GeneratedMoounitGuestClient):
@@ -277,8 +285,25 @@ class Moounit(GeneratedMoounitGuestClient):
             self._temp_dirs.append(temp_dir)
             allowed_paths[temp_dir.name] = dest
             self._mapped_paths[src] = temp_dir.name
+            self._mapped_paths[dest] = temp_dir.name
 
-        target_os = "linux" if sys.platform.startswith("linux") else ("macos" if sys.platform == "darwin" else ("windows" if sys.platform in ("win32", "cygwin") else sys.platform))
+        if hasattr(self, "process_manager") and self.process_manager is not None:
+            self.process_manager.mapped_paths = self._mapped_paths
+
+        # Mapping Python runtime platform to Rust std target constants:
+        # https://doc.rust-lang.org/std/env/consts/constant.OS.html
+        # https://doc.rust-lang.org/std/env/consts/constant.ARCH.html
+        target_os = (
+            "linux"
+            if sys.platform.startswith("linux")
+            else (
+                "macos"
+                if sys.platform == "darwin"
+                else (
+                    "windows" if sys.platform in ("win32", "cygwin") else sys.platform
+                )
+            )
+        )
         machine = platform.machine().lower()
         if machine in ("x86_64", "amd64"):
             target_arch = "x86_64"
@@ -319,7 +344,11 @@ class Moounit(GeneratedMoounitGuestClient):
 
     def check_player_methods(self) -> None:
         if 0 < len(self._called_player_commands) < len(PLAYER_COMMANDS):
-            missing = [cmd for cmd in PLAYER_COMMANDS if cmd not in self._called_player_commands]
+            missing = [
+                cmd
+                for cmd in PLAYER_COMMANDS
+                if cmd not in self._called_player_commands
+            ]
             warnings.warn(
                 f"[Moosync Extension Warning] Not all player methods are registered or called. Missing: {', '.join(missing)}",
                 UserWarning,
@@ -329,6 +358,12 @@ class Moounit(GeneratedMoounitGuestClient):
     def close(self):
         """Free plugin resources and remove from Moounit instances registry."""
         self.check_player_methods()
+        if hasattr(self, "socket_manager") and self.socket_manager:
+            self.socket_manager.close_all()
+        if hasattr(self, "ws_manager") and self.ws_manager:
+            self.ws_manager.close_all()
+        if hasattr(self, "process_manager") and self.process_manager:
+            self.process_manager.close_all()
         if hasattr(self, "_plugin_id") and self._plugin_id in Moounit._instances:
             del Moounit._instances[self._plugin_id]
         if hasattr(self, "plugin") and self.plugin is not None:
@@ -359,7 +394,11 @@ class Moounit(GeneratedMoounitGuestClient):
             self._called_player_commands.add(event)
             Moounit._session_called_player_commands.add(event)
 
-        if event in EVENT_TO_PROVIDER_SCOPE and hasattr(self, "manifest") and self.manifest is not None:
+        if (
+            event in EVENT_TO_PROVIDER_SCOPE
+            and hasattr(self, "manifest")
+            and self.manifest is not None
+        ):
             required_scope = EVENT_TO_PROVIDER_SCOPE[event]
             scopes = set(self.manifest.scopes)
             assert required_scope in scopes, (
@@ -371,9 +410,9 @@ class Moounit(GeneratedMoounitGuestClient):
         if event == "perform_account_login":
             account_id = command.perform_account_login.account_id
             if account_id:
-                assert account_id in self.accounts, (
-                    f"Cannot call 'perform_account_login': account '{account_id}' does not exist in registered accounts: {list(self.accounts.keys())}"
-                )
+                assert (
+                    account_id in self.accounts
+                ), f"Cannot call 'perform_account_login': account '{account_id}' does not exist in registered accounts: {list(self.accounts.keys())}"
             else:
                 assert len(self.accounts) > 0, (
                     "Cannot call 'perform_account_login': no account exists. "
@@ -410,6 +449,7 @@ class Moounit(GeneratedMoounitGuestClient):
         self.package_name = package_name or manifest.name or manifest.display_name or ""
         self.socket_manager = RealSocketManager(dict(manifest.permissions.paths))
         self.ws_manager = RealWebSocketManager(list(manifest.permissions.hosts._values))
+        self.process_manager = RealProcessManager()
         self._load_extension(manifest)
 
     @property
@@ -494,6 +534,9 @@ class Moounit(GeneratedMoounitGuestClient):
             "plugin",
             "manager",
             "_called_player_commands",
+            "socket_manager",
+            "ws_manager",
+            "process_manager",
         ):
             raise AttributeError(name)
         return getattr(self.manager, name)

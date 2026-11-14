@@ -18,23 +18,18 @@ pub use extism_pdk::{config, error, info, log, warn};
 use extism_pdk::{plugin_fn, FnResult, Prost};
 
 // Re-export generated types
+pub use duration_proto;
 pub use extension_service_proto;
 pub use extensions_proto;
 pub use preferences_proto;
-pub use songs_proto;
-pub use themes_proto;
-pub use ui_proto;
-pub use duration_proto;
 pub use prost;
 pub use prost_types;
 pub use serde;
 pub use serde_json;
+pub use songs_proto;
+pub use themes_proto;
 pub use tracing;
-pub use extensions_proto::moosync::types::*;
-pub use preferences_proto::moosync::types::*;
-pub use songs_proto::moosync::types::*;
-pub use themes_proto::moosync::types::*;
-pub use ui_proto::moosync::types::*;
+pub use ui_proto;
 
 #[path = "generated_api.rs"]
 pub mod api;
@@ -45,15 +40,30 @@ pub mod http;
 pub mod platform;
 pub mod process;
 pub mod response_utils;
+pub mod socket;
 pub mod websocket;
 
+pub mod types {
+    pub use crate::api::MoosyncResult;
+    pub use crate::handler::MoosyncError;
+    pub use crate::platform::PlatformInfo;
+    pub use crate::process::ChildProcess;
+    pub use crate::response_utils::LrcParseError;
+    pub use crate::socket::SocketClient;
+    pub use crate::websocket::{WebSocketClient, WebSocketMessage};
+    pub use duration_proto::google::protobuf::Duration;
+    pub use extensions_proto::moosync::types::*;
+    pub use extensions_proto::struct_proto::google::protobuf::{
+        value, ListValue, Struct, Value,
+    };
+    pub use preferences_proto::moosync::types::*;
+    pub use songs_proto::moosync::types::*;
+    pub use themes_proto::moosync::types::*;
+    pub use ui_proto::moosync::types::*;
+}
+
 pub use api::MoosyncResult;
-pub use cache::{get_cache, set_cache, set_cache_with_ttl};
 pub use handler::MoosyncError;
-pub use platform::{get_platform, PlatformInfo};
-pub use process::{spawn_process, notify_player_event, ChildProcess};
-pub use response_utils::{parse_lrc, LrcParseError};
-pub use websocket::{WebSocketClient, WebSocketMessage};
 
 unsafe extern "C" {
     fn init();
@@ -71,16 +81,8 @@ pub fn entry() -> FnResult<()> {
 #[tracing::instrument(level = "debug", skip())]
 #[plugin_fn]
 pub fn handle_extension_command(
-    Prost(cmd): Prost<ExtensionCommand>,
-) -> FnResult<Prost<ExtensionCommandResponse>> {
+    Prost(cmd): Prost<types::ExtensionCommand>,
+) -> FnResult<Prost<types::ExtensionCommandResponse>> {
     let res = handler::handle_command(cmd)?;
     Ok(Prost(res))
-}
-
-/// Converts a standard Rust `Duration` into a protobuf `Duration`.
-pub fn duration_to_proto(d: std::time::Duration) -> duration_proto::google::protobuf::Duration {
-    duration_proto::google::protobuf::Duration {
-        seconds: d.as_secs() as i64,
-        nanos: d.subsec_nanos() as i32,
-    }
 }

@@ -36,6 +36,42 @@ import jinja2
 TAG_IS_EVENT_NOTIFICATION = 60001
 TAG_TRANSPORT = 60002
 TAG_WASM_SYMBOL = 60003
+TAG_HAS_WRAPPER = 60004
+
+FIELD_TYPE_MAP = {
+    3: {
+        "kind": "int64",
+        "rust_type": "i64",
+        "go_type": "int64",
+        "go_wasm_type": "int64",
+        "ts_type": "number",
+        "py_type": "int",
+    },
+    4: {
+        "kind": "uint64",
+        "rust_type": "u64",
+        "go_type": "uint64",
+        "go_wasm_type": "uint64",
+        "ts_type": "number",
+        "py_type": "int",
+    },
+    9: {
+        "kind": "string",
+        "rust_type": "String",
+        "go_type": "string",
+        "go_wasm_type": "uint64",
+        "ts_type": "string",
+        "py_type": "str",
+    },
+    12: {
+        "kind": "bytes",
+        "rust_type": "Vec<u8>",
+        "go_type": "[]byte",
+        "go_wasm_type": "uint64",
+        "ts_type": "Uint8Array",
+        "py_type": "bytes",
+    },
+}
 
 
 def to_snake_case(name: str) -> str:
@@ -51,6 +87,82 @@ def to_camel_case(name: str) -> str:
 
 def to_pascal_case(name: str) -> str:
     return "".join(x.title() for x in to_snake_case(name).split("_"))
+
+
+def format_doc(doc: str, style: str = "jsdoc", indent: int = 0, name: str = "") -> str:
+    if not doc:
+        return ""
+    ind = " " * indent
+    if style == "jsdoc":
+        lines = [f"{ind}/**"]
+        for line in doc.split("\n"):
+            lines.append(f"{ind} * {line}".rstrip())
+        lines.append(f"{ind} */")
+        return "\n".join(lines)
+    elif style == "rustdoc":
+        lines = [f"{ind}/// {line}".rstrip() for line in doc.split("\n")]
+        return "\n".join(lines)
+    elif style == "godoc":
+        prefix = f"{name} " if name else ""
+        lines = [f"{ind}// {prefix}{line}".rstrip() for line in doc.split("\n")]
+        return "\n".join(lines)
+    elif style == "pydoc":
+        if "\n" not in doc:
+            return f'{ind}"""{doc}"""'
+        lines = [f'{ind}"""', f"{ind}{doc}", f'{ind}"""']
+        return "\n".join(lines)
+    return doc
+
+
+def find_proto_file() -> Optional[str]:
+    candidates = [
+        "protos/extension_service.proto",
+        "core/types/protos/extension_service.proto",
+    ]
+    workspace_dir = os.environ.get("BUILD_WORKSPACE_DIRECTORY")
+    if workspace_dir:
+        for c in candidates:
+            p = os.path.join(workspace_dir, c)
+            if os.path.exists(p):
+                return p
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    runfiles_dir = os.environ.get("TEST_SRCDIR", ".")
+    for root, _, files in os.walk(runfiles_dir):
+        if "extension_service.proto" in files:
+            return os.path.join(root, "extension_service.proto")
+    return None
+
+
+def parse_proto_docs(proto_path: Optional[str]) -> Dict[str, str]:
+    docs = {}
+    if not proto_path or not os.path.exists(proto_path):
+        return docs
+    with open(proto_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    pattern = re.compile(
+        r"((?:[ \t]*(?://|/\*|\*).*?\n)+)[ \t]*rpc[ \t]+([A-Za-z0-9_]+)"
+    )
+    for match in pattern.finditer(content):
+        raw_comment, rpc_name = match.groups()
+        lines = []
+        for line in raw_comment.splitlines():
+            line = line.strip()
+            if line.startswith("//"):
+                line = line[2:].strip()
+            elif line.startswith("/*"):
+                line = line[2:].strip()
+            elif line.startswith("*"):
+                line = line[1:].strip()
+            if line.endswith("*/"):
+                line = line[:-2].strip()
+            if line:
+                lines.append(line)
+        if lines:
+            docs[rpc_name] = " ".join(lines)
+    return docs
 
 
 def decode_method_options(options_bytes: bytes) -> Dict[int, Any]:
@@ -86,7 +198,13 @@ def build_descriptor_pool(descriptor_files: List[str]) -> descriptor_pool.Descri
     return pool
 
 
-def extract_metadata(pool: descriptor_pool.DescriptorPool) -> Dict[str, Any]:
+def extract_metadata(
+    pool: descriptor_pool.DescriptorPool, proto_file: Optional[str] = None
+) -> Dict[str, Any]:
+    if proto_file is None:
+        proto_file = find_proto_file()
+    proto_docs = parse_proto_docs(proto_file)
+
     ext_cmd = pool.FindMessageTypeByName("moosync.types.ExtensionCommand")
     ext_resp = pool.FindMessageTypeByName("moosync.types.ExtensionCommandResponse")
     main_cmd = pool.FindMessageTypeByName("moosync.types.MainCommand")
@@ -118,9 +236,31 @@ def extract_metadata(pool: descriptor_pool.DescriptorPool) -> Dict[str, Any]:
 
             transport_val = custom_opts.get(TAG_TRANSPORT, 0)
             wasm_symbol_val = custom_opts.get(TAG_WASM_SYMBOL, "")
+            has_wrapper_val = bool(custom_opts.get(TAG_HAS_WRAPPER, 0))
 
             req_name = m.input_type.name
             resp_name = m.output_type.name
+            is_proto_payload = m.input_type.file.name != service_file.name
+
+            params = []
+            ret_info = {
+                "kind": "void",
+                "rust_type": "()",
+                "go_type": "",
+                "ts_type": "void",
+                "py_type": "None",
+            }
+            if not is_proto_payload:
+                for f in m.input_type.fields:
+                    type_meta = FIELD_TYPE_MAP.get(f.type, FIELD_TYPE_MAP[9])
+                    params.append({
+                        "snake_name": f.name,
+                        "camel_name": to_camel_case(f.name),
+                        **type_meta,
+                    })
+                if m.output_type.fields:
+                    ret_f = m.output_type.fields[0]
+                    ret_info = FIELD_TYPE_MAP.get(ret_f.type, FIELD_TYPE_MAP[4])
 
             host_methods.append({
                 "name": m.name,
@@ -131,8 +271,17 @@ def extract_metadata(pool: descriptor_pool.DescriptorPool) -> Dict[str, Any]:
                 "resp_type": resp_name,
                 "transport": transport_val,  # 0: MAIN_COMMAND, 1: DIRECT_HOST_FN
                 "wasm_symbol": wasm_symbol_val or to_snake_case(m.name),
+                "has_wrapper": has_wrapper_val,
+                "is_proto_payload": is_proto_payload,
+                "params": params,
+                "ret_kind": ret_info["kind"],
+                "ret_rust_type": ret_info["rust_type"],
+                "ret_go_type": ret_info["go_type"],
+                "ret_ts_type": ret_info["ts_type"],
+                "ret_py_type": ret_info["py_type"],
                 "oneof_variant": host_req_to_oneof.get(req_name, to_snake_case(m.name)),
                 "resp_oneof_variant": host_resp_to_oneof.get(resp_name, to_snake_case(m.name)),
+                "doc": proto_docs.get(m.name, ""),
             })
 
     guest_services = []
@@ -166,6 +315,7 @@ def extract_metadata(pool: descriptor_pool.DescriptorPool) -> Dict[str, Any]:
                 "oneof_variant": guest_req_to_oneof.get(req_name, to_snake_case(m.name)),
                 "resp_oneof_variant": guest_resp_to_oneof.get(resp_name, to_snake_case(m.name)),
                 "service_trait": trait_name,
+                "doc": proto_docs.get(m.name, ""),
             }
             methods_in_service.append(method_info)
             guest_methods.append(method_info)
@@ -188,6 +338,7 @@ def render_template(
 ):
     loader = jinja2.FileSystemLoader(template_dir)
     env = jinja2.Environment(loader=loader, trim_blocks=True, lstrip_blocks=True)
+    env.filters["format_doc"] = format_doc
     template = env.get_template(template_name)
     rendered = template.render(context)
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)

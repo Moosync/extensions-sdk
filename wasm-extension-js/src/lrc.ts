@@ -1,5 +1,8 @@
 import { LyricLine, Lyrics } from "./protos/songs_pb.js";
 
+/**
+ * Parses LRC-formatted lyric text into a structured {@link Lyrics} protobuf message.
+ */
 export function parseLrc(lrcText: string): Lyrics {
   const trimmed = lrcText.trim();
   if (!trimmed) {

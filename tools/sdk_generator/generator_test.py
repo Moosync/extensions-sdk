@@ -73,11 +73,21 @@ class GeneratorTest(unittest.TestCase):
                 content = f.read()
             self.assertIn("class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):", content)
             self.assertIn("class GeneratedMoounitExpectationClient:", content)
-            self.assertIn("def default_main_command_response(", content)
+            self.assertIn("MAIN_COMMAND_DEFAULT_RESPONSES", content)
             self.assertIn("def expect_spawn_process(", content)
             self.assertIn("def requested_cover_art(", content)
             self.assertIn("def can_play(", content)
             self.assertIn("def player_play(", content)
+
+            # Verify docs in metadata and generated code
+            self.assertTrue(get_song.get("doc"), "Docstring should be extracted for GetSong")
+            with open(os.path.join(tmp_dir, "rust_api.txt"), "r", encoding="utf-8") as f:
+                rust_content = f.read()
+                self.assertIn("/// Queries and retrieves song entities matching the given criteria from the host database.", rust_content)
+            with open(os.path.join(tmp_dir, "ts_api.txt"), "r", encoding="utf-8") as f:
+                ts_content = f.read()
+                self.assertIn("/**", ts_content)
+                self.assertIn("Queries and retrieves song entities matching the given criteria from the host database.", ts_content)
 
 
 if __name__ == "__main__":

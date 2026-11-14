@@ -2,6 +2,7 @@ import difflib
 import json
 import re
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
 
@@ -102,8 +103,34 @@ def should_ignore(field_path: str, ignored_fields: list[Any] | None) -> bool:
     return any(rule.regex is None for rule in matching)
 
 
+def _normalize_url_query(val: Any) -> Any:
+    if (
+        isinstance(val, str)
+        and (val.startswith("http://") or val.startswith("https://"))
+        and "?" in val
+    ):
+        try:
+            parts = urlsplit(val)
+            query_params = sorted(parse_qsl(parts.query, keep_blank_values=True))
+            sorted_query = urlencode(query_params)
+            return urlunsplit(
+                (
+                    parts.scheme,
+                    parts.netloc,
+                    parts.path,
+                    sorted_query,
+                    parts.fragment,
+                )
+            )
+        except Exception:
+            return val
+    return val
+
+
 def apply_value_regexes(field_path: str, val: Any, rules: list[IgnoreRule]) -> Any:
     current = val
+    if field_path.endswith(".url") or field_path == "url":
+        current = _normalize_url_query(current)
     for rule in rules:
         if rule.matches_path(field_path) and rule.regex is not None:
             current = rule.apply_regex(current)

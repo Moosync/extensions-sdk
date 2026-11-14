@@ -2,12 +2,15 @@
 
 use moosync_edk::{
     api::{
-        host_api::get_current_song, Accounts, ContextMenu, DatabaseEvents, Extension,
-        GetCurrentSongRequest, PlayerEvents, PlayerProvider, PreferenceEvents, Provider,
-        RequestedSearchResultRequest, RequestedSearchResultResponse, ScrobbleRequest,
+        get_current_song, register_extension, Accounts, ContextMenu, DatabaseEvents, Extension,
+        PlayerEvents, PlayerProvider, PreferenceEvents, Provider,
     },
-    handler::register_extension,
-    info, MoosyncResult,
+    info,
+    types::{
+        GetCurrentSongRequest, RequestedSearchResultRequest, RequestedSearchResultResponse,
+        ScrobbleRequest,
+    },
+    MoosyncResult,
 };
 
 // ANCHOR: first_extension

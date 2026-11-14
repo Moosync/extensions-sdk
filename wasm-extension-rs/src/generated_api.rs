@@ -2,135 +2,174 @@
 // Regenerate with: bazel run //tools/sdk_generator:update
 
 use extism_pdk::{host_fn, Prost};
-pub use extensions_proto::moosync::types::*;
-pub use preferences_proto::moosync::types::*;
-pub use songs_proto::moosync::types::*;
-pub use ui_proto::moosync::types::*;
+use crate::handler::MoosyncError;
+use crate::types::*;
 
-pub type MoosyncResult<T> = Result<T, crate::handler::MoosyncError>;
+pub use crate::cache::{get_cache, set_cache, set_cache_with_ttl};
+pub use crate::handler::register_extension;
+pub use crate::platform::get_platform;
+pub use crate::process::spawn_process;
+pub use crate::response_utils::{duration_to_proto, parse_lrc, proto_to_duration, Extract};
+
+pub type MoosyncResult<T> = Result<T, MoosyncError>;
 
 #[allow(unused_variables)]
 pub trait Provider {
+    /// Resolves playback streaming URL or resource location for a remote track.
     fn get_remote_url(&self, req: GetRemoteUrlRequest) -> MoosyncResult<GetRemoteUrlResponse> {
         Err("Not implemented".into())
     }
+    /// Performs search query for songs, albums, artists, or playlists.
     fn requested_search_result(&self, req: RequestedSearchResultRequest) -> MoosyncResult<RequestedSearchResultResponse> {
         Err("Not implemented".into())
     }
+    /// Fetches user playlists or remote playlists available from this provider.
     fn requested_playlists(&self, req: RequestedPlaylistsRequest) -> MoosyncResult<RequestedPlaylistsResponse> {
         Err("Not implemented".into())
     }
+    /// Fetches songs contained within a specified playlist.
     fn requested_playlist_songs(&self, req: RequestedPlaylistSongsRequest) -> MoosyncResult<RequestedPlaylistSongsResponse> {
         Err("Not implemented".into())
     }
+    /// Fetches songs associated with a specified artist.
     fn requested_artist_songs(&self, req: RequestedArtistSongsRequest) -> MoosyncResult<RequestedArtistSongsResponse> {
         Err("Not implemented".into())
     }
+    /// Fetches songs belonging to a specified album.
     fn requested_album_songs(&self, req: RequestedAlbumSongsRequest) -> MoosyncResult<RequestedAlbumSongsResponse> {
         Err("Not implemented".into())
     }
+    /// Fetches recommended tracks based on listening history or seed items.
     fn requested_recommendations(&self, req: RequestedRecommendationsRequest) -> MoosyncResult<RequestedRecommendationsResponse> {
         Err("Not implemented".into())
     }
+    /// Fetches full song metadata for a provider-specific track ID.
     fn requested_song_from_id(&self, req: RequestedSongFromIdRequest) -> MoosyncResult<RequestedSongFromIdResponse> {
         Err("Not implemented".into())
     }
+    /// Fetches detailed playback streaming information (URL, duration, keys).
     fn playback_details_requested(&self, req: PlaybackDetailsRequestedRequest) -> MoosyncResult<PlaybackDetailsRequestedResponse> {
         Err("Not implemented".into())
     }
+    /// Fetches synchronized or plain lyrics for a given song.
     fn requested_lyrics(&self, req: RequestedLyricsRequest) -> MoosyncResult<RequestedLyricsResponse> {
         Err("Not implemented".into())
     }
+    /// Fetches album artwork or cover image URLs for a given entity.
     fn requested_cover_art(&self, req: RequestedCoverArtRequest) -> MoosyncResult<RequestedCoverArtResponse> {
         Err("Not implemented".into())
     }
+    /// Receives track scrobble notification when playback reaches threshold.
     fn scrobble(&self, req: ScrobbleRequest) -> MoosyncResult<()> {
         Ok(())
     }
+    /// Handles generic or provider-specific custom extension RPC requests.
     fn custom_request(&self, req: CustomRequest) -> MoosyncResult<CustomRequestResponse> {
         Err("Not implemented".into())
     }
 }
 #[allow(unused_variables)]
 pub trait Accounts {
+    /// Initiates user login or credentials prompt for extension account.
     fn perform_account_login(&self, req: PerformAccountLoginRequest) -> MoosyncResult<PerformAccountLoginResponse> {
         Err("Not implemented".into())
     }
+    /// Handles OAuth authorization redirection callback token exchange.
     fn oauth_callback(&self, req: OauthCallbackRequest) -> MoosyncResult<OauthCallbackResponse> {
         Err("Not implemented".into())
     }
 }
 #[allow(unused_variables)]
 pub trait ContextMenu {
+    /// Provides custom contextual menu items for a selected song.
     fn requested_song_context_menu(&self, req: RequestedSongContextMenuRequest) -> MoosyncResult<RequestedSongContextMenuResponse> {
         Err("Not implemented".into())
     }
+    /// Provides custom contextual menu items for a selected playlist.
     fn requested_playlist_context_menu(&self, req: RequestedPlaylistContextMenuRequest) -> MoosyncResult<RequestedPlaylistContextMenuResponse> {
         Err("Not implemented".into())
     }
+    /// Invoked when a user selects a custom context menu item.
     fn context_menu_action(&self, req: ContextMenuActionRequest) -> MoosyncResult<ContextMenuActionResponse> {
         Err("Not implemented".into())
     }
 }
 #[allow(unused_variables)]
 pub trait PlayerEvents {
+    /// Notified when the playback queue order or track list changes.
     fn song_queue_changed(&self, req: SongQueueChangedRequest) -> MoosyncResult<()> {
         Ok(())
     }
+    /// Notified when playback position is seeked to a new timestamp.
     fn seeked(&self, req: SeekedRequest) -> MoosyncResult<()> {
         Ok(())
     }
+    /// Notified when playback volume level changes.
     fn volume_changed(&self, req: VolumeChangedRequest) -> MoosyncResult<()> {
         Ok(())
     }
+    /// Notified when player transitions between play, pause, and stop states.
     fn player_state_changed(&self, req: PlayerStateChangedRequest) -> MoosyncResult<()> {
         Ok(())
     }
+    /// Notified when the currently playing track changes.
     fn song_changed(&self, req: SongChangedRequest) -> MoosyncResult<()> {
         Ok(())
     }
 }
 #[allow(unused_variables)]
 pub trait DatabaseEvents {
+    /// Notified when a new song is added to the host database.
     fn song_added(&self, req: SongAddedRequest) -> MoosyncResult<()> {
         Ok(())
     }
+    /// Notified when a song is removed from the host database.
     fn song_removed(&self, req: SongRemovedRequest) -> MoosyncResult<()> {
         Ok(())
     }
+    /// Notified when a new playlist is created in the host database.
     fn playlist_added(&self, req: PlaylistAddedRequest) -> MoosyncResult<()> {
         Ok(())
     }
+    /// Notified when a playlist is deleted from the host database.
     fn playlist_removed(&self, req: PlaylistRemovedRequest) -> MoosyncResult<()> {
         Ok(())
     }
 }
 #[allow(unused_variables)]
 pub trait PreferenceEvents {
+    /// Notified when an extension preference value is modified by user.
     fn preference_changed(&self, req: PreferenceChangedRequest) -> MoosyncResult<()> {
         Ok(())
     }
 }
 #[allow(unused_variables)]
 pub trait PlayerProvider {
+    /// Determines whether this player provider is capable of playing the given track.
     fn can_play(&self, req: CanPlayRequest) -> MoosyncResult<CanPlayResponse> {
         Err("Not implemented".into())
     }
+    /// Commands the custom player engine to resume playback.
     fn player_play(&self, req: PlayerPlayRequest) -> MoosyncResult<PlayerPlayResponse> {
         Err("Not implemented".into())
     }
+    /// Commands the custom player engine to pause playback.
     fn player_pause(&self, req: PlayerPauseRequest) -> MoosyncResult<PlayerPauseResponse> {
         Err("Not implemented".into())
     }
+    /// Commands the custom player engine to stop playback.
     fn player_stop(&self, req: PlayerStopRequest) -> MoosyncResult<PlayerStopResponse> {
         Err("Not implemented".into())
     }
+    /// Commands the custom player engine to seek to a given position.
     fn player_seek(&self, req: PlayerSeekRequest) -> MoosyncResult<PlayerSeekResponse> {
         Err("Not implemented".into())
     }
+    /// Commands the custom player engine to set playback volume.
     fn player_set_volume(&self, req: PlayerSetVolumeRequest) -> MoosyncResult<PlayerSetVolumeResponse> {
         Err("Not implemented".into())
     }
+    /// Commands the custom player engine to load a track for playback.
     fn player_load_track(&self, req: PlayerLoadTrackRequest) -> MoosyncResult<PlayerLoadTrackResponse> {
         Err("Not implemented".into())
     }
@@ -146,708 +185,740 @@ pub trait Extension:
     PlayerProvider +
 {}
 
-#[host_fn]
-extern "ExtismHost" {
-    fn send_main_command(command: Prost<MainCommand>) -> Prost<MainCommandResponse>;
-    fn system_time() -> u64;
-    fn open_clientfd(path: String) -> i64;
-    fn write_sock(sock_id: i64, buf: Vec<u8>) -> i64;
-    fn read_sock(sock_id: i64, read_len: u64) -> Vec<u8>;
-    fn batch_http_request(requests: Prost<BatchHttpRequest>) -> Prost<BatchHttpResponse>;
+mod raw_host {
+    use super::*;
+
+    #[host_fn]
+    extern "ExtismHost" {
+        pub(super) fn send_main_command(command: Prost<MainCommand>) -> Prost<MainCommandResponse>;
+        pub(super) fn system_time() -> u64;
+        pub(super) fn open_clientfd(path: String) -> i64;
+        pub(super) fn write_sock(sock_id: i64, buf: Vec<u8>) -> i64;
+        pub(super) fn read_sock(sock_id: i64, read_len: u64) -> Vec<u8>;
+        pub(super) fn batch_http_request(req: Prost<BatchHttpRequest>) -> Prost<BatchHttpResponse>;
+    }
 }
 
-pub mod host_api {
-    use super::*;
-    use crate::handler::MoosyncError;
-
-    // Direct Host Functions
-    pub fn system_time() -> MoosyncResult<u64> {
-        unsafe { Ok(super::system_time()?) }
+/// Returns current host system time in seconds since Unix epoch.
+pub fn system_time() -> MoosyncResult<u64> {
+    unsafe { Ok(raw_host::system_time()?) }
+}
+/// Opens a client socket at the specified path and returns a file descriptor handle.
+pub fn open_clientfd(path: String) -> MoosyncResult<i64> {
+    unsafe { Ok(raw_host::open_clientfd(path)?) }
+}
+/// Writes a byte buffer to the socket associated with the given file descriptor handle.
+pub fn write_sock(sock_id: i64, buf: Vec<u8>) -> MoosyncResult<i64> {
+    unsafe { Ok(raw_host::write_sock(sock_id, buf)?) }
+}
+/// Reads up to max_bytes from the socket associated with the given file descriptor handle.
+pub fn read_sock(sock_id: i64, read_len: u64) -> MoosyncResult<Vec<u8>> {
+    unsafe { Ok(raw_host::read_sock(sock_id, read_len)?) }
+}
+/// Executes a batch of HTTP requests via the host network runner.
+pub fn batch_http_request(req: BatchHttpRequest) -> MoosyncResult<BatchHttpResponse> {
+    unsafe {
+        let Prost(res) = raw_host::batch_http_request(Prost(req))?;
+        Ok(res)
     }
+}
+/// Queries and retrieves song entities matching the given criteria from the host database.
+pub fn get_song(req: GetSongRequest) -> MoosyncResult<GetSongResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetSong(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-    pub fn open_clientfd(path: String) -> MoosyncResult<i64> {
-        unsafe { Ok(super::open_clientfd(path)?) }
-    }
-
-    pub fn write_sock(sock_id: i64, buf: Vec<u8>) -> MoosyncResult<i64> {
-        unsafe { Ok(super::write_sock(sock_id, buf)?) }
-    }
-
-    pub fn read_sock(sock_id: i64, read_len: u64) -> MoosyncResult<Vec<u8>> {
-        unsafe { Ok(super::read_sock(sock_id, read_len)?) }
-    }
-
-    pub fn batch_http_request(req: BatchHttpRequest) -> MoosyncResult<BatchHttpResponse> {
-        unsafe {
-            let Prost(res) = super::batch_http_request(Prost(req))?;
-            Ok(res)
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
-    }
 
-    // Multiplexed MainCommands
-    pub fn get_song(req: GetSongRequest) -> MoosyncResult<GetSongResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetSong(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
-
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetSong(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::GetSong(data)) = res.response {
+            return Ok(data);
         }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn get_entity(req: GetEntityRequest) -> MoosyncResult<GetEntityResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetEntity(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Retrieves detailed entity information (such as artist or album) from the host database.
+pub fn get_entity(req: GetEntityRequest) -> MoosyncResult<GetEntityResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetEntity(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetEntity(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::GetEntity(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn get_current_song(req: GetCurrentSongRequest) -> MoosyncResult<GetCurrentSongResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetCurrentSong(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Retrieves the currently playing song from the active player session.
+pub fn get_current_song(req: GetCurrentSongRequest) -> MoosyncResult<GetCurrentSongResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetCurrentSong(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetCurrentSong(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::GetCurrentSong(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn get_player_state(req: GetPlayerStateRequest) -> MoosyncResult<GetPlayerStateResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetPlayerState(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Retrieves the current playback state (e.g. playing, paused, stopped) of the player.
+pub fn get_player_state(req: GetPlayerStateRequest) -> MoosyncResult<GetPlayerStateResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetPlayerState(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetPlayerState(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::GetPlayerState(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn get_volume(req: GetVolumeRequest) -> MoosyncResult<GetVolumeResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetVolume(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Retrieves the current master playback volume level (0.0 to 1.0).
+pub fn get_volume(req: GetVolumeRequest) -> MoosyncResult<GetVolumeResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetVolume(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetVolume(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::GetVolume(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn get_time(req: GetTimeRequest) -> MoosyncResult<GetTimeResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetTime(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Retrieves the current playback position timestamp in seconds.
+pub fn get_time(req: GetTimeRequest) -> MoosyncResult<GetTimeResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetTime(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetTime(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::GetTime(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn get_queue(req: GetQueueRequest) -> MoosyncResult<GetQueueResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetQueue(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Retrieves the current player queue state and list of queued tracks.
+pub fn get_queue(req: GetQueueRequest) -> MoosyncResult<GetQueueResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetQueue(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetQueue(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::GetQueue(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn get_preference(req: GetPreferenceRequest) -> MoosyncResult<GetPreferenceResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetPreference(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Retrieves an extension preference value by key.
+pub fn get_preference(req: GetPreferenceRequest) -> MoosyncResult<GetPreferenceResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetPreference(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetPreference(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::GetPreference(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn set_preference(req: SetPreferenceRequest) -> MoosyncResult<SetPreferenceResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::SetPreference(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Stores an extension preference value by key.
+pub fn set_preference(req: SetPreferenceRequest) -> MoosyncResult<SetPreferenceResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::SetPreference(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::SetPreference(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::SetPreference(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn get_secure(req: GetSecureRequest) -> MoosyncResult<GetSecureResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetSecure(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Retrieves a securely stored credential or secret by key from the host keyring.
+pub fn get_secure(req: GetSecureRequest) -> MoosyncResult<GetSecureResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetSecure(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetSecure(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::GetSecure(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn set_secure(req: SetSecureRequest) -> MoosyncResult<SetSecureResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::SetSecure(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Stores a credential or secret securely in the host keyring/vault.
+pub fn set_secure(req: SetSecureRequest) -> MoosyncResult<SetSecureResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::SetSecure(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::SetSecure(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::SetSecure(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn add_songs(req: AddSongsRequest) -> MoosyncResult<AddSongsResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::AddSongs(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Inserts one or more songs into the host music database.
+pub fn add_songs(req: AddSongsRequest) -> MoosyncResult<AddSongsResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::AddSongs(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::AddSongs(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::AddSongs(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn remove_song(req: RemoveSongRequest) -> MoosyncResult<RemoveSongResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::RemoveSong(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Removes a song from the host music database by its ID.
+pub fn remove_song(req: RemoveSongRequest) -> MoosyncResult<RemoveSongResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::RemoveSong(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::RemoveSong(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::RemoveSong(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn update_song(req: UpdateSongRequest) -> MoosyncResult<UpdateSongResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::UpdateSong(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Updates metadata for an existing song in the host database.
+pub fn update_song(req: UpdateSongRequest) -> MoosyncResult<UpdateSongResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::UpdateSong(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::UpdateSong(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::UpdateSong(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn add_playlist(req: AddPlaylistRequest) -> MoosyncResult<AddPlaylistResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::AddPlaylist(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Creates a new playlist in the host database.
+pub fn add_playlist(req: AddPlaylistRequest) -> MoosyncResult<AddPlaylistResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::AddPlaylist(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::AddPlaylist(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::AddPlaylist(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn add_to_playlist(req: AddToPlaylistRequest) -> MoosyncResult<AddToPlaylistResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::AddToPlaylist(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Appends songs to an existing playlist in the host database.
+pub fn add_to_playlist(req: AddToPlaylistRequest) -> MoosyncResult<AddToPlaylistResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::AddToPlaylist(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::AddToPlaylist(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::AddToPlaylist(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn register_oauth(req: RegisterOauthRequest) -> MoosyncResult<RegisterOauthResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::RegisterOauth(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Registers OAuth configuration details for account authentication flows.
+pub fn register_oauth(req: RegisterOauthRequest) -> MoosyncResult<RegisterOauthResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::RegisterOauth(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::RegisterOauth(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::RegisterOauth(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn open_external_url(req: OpenExternalUrlRequest) -> MoosyncResult<OpenExternalUrlResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::OpenExternalUrl(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Requests the host to open a URL in the user's default system browser.
+pub fn open_external_url(req: OpenExternalUrlRequest) -> MoosyncResult<OpenExternalUrlResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::OpenExternalUrl(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::OpenExternalUrl(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::OpenExternalUrl(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn set_account(req: SetAccountRequest) -> MoosyncResult<SetAccountResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::SetAccount(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Updates account login credentials and details for this extension.
+pub fn set_account(req: SetAccountRequest) -> MoosyncResult<SetAccountResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::SetAccount(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::SetAccount(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::SetAccount(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn register_user_preference(req: RegisterUserPreferenceRequest) -> MoosyncResult<RegisterUserPreferenceResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::RegisterUserPreference(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Registers dynamic preference schema entries shown in user settings.
+pub fn register_user_preference(req: RegisterUserPreferenceRequest) -> MoosyncResult<RegisterUserPreferenceResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::RegisterUserPreference(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::RegisterUserPreference(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::RegisterUserPreference(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn unregister_user_preference(req: UnregisterUserPreferenceRequest) -> MoosyncResult<UnregisterUserPreferenceResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::UnregisterUserPreference(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Unregisters dynamic preference schema entries previously registered.
+pub fn unregister_user_preference(req: UnregisterUserPreferenceRequest) -> MoosyncResult<UnregisterUserPreferenceResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::UnregisterUserPreference(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::UnregisterUserPreference(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::UnregisterUserPreference(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn extensions_updated(req: ExtensionsUpdatedRequest) -> MoosyncResult<ExtensionsUpdatedResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::ExtensionsUpdated(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Notifies the host that extension configuration or available extensions changed.
+pub fn extensions_updated(req: ExtensionsUpdatedRequest) -> MoosyncResult<ExtensionsUpdatedResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::ExtensionsUpdated(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::ExtensionsUpdated(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::ExtensionsUpdated(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn get_app_version(req: GetAppVersionRequest) -> MoosyncResult<GetAppVersionResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetAppVersion(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Retrieves the host application version string.
+pub fn get_app_version(req: GetAppVersionRequest) -> MoosyncResult<GetAppVersionResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetAppVersion(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetAppVersion(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::GetAppVersion(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn get_cache(req: GetCacheRequest) -> MoosyncResult<GetCacheResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetCache(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Retrieves cached binary data associated with the specified cache key.
+pub fn host_get_cache(req: GetCacheRequest) -> MoosyncResult<GetCacheResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetCache(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetCache(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::GetCache(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn set_cache(req: SetCacheRequest) -> MoosyncResult<SetCacheResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::SetCache(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Stores binary data in the host cache with an optional time-to-live (TTL).
+pub fn host_set_cache(req: SetCacheRequest) -> MoosyncResult<SetCacheResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::SetCache(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::SetCache(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::SetCache(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn spawn_process(req: SpawnProcessRequest) -> MoosyncResult<SpawnProcessResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::SpawnProcess(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Spawns a child process on the host system within permitted binary limits.
+pub fn host_spawn_process(req: SpawnProcessRequest) -> MoosyncResult<SpawnProcessResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::SpawnProcess(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::SpawnProcess(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::SpawnProcess(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn write_process_stdin(req: WriteProcessStdinRequest) -> MoosyncResult<WriteProcessStdinResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::WriteProcessStdin(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Writes input data to standard input of an active spawned child process.
+pub fn write_process_stdin(req: WriteProcessStdinRequest) -> MoosyncResult<WriteProcessStdinResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::WriteProcessStdin(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::WriteProcessStdin(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::WriteProcessStdin(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn read_process_stdout(req: ReadProcessStdoutRequest) -> MoosyncResult<ReadProcessStdoutResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::ReadProcessStdout(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Reads standard output or standard error data from an active spawned child process.
+pub fn read_process_stdout(req: ReadProcessStdoutRequest) -> MoosyncResult<ReadProcessStdoutResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::ReadProcessStdout(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::ReadProcessStdout(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::ReadProcessStdout(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn kill_process(req: KillProcessRequest) -> MoosyncResult<KillProcessResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::KillProcess(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Terminates an active spawned child process.
+pub fn kill_process(req: KillProcessRequest) -> MoosyncResult<KillProcessResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::KillProcess(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::KillProcess(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::KillProcess(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn get_process_status(req: GetProcessStatusRequest) -> MoosyncResult<GetProcessStatusResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::GetProcessStatus(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Checks whether a spawned child process is still running and gets its exit code.
+pub fn get_process_status(req: GetProcessStatusRequest) -> MoosyncResult<GetProcessStatusResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetProcessStatus(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::GetProcessStatus(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::GetProcessStatus(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn notify_player_event(req: NotifyPlayerEventRequest) -> MoosyncResult<NotifyPlayerEventResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::NotifyPlayerEvent(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Notifies the host player of custom playback events or state overrides.
+pub fn notify_player_event(req: NotifyPlayerEventRequest) -> MoosyncResult<NotifyPlayerEventResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::NotifyPlayerEvent(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::NotifyPlayerEvent(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::NotifyPlayerEvent(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn ws_connect(req: WsConnectRequest) -> MoosyncResult<WsConnectResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::WsConnect(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Establishes a WebSocket client connection to a remote WebSocket server.
+pub fn ws_connect(req: WsConnectRequest) -> MoosyncResult<WsConnectResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::WsConnect(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::WsConnect(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::WsConnect(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn ws_send(req: WsSendRequest) -> MoosyncResult<WsSendResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::WsSend(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Sends a text or binary message through an active WebSocket connection.
+pub fn ws_send(req: WsSendRequest) -> MoosyncResult<WsSendResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::WsSend(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::WsSend(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::WsSend(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn ws_receive(req: WsReceiveRequest) -> MoosyncResult<WsReceiveResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::WsReceive(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Receives the next incoming message frame from an active WebSocket connection.
+pub fn ws_receive(req: WsReceiveRequest) -> MoosyncResult<WsReceiveResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::WsReceive(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::WsReceive(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::WsReceive(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
-    pub fn ws_close(req: WsCloseRequest) -> MoosyncResult<WsCloseResponse> {
-        unsafe {
-            let cmd = MainCommand {
-                command: Some(main_command::Command::WsClose(req)),
-            };
-            let Prost(res) = send_main_command(Prost(cmd))
-                .map_err(|e| MoosyncError::String(e.to_string()))?;
+}
+/// Closes an active WebSocket connection with an optional code and reason.
+pub fn ws_close(req: WsCloseRequest) -> MoosyncResult<WsCloseResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::WsClose(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
 
-            if let Some(main_command_response::Response::Error(e)) = res.response {
-                return Err(MoosyncError::String(e.message));
-            }
-
-            if let Some(main_command_response::Response::WsClose(data)) = res.response {
-                return Ok(data);
-            }
-
-            Err(MoosyncError::String("Host returned invalid response".into()))
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
         }
+
+        if let Some(main_command_response::Response::WsClose(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
 }

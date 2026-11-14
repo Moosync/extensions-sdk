@@ -4,64 +4,42 @@
 from abc import ABC
 import extism
 from core.types.protos import extensions_pb2
+from . import send_main_command
 
 {% for s in guest_services %}
 class {{ s.trait_name }}(ABC):
 {% for m in s.methods %}
 {% if m.is_event %}
     def {{ m.snake_name }}(self, req: extensions_pb2.{{ m.req_type }}) -> None:
+{% if m.doc %}
+{{ m.doc | format_doc("pydoc", 8) }}
+{% endif %}
         pass
 {% else %}
     def {{ m.snake_name }}(self, req: extensions_pb2.{{ m.req_type }}) -> extensions_pb2.{{ m.resp_type }}:
+{% if m.doc %}
+{{ m.doc | format_doc("pydoc", 8) }}
+{% endif %}
         raise NotImplementedError("{{ m.snake_name }} not implemented")
 {% endif %}
 {% endfor %}
 
 {% endfor %}
-@extism.import_fn("extism:host/user", "system_time")
-def system_time() -> int: ...
-
-
-@extism.import_fn("extism:host/user", "open_clientfd")
-def open_clientfd(path: str) -> int: ...
-
-
-@extism.import_fn("extism:host/user", "write_sock")
-def write_sock(sock_id: int, buf: bytes) -> int: ...
-
-
-@extism.import_fn("extism:host/user", "read_sock")
-def read_sock(sock_id: int, read_len: int) -> bytes: ...
-
-
-@extism.import_fn("extism:host/user", "batch_http_request")
-def batch_http_request(data: int) -> int: ...
-
-
-@extism.import_fn("extism:host/user", "send_main_command")
-def send_main_command_raw(data: int) -> int: ...
-
-
-def send_main_command(command: extensions_pb2.MainCommand) -> extensions_pb2.MainCommandResponse:
-    serialized = command.SerializeToString()
-    mem = extism.memory.alloc(serialized)
-    if mem is None:
-        raise RuntimeError("Failed to allocate memory for main command")
-    res_offset = send_main_command_raw(mem.offset)
-    res_handle = extism.memory.find(res_offset)
-    if res_handle is None:
-        raise RuntimeError(f"Failed to find memory for response at offset {res_offset}")
-    res_bytes = extism.memory.bytes(res_handle)
-    extism.memory.free(mem)
-    res = extensions_pb2.MainCommandResponse()
-    res.ParseFromString(res_bytes)
-    return res
-
-
-# Multiplexed MainCommands
 {% for m in host_methods %}
-{% if m.transport == 0 %}
+{% if m.transport == 1 %}
+@extism.import_fn("extism:host/user", "{{ m.wasm_symbol }}")
+{% if m.is_proto_payload %}
+def {{ m.wasm_symbol }}(data: int) -> int: ...
+{% else %}
+def {{ m.wasm_symbol }}({% for p in m.params %}{{ p.snake_name }}: {{ p.py_type }}{% if not loop.last %}, {% endif %}{% endfor %}) -> {{ m.ret_py_type }}: ...
+{% endif %}
+
+
+{% else %}
 def {{ m.snake_name }}(req: extensions_pb2.{{ m.req_type }} | None = None) -> extensions_pb2.{{ m.resp_type }}:
+{% if m.doc %}
+{{ m.doc | format_doc("pydoc", 4) }}
+{% endif %}
     if req is None:
         req = extensions_pb2.{{ m.req_type }}()
     cmd = extensions_pb2.MainCommand()
@@ -82,6 +60,9 @@ class ExtensionApi:
 {% for m in host_methods %}
 {% if m.transport == 0 %}
     def {{ m.snake_name }}(self, req: extensions_pb2.{{ m.req_type }} | None = None) -> extensions_pb2.{{ m.resp_type }}:
+{% if m.doc %}
+{{ m.doc | format_doc("pydoc", 8) }}
+{% endif %}
         return {{ m.snake_name }}(req)
 {% endif %}
 {% endfor %}

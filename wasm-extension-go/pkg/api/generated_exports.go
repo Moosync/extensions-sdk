@@ -12,12 +12,6 @@ import (
 	extensions "github.com/moosync/moosync/types/extensions"
 )
 
-var extension any
-
-func RegisterExtension(ext any) {
-	extension = ext
-}
-
 //go:wasmexport handle_extension_command
 func handle_extension_command() int32 {
 	inputBytes := pdk.Input()

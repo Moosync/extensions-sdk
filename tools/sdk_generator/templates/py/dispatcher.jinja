@@ -3,17 +3,7 @@
 
 import extism
 from core.types.protos import extensions_pb2
-
-_extension_instance = None
-
-
-def register_extension(instance):
-    global _extension_instance
-    _extension_instance = instance
-
-
-def get_extension():
-    return _extension_instance
+from . import get_extension
 
 
 @extism.plugin_fn
@@ -35,33 +25,14 @@ def handle_extension_command() -> int:
 {% for m in guest_methods %}
     if which == "{{ m.oneof_variant }}":
         handler = getattr(inst, "{{ m.snake_name }}", None)
-{% if m.snake_name.startswith("requested_") %}
-        if handler is None:
-            handler = getattr(inst, "get_{{ m.snake_name[10:] }}", None)
-{% elif m.snake_name.startswith("song_") %}
-        if handler is None:
-            handler = getattr(inst, "on_{{ m.snake_name }}", None)
-{% elif m.snake_name.startswith("player_") or m.snake_name.startswith("volume_") or m.snake_name.startswith("preference_") or m.snake_name.startswith("playlist_") or m.snake_name == "seeked" %}
-        if handler is None:
-            handler = getattr(inst, "on_{{ m.snake_name }}", None)
-{% endif %}
-{% if m.snake_name == "custom_request" %}
-        if handler is None:
-            handler = getattr(inst, "handle_custom_request", None)
-{% elif m.snake_name == "playback_details_requested" %}
-        if handler is None:
-            handler = getattr(inst, "get_playback_details", None)
-{% endif %}
         if handler is not None:
 {% if m.is_event %}
             handler(getattr(cmd, "{{ m.oneof_variant }}"))
 {% else %}
             res = handler(getattr(cmd, "{{ m.oneof_variant }}"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "{{ m.resp_oneof_variant }}").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "{{ m.resp_oneof_variant }}").CopyFrom(res)
+                getattr(response, "{{ m.resp_oneof_variant }}").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
 {% endif %}
         return 0
 {% endfor %}

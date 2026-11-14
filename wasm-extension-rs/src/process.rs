@@ -28,7 +28,7 @@ impl ChildProcess {
             process_id: self.id as u64,
             data: data.to_vec(),
         };
-        let resp = crate::api::host_api::write_process_stdin(req)?;
+        let resp = crate::api::write_process_stdin(req)?;
         Ok(resp.bytes_written)
     }
 
@@ -37,15 +37,20 @@ impl ChildProcess {
             process_id: self.id as u64,
             max_bytes,
         };
-        let resp = crate::api::host_api::read_process_stdout(req)?;
+        let resp = crate::api::read_process_stdout(req)?;
         Ok(resp.data)
+    }
+
+    pub fn read_stdout_string(&self, max_bytes: Option<u64>) -> MoosyncResult<String> {
+        let bytes = self.read_stdout(max_bytes)?;
+        String::from_utf8(bytes).map_err(|e| crate::handler::MoosyncError::String(e.to_string()))
     }
 
     pub fn kill(&self) -> MoosyncResult<bool> {
         let req = extensions_proto::moosync::types::KillProcessRequest {
             process_id: self.id as u64,
         };
-        let resp = crate::api::host_api::kill_process(req)?;
+        let resp = crate::api::kill_process(req)?;
         Ok(resp.success)
     }
 
@@ -53,7 +58,7 @@ impl ChildProcess {
         let req = extensions_proto::moosync::types::GetProcessStatusRequest {
             process_id: self.id as u64,
         };
-        let resp = crate::api::host_api::get_process_status(req)?;
+        let resp = crate::api::get_process_status(req)?;
         Ok((resp.is_running, resp.exit_code))
     }
 }
@@ -68,16 +73,9 @@ pub fn spawn_process(
         args: args.iter().map(|s| s.as_ref().to_string()).collect(),
         env: env.clone(),
     };
-    let resp = crate::api::host_api::spawn_process(req)?;
+    let resp = crate::api::host_spawn_process(req)?;
     Ok(ChildProcess {
         id: resp.process_id as usize,
         pid: resp.pid,
     })
-}
-
-pub fn notify_player_event(
-    req: extensions_proto::moosync::types::NotifyPlayerEventRequest,
-) -> MoosyncResult<()> {
-    crate::api::host_api::notify_player_event(req)?;
-    Ok(())
 }

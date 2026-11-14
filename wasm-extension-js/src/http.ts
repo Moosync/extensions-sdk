@@ -52,6 +52,9 @@ export class BatchFetchResponse {
   }
 }
 
+/**
+ * Executes multiple HTTP requests in a single host batch call.
+ */
 export function batchFetch(
   requests: (string | BatchFetchRequest)[],
   options?: BatchFetchOptions,
@@ -259,6 +262,9 @@ function toResponse(resp: BatchFetchResponse): Response {
   return r;
 }
 
+/**
+ * Performs an HTTP request via the Moosync host network runner using a standard Fetch-compatible API.
+ */
 export async function fetch(
   input: string | URL | Request,
   init?: RequestInit,

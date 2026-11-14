@@ -11,9 +11,11 @@ generate_extension_sdk(
 
 exports_files([
     "api.go",
+    "cache.go",
     "generated_api.go",
     "generated_exports.go",
     "platform.go",
+    "socket.go",
     "websocket.go",
 ])
 
@@ -21,9 +23,11 @@ go_library(
     name = "api",
     srcs = [
         "api.go",
+        "cache.go",
         "generated_api.go",
         "generated_exports.go",
         "platform.go",
+        "socket.go",
         "websocket.go",
     ],
     importpath = "github.com/Moosync/extensions-sdk/wasm-extension-go/pkg/api",

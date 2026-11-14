@@ -20,7 +20,10 @@ filegroup(
 py_binary(
     name = "generator",
     srcs = ["generator.py"],
-    data = [":all_templates"],
+    data = [
+        ":all_templates",
+        "//protos:extension_service.proto",
+    ],
     main = "generator.py",
     deps = [
         "@com_google_protobuf//:protobuf_python",
@@ -44,6 +47,7 @@ py_binary(
     ],
     data = [
         ":all_templates",
+        "//protos:extension_service.proto",
         "//protos:extension_service_proto",
         "//protos:extensions_proto",
         "//protos:preferences_proto",
@@ -63,6 +67,7 @@ py_test(
     data = [
         ":all_templates",
         ":generator",
+        "//protos:extension_service.proto",
         "//protos:extension_service_proto",
         "//protos:extensions_proto",
         "//protos:preferences_proto",

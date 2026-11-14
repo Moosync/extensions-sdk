@@ -31,6 +31,7 @@ py_library(
     deps = [
         requirement("extism"),
         requirement("pytest"),
+        requirement("websocket-client"),
         "//protos:extensions_py_proto",
         "//protos:moosync_python_root",
         "//protos:songs_py_proto",
@@ -47,6 +48,7 @@ py_binary(
     deps = [
         ":moounit",
         requirement("pytest"),
+        requirement("websocket-client"),
     ],
 )
 

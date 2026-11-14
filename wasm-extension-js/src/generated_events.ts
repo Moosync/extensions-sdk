@@ -2,8 +2,6 @@
 // Regenerate with: bazel run //tools/sdk_generator:update
 
 import {
-  ExtensionCommand,
-  ExtensionCommandResponse,
   GetRemoteUrlRequest,
   GetRemoteUrlResponse,
   RequestedSearchResultRequest,
@@ -77,70 +75,148 @@ import {
 } from "./protos/extensions_pb.js";
 
 export interface Provider {
+  /**
+   * Resolves playback streaming URL or resource location for a remote track.
+   */
   getRemoteUrl?(req: GetRemoteUrlRequest): Promise<GetRemoteUrlResponse> | GetRemoteUrlResponse;
+  /**
+   * Performs search query for songs, albums, artists, or playlists.
+   */
   requestedSearchResult?(req: RequestedSearchResultRequest): Promise<RequestedSearchResultResponse> | RequestedSearchResultResponse;
+  /**
+   * Fetches user playlists or remote playlists available from this provider.
+   */
   requestedPlaylists?(req: RequestedPlaylistsRequest): Promise<RequestedPlaylistsResponse> | RequestedPlaylistsResponse;
+  /**
+   * Fetches songs contained within a specified playlist.
+   */
   requestedPlaylistSongs?(req: RequestedPlaylistSongsRequest): Promise<RequestedPlaylistSongsResponse> | RequestedPlaylistSongsResponse;
+  /**
+   * Fetches songs associated with a specified artist.
+   */
   requestedArtistSongs?(req: RequestedArtistSongsRequest): Promise<RequestedArtistSongsResponse> | RequestedArtistSongsResponse;
+  /**
+   * Fetches songs belonging to a specified album.
+   */
   requestedAlbumSongs?(req: RequestedAlbumSongsRequest): Promise<RequestedAlbumSongsResponse> | RequestedAlbumSongsResponse;
+  /**
+   * Fetches recommended tracks based on listening history or seed items.
+   */
   requestedRecommendations?(req: RequestedRecommendationsRequest): Promise<RequestedRecommendationsResponse> | RequestedRecommendationsResponse;
+  /**
+   * Fetches full song metadata for a provider-specific track ID.
+   */
   requestedSongFromId?(req: RequestedSongFromIdRequest): Promise<RequestedSongFromIdResponse> | RequestedSongFromIdResponse;
+  /**
+   * Fetches detailed playback streaming information (URL, duration, keys).
+   */
   playbackDetailsRequested?(req: PlaybackDetailsRequestedRequest): Promise<PlaybackDetailsRequestedResponse> | PlaybackDetailsRequestedResponse;
+  /**
+   * Fetches synchronized or plain lyrics for a given song.
+   */
   requestedLyrics?(req: RequestedLyricsRequest): Promise<RequestedLyricsResponse> | RequestedLyricsResponse;
+  /**
+   * Fetches album artwork or cover image URLs for a given entity.
+   */
   requestedCoverArt?(req: RequestedCoverArtRequest): Promise<RequestedCoverArtResponse> | RequestedCoverArtResponse;
+  /**
+   * Receives track scrobble notification when playback reaches threshold.
+   */
   scrobble?(req: ScrobbleRequest): Promise<void> | void;
+  /**
+   * Handles generic or provider-specific custom extension RPC requests.
+   */
   customRequest?(req: CustomRequest): Promise<CustomRequestResponse> | CustomRequestResponse;
 }
 
 export interface ProviderEvents {
+  /**
+   * Resolves playback streaming URL or resource location for a remote track.
+   */
   "getRemoteUrl": {
     req: GetRemoteUrlRequest;
     resp: GetRemoteUrlResponse;
   };
+  /**
+   * Performs search query for songs, albums, artists, or playlists.
+   */
   "requestedSearchResult": {
     req: RequestedSearchResultRequest;
     resp: RequestedSearchResultResponse;
   };
+  /**
+   * Fetches user playlists or remote playlists available from this provider.
+   */
   "requestedPlaylists": {
     req: RequestedPlaylistsRequest;
     resp: RequestedPlaylistsResponse;
   };
+  /**
+   * Fetches songs contained within a specified playlist.
+   */
   "requestedPlaylistSongs": {
     req: RequestedPlaylistSongsRequest;
     resp: RequestedPlaylistSongsResponse;
   };
+  /**
+   * Fetches songs associated with a specified artist.
+   */
   "requestedArtistSongs": {
     req: RequestedArtistSongsRequest;
     resp: RequestedArtistSongsResponse;
   };
+  /**
+   * Fetches songs belonging to a specified album.
+   */
   "requestedAlbumSongs": {
     req: RequestedAlbumSongsRequest;
     resp: RequestedAlbumSongsResponse;
   };
+  /**
+   * Fetches recommended tracks based on listening history or seed items.
+   */
   "requestedRecommendations": {
     req: RequestedRecommendationsRequest;
     resp: RequestedRecommendationsResponse;
   };
+  /**
+   * Fetches full song metadata for a provider-specific track ID.
+   */
   "requestedSongFromId": {
     req: RequestedSongFromIdRequest;
     resp: RequestedSongFromIdResponse;
   };
+  /**
+   * Fetches detailed playback streaming information (URL, duration, keys).
+   */
   "playbackDetailsRequested": {
     req: PlaybackDetailsRequestedRequest;
     resp: PlaybackDetailsRequestedResponse;
   };
+  /**
+   * Fetches synchronized or plain lyrics for a given song.
+   */
   "requestedLyrics": {
     req: RequestedLyricsRequest;
     resp: RequestedLyricsResponse;
   };
+  /**
+   * Fetches album artwork or cover image URLs for a given entity.
+   */
   "requestedCoverArt": {
     req: RequestedCoverArtRequest;
     resp: RequestedCoverArtResponse;
   };
+  /**
+   * Receives track scrobble notification when playback reaches threshold.
+   */
   "scrobble": {
     req: ScrobbleRequest;
     resp: ScrobbleResponse;
   };
+  /**
+   * Handles generic or provider-specific custom extension RPC requests.
+   */
   "customRequest": {
     req: CustomRequest;
     resp: CustomRequestResponse;
@@ -148,15 +224,27 @@ export interface ProviderEvents {
 }
 
 export interface Accounts {
+  /**
+   * Initiates user login or credentials prompt for extension account.
+   */
   performAccountLogin?(req: PerformAccountLoginRequest): Promise<PerformAccountLoginResponse> | PerformAccountLoginResponse;
+  /**
+   * Handles OAuth authorization redirection callback token exchange.
+   */
   oauthCallback?(req: OauthCallbackRequest): Promise<OauthCallbackResponse> | OauthCallbackResponse;
 }
 
 export interface AccountsEvents {
+  /**
+   * Initiates user login or credentials prompt for extension account.
+   */
   "performAccountLogin": {
     req: PerformAccountLoginRequest;
     resp: PerformAccountLoginResponse;
   };
+  /**
+   * Handles OAuth authorization redirection callback token exchange.
+   */
   "oauthCallback": {
     req: OauthCallbackRequest;
     resp: OauthCallbackResponse;
@@ -164,20 +252,38 @@ export interface AccountsEvents {
 }
 
 export interface ContextMenu {
+  /**
+   * Provides custom contextual menu items for a selected song.
+   */
   requestedSongContextMenu?(req: RequestedSongContextMenuRequest): Promise<RequestedSongContextMenuResponse> | RequestedSongContextMenuResponse;
+  /**
+   * Provides custom contextual menu items for a selected playlist.
+   */
   requestedPlaylistContextMenu?(req: RequestedPlaylistContextMenuRequest): Promise<RequestedPlaylistContextMenuResponse> | RequestedPlaylistContextMenuResponse;
+  /**
+   * Invoked when a user selects a custom context menu item.
+   */
   contextMenuAction?(req: ContextMenuActionRequest): Promise<ContextMenuActionResponse> | ContextMenuActionResponse;
 }
 
 export interface ContextMenuEvents {
+  /**
+   * Provides custom contextual menu items for a selected song.
+   */
   "requestedSongContextMenu": {
     req: RequestedSongContextMenuRequest;
     resp: RequestedSongContextMenuResponse;
   };
+  /**
+   * Provides custom contextual menu items for a selected playlist.
+   */
   "requestedPlaylistContextMenu": {
     req: RequestedPlaylistContextMenuRequest;
     resp: RequestedPlaylistContextMenuResponse;
   };
+  /**
+   * Invoked when a user selects a custom context menu item.
+   */
   "contextMenuAction": {
     req: ContextMenuActionRequest;
     resp: ContextMenuActionResponse;
@@ -185,30 +291,60 @@ export interface ContextMenuEvents {
 }
 
 export interface PlayerEvents {
+  /**
+   * Notified when the playback queue order or track list changes.
+   */
   songQueueChanged?(req: SongQueueChangedRequest): Promise<void> | void;
+  /**
+   * Notified when playback position is seeked to a new timestamp.
+   */
   seeked?(req: SeekedRequest): Promise<void> | void;
+  /**
+   * Notified when playback volume level changes.
+   */
   volumeChanged?(req: VolumeChangedRequest): Promise<void> | void;
+  /**
+   * Notified when player transitions between play, pause, and stop states.
+   */
   playerStateChanged?(req: PlayerStateChangedRequest): Promise<void> | void;
+  /**
+   * Notified when the currently playing track changes.
+   */
   songChanged?(req: SongChangedRequest): Promise<void> | void;
 }
 
 export interface PlayerEventsEvents {
+  /**
+   * Notified when the playback queue order or track list changes.
+   */
   "songQueueChanged": {
     req: SongQueueChangedRequest;
     resp: SongQueueChangedResponse;
   };
+  /**
+   * Notified when playback position is seeked to a new timestamp.
+   */
   "seeked": {
     req: SeekedRequest;
     resp: SeekedResponse;
   };
+  /**
+   * Notified when playback volume level changes.
+   */
   "volumeChanged": {
     req: VolumeChangedRequest;
     resp: VolumeChangedResponse;
   };
+  /**
+   * Notified when player transitions between play, pause, and stop states.
+   */
   "playerStateChanged": {
     req: PlayerStateChangedRequest;
     resp: PlayerStateChangedResponse;
   };
+  /**
+   * Notified when the currently playing track changes.
+   */
   "songChanged": {
     req: SongChangedRequest;
     resp: SongChangedResponse;
@@ -216,25 +352,49 @@ export interface PlayerEventsEvents {
 }
 
 export interface DatabaseEvents {
+  /**
+   * Notified when a new song is added to the host database.
+   */
   songAdded?(req: SongAddedRequest): Promise<void> | void;
+  /**
+   * Notified when a song is removed from the host database.
+   */
   songRemoved?(req: SongRemovedRequest): Promise<void> | void;
+  /**
+   * Notified when a new playlist is created in the host database.
+   */
   playlistAdded?(req: PlaylistAddedRequest): Promise<void> | void;
+  /**
+   * Notified when a playlist is deleted from the host database.
+   */
   playlistRemoved?(req: PlaylistRemovedRequest): Promise<void> | void;
 }
 
 export interface DatabaseEventsEvents {
+  /**
+   * Notified when a new song is added to the host database.
+   */
   "songAdded": {
     req: SongAddedRequest;
     resp: SongAddedResponse;
   };
+  /**
+   * Notified when a song is removed from the host database.
+   */
   "songRemoved": {
     req: SongRemovedRequest;
     resp: SongRemovedResponse;
   };
+  /**
+   * Notified when a new playlist is created in the host database.
+   */
   "playlistAdded": {
     req: PlaylistAddedRequest;
     resp: PlaylistAddedResponse;
   };
+  /**
+   * Notified when a playlist is deleted from the host database.
+   */
   "playlistRemoved": {
     req: PlaylistRemovedRequest;
     resp: PlaylistRemovedResponse;
@@ -242,10 +402,16 @@ export interface DatabaseEventsEvents {
 }
 
 export interface PreferenceEvents {
+  /**
+   * Notified when an extension preference value is modified by user.
+   */
   preferenceChanged?(req: PreferenceChangedRequest): Promise<void> | void;
 }
 
 export interface PreferenceEventsEvents {
+  /**
+   * Notified when an extension preference value is modified by user.
+   */
   "preferenceChanged": {
     req: PreferenceChangedRequest;
     resp: PreferenceChangedResponse;
@@ -253,40 +419,82 @@ export interface PreferenceEventsEvents {
 }
 
 export interface PlayerProvider {
+  /**
+   * Determines whether this player provider is capable of playing the given track.
+   */
   canPlay?(req: CanPlayRequest): Promise<CanPlayResponse> | CanPlayResponse;
+  /**
+   * Commands the custom player engine to resume playback.
+   */
   playerPlay?(req: PlayerPlayRequest): Promise<PlayerPlayResponse> | PlayerPlayResponse;
+  /**
+   * Commands the custom player engine to pause playback.
+   */
   playerPause?(req: PlayerPauseRequest): Promise<PlayerPauseResponse> | PlayerPauseResponse;
+  /**
+   * Commands the custom player engine to stop playback.
+   */
   playerStop?(req: PlayerStopRequest): Promise<PlayerStopResponse> | PlayerStopResponse;
+  /**
+   * Commands the custom player engine to seek to a given position.
+   */
   playerSeek?(req: PlayerSeekRequest): Promise<PlayerSeekResponse> | PlayerSeekResponse;
+  /**
+   * Commands the custom player engine to set playback volume.
+   */
   playerSetVolume?(req: PlayerSetVolumeRequest): Promise<PlayerSetVolumeResponse> | PlayerSetVolumeResponse;
+  /**
+   * Commands the custom player engine to load a track for playback.
+   */
   playerLoadTrack?(req: PlayerLoadTrackRequest): Promise<PlayerLoadTrackResponse> | PlayerLoadTrackResponse;
 }
 
 export interface PlayerProviderEvents {
+  /**
+   * Determines whether this player provider is capable of playing the given track.
+   */
   "canPlay": {
     req: CanPlayRequest;
     resp: CanPlayResponse;
   };
+  /**
+   * Commands the custom player engine to resume playback.
+   */
   "playerPlay": {
     req: PlayerPlayRequest;
     resp: PlayerPlayResponse;
   };
+  /**
+   * Commands the custom player engine to pause playback.
+   */
   "playerPause": {
     req: PlayerPauseRequest;
     resp: PlayerPauseResponse;
   };
+  /**
+   * Commands the custom player engine to stop playback.
+   */
   "playerStop": {
     req: PlayerStopRequest;
     resp: PlayerStopResponse;
   };
+  /**
+   * Commands the custom player engine to seek to a given position.
+   */
   "playerSeek": {
     req: PlayerSeekRequest;
     resp: PlayerSeekResponse;
   };
+  /**
+   * Commands the custom player engine to set playback volume.
+   */
   "playerSetVolume": {
     req: PlayerSetVolumeRequest;
     resp: PlayerSetVolumeResponse;
   };
+  /**
+   * Commands the custom player engine to load a track for playback.
+   */
   "playerLoadTrack": {
     req: PlayerLoadTrackRequest;
     resp: PlayerLoadTrackResponse;
@@ -298,64 +506,3 @@ export interface Extension extends
 
 export interface ExtensionEventMap extends
   ProviderEvents,  AccountsEvents,  ContextMenuEvents,  PlayerEventsEvents,  DatabaseEventsEvents,  PreferenceEventsEvents,  PlayerProviderEvents{}
-
-let registeredExtension: Extension | undefined;
-
-export function registerExtension(ext: Extension): void {
-  registeredExtension = ext;
-}
-
-export function getRegisteredExtension(): Extension | undefined {
-  return registeredExtension;
-}
-
-const listeners: Map<keyof ExtensionEventMap, Function> = new Map();
-
-export function on<K extends keyof ExtensionEventMap>(
-  event: K,
-  handler: (
-    req: ExtensionEventMap[K]["req"]
-  ) => Promise<ExtensionEventMap[K]["resp"] | void> | ExtensionEventMap[K]["resp"] | void
-): void {
-  listeners.set(event, handler);
-}
-
-export function callListener(event: string, payload: any): any {
-  if (registeredExtension && typeof (registeredExtension as any)[event] === "function") {
-    return (registeredExtension as any)[event](payload);
-  }
-  const handler = listeners.get(event as keyof ExtensionEventMap);
-  if (handler) {
-    return handler(payload);
-  }
-  return undefined;
-}
-
-export async function handle(
-  command: ExtensionCommand
-): Promise<ExtensionCommandResponse | undefined> {
-  if (!command.event.case) return undefined;
-
-  const caseStr = command.event.case;
-  const payload = command.event.value;
-
-  if (payload) {
-    const result = await Promise.resolve(callListener(caseStr as any, payload));
-    if (result !== undefined) {
-      return new ExtensionCommandResponse({
-        response: {
-          case: caseStr as any,
-          value: result,
-        },
-      });
-    } else {
-      return new ExtensionCommandResponse({
-        response: {
-          case: caseStr as any,
-          value: {},
-        },
-      });
-    }
-  }
-  return undefined;
-}

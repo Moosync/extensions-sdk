@@ -1,8 +1,6 @@
 package api
 
 import (
-	"runtime"
-
 	pdk "github.com/extism/go-pdk"
 )
 

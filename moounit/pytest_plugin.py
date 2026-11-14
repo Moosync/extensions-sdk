@@ -74,6 +74,8 @@ def moounit_recorder(request):
     record_mode = request.config.getoption("--record", default=False)
     expectations_file = request.config.getoption("--expectations-file", default=None)
     test_filter = request.config.getoption("--test-filter", default=None)
+    if not test_filter:
+        test_filter = request.config.getoption("-k", default=None)
 
     if not expectations_file:
         test_dir = os.path.dirname(str(request.config.rootdir))

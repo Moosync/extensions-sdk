@@ -14,7 +14,35 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub use crate::generated_dispatcher::{handle_command, register_extension};
+use crate::api::Extension;
+pub use crate::generated_dispatcher::handle_command;
+use extism_pdk::FnResult;
+use std::{cell::RefCell, rc::Rc};
+
+thread_local!(
+    static EXTENSION: RefCell<Option<Rc<Box<dyn Extension>>>> = RefCell::new(None);
+);
+
+#[tracing::instrument(level = "debug", skip(extension))]
+pub fn register_extension(extension: Box<dyn Extension>) -> FnResult<()> {
+    EXTENSION.with(|ext| {
+        ext.borrow_mut().replace(Rc::new(extension));
+    });
+    Ok(())
+}
+
+pub(crate) fn with_extension<F, R>(f: F) -> Result<R, extism_pdk::Error>
+where
+    F: FnOnce(&dyn Extension) -> Result<R, extism_pdk::Error>,
+{
+    EXTENSION.with(|ext| {
+        if let Some(ext) = ext.borrow().as_ref() {
+            f(ext.as_ref().as_ref())
+        } else {
+            Err(extism_pdk::Error::msg("Extension not registered"))
+        }
+    })
+}
 
 #[derive(Debug)]
 pub enum MoosyncError {

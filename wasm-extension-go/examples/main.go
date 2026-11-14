@@ -72,7 +72,7 @@ func searchAndFetchDetails(query string) error {
 		Body:      []byte(`{"name":"My Playlist"}`),
 		TimeoutMs: 5000,
 	}
-	postResp, err := api.SendHttpRequest(postReq)
+	postResp, err := api.DoHttpRequest(postReq)
 	if err != nil {
 		return err
 	}

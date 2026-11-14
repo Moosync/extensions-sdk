@@ -5,6 +5,9 @@ export interface PlatformInfo {
 
 let platformInfo: PlatformInfo | null = null;
 
+/**
+ * Returns the host operating system and CPU architecture information.
+ */
 export function getPlatform(): PlatformInfo {
   if (!platformInfo) {
     let os = "unknown";

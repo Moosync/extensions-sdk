@@ -11,11 +11,43 @@ import (
 
 	pdk "github.com/extism/go-pdk"
 	pdkhttp "github.com/extism/go-pdk/http"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	extensions "github.com/moosync/moosync/types/extensions"
 	songs "github.com/moosync/moosync/types/songs"
 )
+
+var extension any
+
+func RegisterExtension(ext any) {
+	extension = ext
+}
+
+//go:wasmimport extism:host/user send_main_command
+func send_main_command(uint64) uint64
+
+func DispatchMainCommand(cmd *extensions.MainCommand) (*extensions.MainCommandResponse, error) {
+	cmdBytes, err := proto.Marshal(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	mem := pdk.AllocateBytes(cmdBytes)
+	ptr := send_main_command(mem.Offset())
+	resMem := pdk.FindMemory(ptr)
+
+	res := &extensions.MainCommandResponse{}
+	if err := proto.Unmarshal(resMem.ReadBytes(), res); err != nil {
+		return nil, err
+	}
+
+	if errResp, ok := res.Response.(*extensions.MainCommandResponse_Error); ok {
+		return nil, fmt.Errorf("Host error: %s", errResp.Error.Message)
+	}
+
+	return res, nil
+}
 
 
 
@@ -112,10 +144,6 @@ func ParseLrc(lrcText string) (*songs.Lyrics, error) {
 	}, nil
 }
 
-func OpenSock(path string) int64 {
-	return OpenClientFd(path)
-}
-
 func LogTrace(format string, args ...any) {
 	pdk.Log(pdk.LogTrace, fmt.Sprintf(format, args...))
 }
@@ -148,6 +176,14 @@ func init() {
 // DurationToProto converts a native time.Duration to a protobuf duration.
 func DurationToProto(d time.Duration) *durationpb.Duration {
 	return durationpb.New(d)
+}
+
+// ProtoToDuration converts a protobuf duration to a native time.Duration.
+func ProtoToDuration(d *durationpb.Duration) time.Duration {
+	if d == nil {
+		return 0
+	}
+	return d.AsDuration()
 }
 
 type PlaybackDetailsReturnType struct {
@@ -183,7 +219,7 @@ func (r *HttpResponse) JSON(v any) error {
 	return json.Unmarshal(r.Body, v)
 }
 
-func BatchHttp(requests []HttpRequest) ([]HttpResponse, []error) {
+func BatchHttpRequestList(requests []HttpRequest) ([]HttpResponse, []error) {
 	if len(requests) == 0 {
 		return nil, nil
 	}
@@ -255,11 +291,11 @@ func BatchHttpGet(urls []string, headers map[string]string) ([]HttpResponse, []e
 			Headers: headers,
 		}
 	}
-	return BatchHttp(reqs)
+	return BatchHttpRequestList(reqs)
 }
 
-func SendHttpRequest(req HttpRequest) (HttpResponse, error) {
-	resps, errs := BatchHttp([]HttpRequest{req})
+func DoHttpRequest(req HttpRequest) (HttpResponse, error) {
+	resps, errs := BatchHttpRequestList([]HttpRequest{req})
 	if len(errs) > 0 {
 		return HttpResponse{}, errs[0]
 	}
@@ -270,7 +306,7 @@ func SendHttpRequest(req HttpRequest) (HttpResponse, error) {
 }
 
 func HttpGet(url string, headers map[string]string) (HttpResponse, error) {
-	return SendHttpRequest(HttpRequest{
+	return DoHttpRequest(HttpRequest{
 		URL:     url,
 		Method:  "GET",
 		Headers: headers,
@@ -308,6 +344,14 @@ func (c *ChildProcess) ReadStdout(maxBytes uint64) ([]byte, error) {
 	return resp.Data, nil
 }
 
+func (c *ChildProcess) ReadStdoutString(maxBytes uint64) (string, error) {
+	bytes, err := c.ReadStdout(maxBytes)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
+
 func (c *ChildProcess) Kill() (bool, error) {
 	resp, err := KillProcess(&extensions.KillProcessRequest{
 		ProcessId: c.ID,
@@ -328,8 +372,8 @@ func (c *ChildProcess) GetStatus() (bool, *int32, error) {
 	return resp.IsRunning, resp.ExitCode, nil
 }
 
-func StartProcess(path string, args []string, env map[string]string) (*ChildProcess, error) {
-	resp, err := SpawnProcess(&extensions.SpawnProcessRequest{
+func SpawnProcess(path string, args []string, env map[string]string) (*ChildProcess, error) {
+	resp, err := HostSpawnProcess(&extensions.SpawnProcessRequest{
 		Path: path,
 		Args: args,
 		Env:  env,

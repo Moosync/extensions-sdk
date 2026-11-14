@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::api::host_api;
-use crate::api::MoosyncResult;
+use crate::api::{self, MoosyncResult};
 use extensions_proto::moosync::types::{
     ws_receive_response, ws_send_request, WsCloseRequest, WsConnectRequest, WsReceiveRequest,
     WsSendRequest,
@@ -39,7 +38,7 @@ impl WebSocketClient {
             headers: Default::default(),
             protocols: Vec::new(),
         };
-        let resp = host_api::ws_connect(req)?;
+        let resp = api::ws_connect(req)?;
         Ok(Self {
             connection_id: resp.connection_id,
         })
@@ -50,7 +49,7 @@ impl WebSocketClient {
             connection_id: self.connection_id,
             payload: Some(ws_send_request::Payload::Text(text.into())),
         };
-        host_api::ws_send(req)?;
+        api::ws_send(req)?;
         Ok(())
     }
 
@@ -59,7 +58,7 @@ impl WebSocketClient {
             connection_id: self.connection_id,
             payload: Some(ws_send_request::Payload::Binary(data.to_vec())),
         };
-        host_api::ws_send(req)?;
+        api::ws_send(req)?;
         Ok(())
     }
 
@@ -68,7 +67,7 @@ impl WebSocketClient {
             connection_id: self.connection_id,
             timeout_ms,
         };
-        let resp = host_api::ws_receive(req)?;
+        let resp = api::ws_receive(req)?;
         match resp.payload {
             Some(ws_receive_response::Payload::Text(t)) => Ok(Some(WebSocketMessage::Text(t))),
             Some(ws_receive_response::Payload::Binary(b)) => Ok(Some(WebSocketMessage::Binary(b))),
@@ -82,7 +81,7 @@ impl WebSocketClient {
             code,
             reason,
         };
-        host_api::ws_close(req)?;
+        api::ws_close(req)?;
         Ok(())
     }
 }

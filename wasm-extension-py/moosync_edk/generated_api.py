@@ -4,89 +4,125 @@
 from abc import ABC
 import extism
 from core.types.protos import extensions_pb2
+from . import send_main_command
 
 class Provider(ABC):
     def get_remote_url(self, req: extensions_pb2.GetRemoteUrlRequest) -> extensions_pb2.GetRemoteUrlResponse:
+        """Resolves playback streaming URL or resource location for a remote track."""
         raise NotImplementedError("get_remote_url not implemented")
     def requested_search_result(self, req: extensions_pb2.RequestedSearchResultRequest) -> extensions_pb2.RequestedSearchResultResponse:
+        """Performs search query for songs, albums, artists, or playlists."""
         raise NotImplementedError("requested_search_result not implemented")
     def requested_playlists(self, req: extensions_pb2.RequestedPlaylistsRequest) -> extensions_pb2.RequestedPlaylistsResponse:
+        """Fetches user playlists or remote playlists available from this provider."""
         raise NotImplementedError("requested_playlists not implemented")
     def requested_playlist_songs(self, req: extensions_pb2.RequestedPlaylistSongsRequest) -> extensions_pb2.RequestedPlaylistSongsResponse:
+        """Fetches songs contained within a specified playlist."""
         raise NotImplementedError("requested_playlist_songs not implemented")
     def requested_artist_songs(self, req: extensions_pb2.RequestedArtistSongsRequest) -> extensions_pb2.RequestedArtistSongsResponse:
+        """Fetches songs associated with a specified artist."""
         raise NotImplementedError("requested_artist_songs not implemented")
     def requested_album_songs(self, req: extensions_pb2.RequestedAlbumSongsRequest) -> extensions_pb2.RequestedAlbumSongsResponse:
+        """Fetches songs belonging to a specified album."""
         raise NotImplementedError("requested_album_songs not implemented")
     def requested_recommendations(self, req: extensions_pb2.RequestedRecommendationsRequest) -> extensions_pb2.RequestedRecommendationsResponse:
+        """Fetches recommended tracks based on listening history or seed items."""
         raise NotImplementedError("requested_recommendations not implemented")
     def requested_song_from_id(self, req: extensions_pb2.RequestedSongFromIdRequest) -> extensions_pb2.RequestedSongFromIdResponse:
+        """Fetches full song metadata for a provider-specific track ID."""
         raise NotImplementedError("requested_song_from_id not implemented")
     def playback_details_requested(self, req: extensions_pb2.PlaybackDetailsRequestedRequest) -> extensions_pb2.PlaybackDetailsRequestedResponse:
+        """Fetches detailed playback streaming information (URL, duration, keys)."""
         raise NotImplementedError("playback_details_requested not implemented")
     def requested_lyrics(self, req: extensions_pb2.RequestedLyricsRequest) -> extensions_pb2.RequestedLyricsResponse:
+        """Fetches synchronized or plain lyrics for a given song."""
         raise NotImplementedError("requested_lyrics not implemented")
     def requested_cover_art(self, req: extensions_pb2.RequestedCoverArtRequest) -> extensions_pb2.RequestedCoverArtResponse:
+        """Fetches album artwork or cover image URLs for a given entity."""
         raise NotImplementedError("requested_cover_art not implemented")
     def scrobble(self, req: extensions_pb2.ScrobbleRequest) -> None:
+        """Receives track scrobble notification when playback reaches threshold."""
         pass
     def custom_request(self, req: extensions_pb2.CustomRequest) -> extensions_pb2.CustomRequestResponse:
+        """Handles generic or provider-specific custom extension RPC requests."""
         raise NotImplementedError("custom_request not implemented")
 
 class Accounts(ABC):
     def perform_account_login(self, req: extensions_pb2.PerformAccountLoginRequest) -> extensions_pb2.PerformAccountLoginResponse:
+        """Initiates user login or credentials prompt for extension account."""
         raise NotImplementedError("perform_account_login not implemented")
     def oauth_callback(self, req: extensions_pb2.OauthCallbackRequest) -> extensions_pb2.OauthCallbackResponse:
+        """Handles OAuth authorization redirection callback token exchange."""
         raise NotImplementedError("oauth_callback not implemented")
 
 class ContextMenu(ABC):
     def requested_song_context_menu(self, req: extensions_pb2.RequestedSongContextMenuRequest) -> extensions_pb2.RequestedSongContextMenuResponse:
+        """Provides custom contextual menu items for a selected song."""
         raise NotImplementedError("requested_song_context_menu not implemented")
     def requested_playlist_context_menu(self, req: extensions_pb2.RequestedPlaylistContextMenuRequest) -> extensions_pb2.RequestedPlaylistContextMenuResponse:
+        """Provides custom contextual menu items for a selected playlist."""
         raise NotImplementedError("requested_playlist_context_menu not implemented")
     def context_menu_action(self, req: extensions_pb2.ContextMenuActionRequest) -> extensions_pb2.ContextMenuActionResponse:
+        """Invoked when a user selects a custom context menu item."""
         raise NotImplementedError("context_menu_action not implemented")
 
 class PlayerEvents(ABC):
     def song_queue_changed(self, req: extensions_pb2.SongQueueChangedRequest) -> None:
+        """Notified when the playback queue order or track list changes."""
         pass
     def seeked(self, req: extensions_pb2.SeekedRequest) -> None:
+        """Notified when playback position is seeked to a new timestamp."""
         pass
     def volume_changed(self, req: extensions_pb2.VolumeChangedRequest) -> None:
+        """Notified when playback volume level changes."""
         pass
     def player_state_changed(self, req: extensions_pb2.PlayerStateChangedRequest) -> None:
+        """Notified when player transitions between play, pause, and stop states."""
         pass
     def song_changed(self, req: extensions_pb2.SongChangedRequest) -> None:
+        """Notified when the currently playing track changes."""
         pass
 
 class DatabaseEvents(ABC):
     def song_added(self, req: extensions_pb2.SongAddedRequest) -> None:
+        """Notified when a new song is added to the host database."""
         pass
     def song_removed(self, req: extensions_pb2.SongRemovedRequest) -> None:
+        """Notified when a song is removed from the host database."""
         pass
     def playlist_added(self, req: extensions_pb2.PlaylistAddedRequest) -> None:
+        """Notified when a new playlist is created in the host database."""
         pass
     def playlist_removed(self, req: extensions_pb2.PlaylistRemovedRequest) -> None:
+        """Notified when a playlist is deleted from the host database."""
         pass
 
 class PreferenceEvents(ABC):
     def preference_changed(self, req: extensions_pb2.PreferenceChangedRequest) -> None:
+        """Notified when an extension preference value is modified by user."""
         pass
 
 class PlayerProvider(ABC):
     def can_play(self, req: extensions_pb2.CanPlayRequest) -> extensions_pb2.CanPlayResponse:
+        """Determines whether this player provider is capable of playing the given track."""
         raise NotImplementedError("can_play not implemented")
     def player_play(self, req: extensions_pb2.PlayerPlayRequest) -> extensions_pb2.PlayerPlayResponse:
+        """Commands the custom player engine to resume playback."""
         raise NotImplementedError("player_play not implemented")
     def player_pause(self, req: extensions_pb2.PlayerPauseRequest) -> extensions_pb2.PlayerPauseResponse:
+        """Commands the custom player engine to pause playback."""
         raise NotImplementedError("player_pause not implemented")
     def player_stop(self, req: extensions_pb2.PlayerStopRequest) -> extensions_pb2.PlayerStopResponse:
+        """Commands the custom player engine to stop playback."""
         raise NotImplementedError("player_stop not implemented")
     def player_seek(self, req: extensions_pb2.PlayerSeekRequest) -> extensions_pb2.PlayerSeekResponse:
+        """Commands the custom player engine to seek to a given position."""
         raise NotImplementedError("player_seek not implemented")
     def player_set_volume(self, req: extensions_pb2.PlayerSetVolumeRequest) -> extensions_pb2.PlayerSetVolumeResponse:
+        """Commands the custom player engine to set playback volume."""
         raise NotImplementedError("player_set_volume not implemented")
     def player_load_track(self, req: extensions_pb2.PlayerLoadTrackRequest) -> extensions_pb2.PlayerLoadTrackResponse:
+        """Commands the custom player engine to load a track for playback."""
         raise NotImplementedError("player_load_track not implemented")
 
 @extism.import_fn("extism:host/user", "system_time")
@@ -109,28 +145,8 @@ def read_sock(sock_id: int, read_len: int) -> bytes: ...
 def batch_http_request(data: int) -> int: ...
 
 
-@extism.import_fn("extism:host/user", "send_main_command")
-def send_main_command_raw(data: int) -> int: ...
-
-
-def send_main_command(command: extensions_pb2.MainCommand) -> extensions_pb2.MainCommandResponse:
-    serialized = command.SerializeToString()
-    mem = extism.memory.alloc(serialized)
-    if mem is None:
-        raise RuntimeError("Failed to allocate memory for main command")
-    res_offset = send_main_command_raw(mem.offset)
-    res_handle = extism.memory.find(res_offset)
-    if res_handle is None:
-        raise RuntimeError(f"Failed to find memory for response at offset {res_offset}")
-    res_bytes = extism.memory.bytes(res_handle)
-    extism.memory.free(mem)
-    res = extensions_pb2.MainCommandResponse()
-    res.ParseFromString(res_bytes)
-    return res
-
-
-# Multiplexed MainCommands
 def get_song(req: extensions_pb2.GetSongRequest | None = None) -> extensions_pb2.GetSongResponse:
+    """Queries and retrieves song entities matching the given criteria from the host database."""
     if req is None:
         req = extensions_pb2.GetSongRequest()
     cmd = extensions_pb2.MainCommand()
@@ -143,6 +159,7 @@ def get_song(req: extensions_pb2.GetSongRequest | None = None) -> extensions_pb2
         return getattr(res, "get_song")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_entity(req: extensions_pb2.GetEntityRequest | None = None) -> extensions_pb2.GetEntityResponse:
+    """Retrieves detailed entity information (such as artist or album) from the host database."""
     if req is None:
         req = extensions_pb2.GetEntityRequest()
     cmd = extensions_pb2.MainCommand()
@@ -155,6 +172,7 @@ def get_entity(req: extensions_pb2.GetEntityRequest | None = None) -> extensions
         return getattr(res, "get_entity")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_current_song(req: extensions_pb2.GetCurrentSongRequest | None = None) -> extensions_pb2.GetCurrentSongResponse:
+    """Retrieves the currently playing song from the active player session."""
     if req is None:
         req = extensions_pb2.GetCurrentSongRequest()
     cmd = extensions_pb2.MainCommand()
@@ -167,6 +185,7 @@ def get_current_song(req: extensions_pb2.GetCurrentSongRequest | None = None) ->
         return getattr(res, "get_current_song")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_player_state(req: extensions_pb2.GetPlayerStateRequest | None = None) -> extensions_pb2.GetPlayerStateResponse:
+    """Retrieves the current playback state (e.g. playing, paused, stopped) of the player."""
     if req is None:
         req = extensions_pb2.GetPlayerStateRequest()
     cmd = extensions_pb2.MainCommand()
@@ -179,6 +198,7 @@ def get_player_state(req: extensions_pb2.GetPlayerStateRequest | None = None) ->
         return getattr(res, "get_player_state")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_volume(req: extensions_pb2.GetVolumeRequest | None = None) -> extensions_pb2.GetVolumeResponse:
+    """Retrieves the current master playback volume level (0.0 to 1.0)."""
     if req is None:
         req = extensions_pb2.GetVolumeRequest()
     cmd = extensions_pb2.MainCommand()
@@ -191,6 +211,7 @@ def get_volume(req: extensions_pb2.GetVolumeRequest | None = None) -> extensions
         return getattr(res, "get_volume")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_time(req: extensions_pb2.GetTimeRequest | None = None) -> extensions_pb2.GetTimeResponse:
+    """Retrieves the current playback position timestamp in seconds."""
     if req is None:
         req = extensions_pb2.GetTimeRequest()
     cmd = extensions_pb2.MainCommand()
@@ -203,6 +224,7 @@ def get_time(req: extensions_pb2.GetTimeRequest | None = None) -> extensions_pb2
         return getattr(res, "get_time")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_queue(req: extensions_pb2.GetQueueRequest | None = None) -> extensions_pb2.GetQueueResponse:
+    """Retrieves the current player queue state and list of queued tracks."""
     if req is None:
         req = extensions_pb2.GetQueueRequest()
     cmd = extensions_pb2.MainCommand()
@@ -215,6 +237,7 @@ def get_queue(req: extensions_pb2.GetQueueRequest | None = None) -> extensions_p
         return getattr(res, "get_queue")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_preference(req: extensions_pb2.GetPreferenceRequest | None = None) -> extensions_pb2.GetPreferenceResponse:
+    """Retrieves an extension preference value by key."""
     if req is None:
         req = extensions_pb2.GetPreferenceRequest()
     cmd = extensions_pb2.MainCommand()
@@ -227,6 +250,7 @@ def get_preference(req: extensions_pb2.GetPreferenceRequest | None = None) -> ex
         return getattr(res, "get_preference")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def set_preference(req: extensions_pb2.SetPreferenceRequest | None = None) -> extensions_pb2.SetPreferenceResponse:
+    """Stores an extension preference value by key."""
     if req is None:
         req = extensions_pb2.SetPreferenceRequest()
     cmd = extensions_pb2.MainCommand()
@@ -239,6 +263,7 @@ def set_preference(req: extensions_pb2.SetPreferenceRequest | None = None) -> ex
         return getattr(res, "set_preference")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_secure(req: extensions_pb2.GetSecureRequest | None = None) -> extensions_pb2.GetSecureResponse:
+    """Retrieves a securely stored credential or secret by key from the host keyring."""
     if req is None:
         req = extensions_pb2.GetSecureRequest()
     cmd = extensions_pb2.MainCommand()
@@ -251,6 +276,7 @@ def get_secure(req: extensions_pb2.GetSecureRequest | None = None) -> extensions
         return getattr(res, "get_secure")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def set_secure(req: extensions_pb2.SetSecureRequest | None = None) -> extensions_pb2.SetSecureResponse:
+    """Stores a credential or secret securely in the host keyring/vault."""
     if req is None:
         req = extensions_pb2.SetSecureRequest()
     cmd = extensions_pb2.MainCommand()
@@ -263,6 +289,7 @@ def set_secure(req: extensions_pb2.SetSecureRequest | None = None) -> extensions
         return getattr(res, "set_secure")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def add_songs(req: extensions_pb2.AddSongsRequest | None = None) -> extensions_pb2.AddSongsResponse:
+    """Inserts one or more songs into the host music database."""
     if req is None:
         req = extensions_pb2.AddSongsRequest()
     cmd = extensions_pb2.MainCommand()
@@ -275,6 +302,7 @@ def add_songs(req: extensions_pb2.AddSongsRequest | None = None) -> extensions_p
         return getattr(res, "add_songs")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def remove_song(req: extensions_pb2.RemoveSongRequest | None = None) -> extensions_pb2.RemoveSongResponse:
+    """Removes a song from the host music database by its ID."""
     if req is None:
         req = extensions_pb2.RemoveSongRequest()
     cmd = extensions_pb2.MainCommand()
@@ -287,6 +315,7 @@ def remove_song(req: extensions_pb2.RemoveSongRequest | None = None) -> extensio
         return getattr(res, "remove_song")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def update_song(req: extensions_pb2.UpdateSongRequest | None = None) -> extensions_pb2.UpdateSongResponse:
+    """Updates metadata for an existing song in the host database."""
     if req is None:
         req = extensions_pb2.UpdateSongRequest()
     cmd = extensions_pb2.MainCommand()
@@ -299,6 +328,7 @@ def update_song(req: extensions_pb2.UpdateSongRequest | None = None) -> extensio
         return getattr(res, "update_song")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def add_playlist(req: extensions_pb2.AddPlaylistRequest | None = None) -> extensions_pb2.AddPlaylistResponse:
+    """Creates a new playlist in the host database."""
     if req is None:
         req = extensions_pb2.AddPlaylistRequest()
     cmd = extensions_pb2.MainCommand()
@@ -311,6 +341,7 @@ def add_playlist(req: extensions_pb2.AddPlaylistRequest | None = None) -> extens
         return getattr(res, "add_playlist")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def add_to_playlist(req: extensions_pb2.AddToPlaylistRequest | None = None) -> extensions_pb2.AddToPlaylistResponse:
+    """Appends songs to an existing playlist in the host database."""
     if req is None:
         req = extensions_pb2.AddToPlaylistRequest()
     cmd = extensions_pb2.MainCommand()
@@ -323,6 +354,7 @@ def add_to_playlist(req: extensions_pb2.AddToPlaylistRequest | None = None) -> e
         return getattr(res, "add_to_playlist")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def register_oauth(req: extensions_pb2.RegisterOauthRequest | None = None) -> extensions_pb2.RegisterOauthResponse:
+    """Registers OAuth configuration details for account authentication flows."""
     if req is None:
         req = extensions_pb2.RegisterOauthRequest()
     cmd = extensions_pb2.MainCommand()
@@ -335,6 +367,7 @@ def register_oauth(req: extensions_pb2.RegisterOauthRequest | None = None) -> ex
         return getattr(res, "register_oauth")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def open_external_url(req: extensions_pb2.OpenExternalUrlRequest | None = None) -> extensions_pb2.OpenExternalUrlResponse:
+    """Requests the host to open a URL in the user's default system browser."""
     if req is None:
         req = extensions_pb2.OpenExternalUrlRequest()
     cmd = extensions_pb2.MainCommand()
@@ -347,6 +380,7 @@ def open_external_url(req: extensions_pb2.OpenExternalUrlRequest | None = None) 
         return getattr(res, "open_external_url")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def set_account(req: extensions_pb2.SetAccountRequest | None = None) -> extensions_pb2.SetAccountResponse:
+    """Updates account login credentials and details for this extension."""
     if req is None:
         req = extensions_pb2.SetAccountRequest()
     cmd = extensions_pb2.MainCommand()
@@ -359,6 +393,7 @@ def set_account(req: extensions_pb2.SetAccountRequest | None = None) -> extensio
         return getattr(res, "set_account")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def register_user_preference(req: extensions_pb2.RegisterUserPreferenceRequest | None = None) -> extensions_pb2.RegisterUserPreferenceResponse:
+    """Registers dynamic preference schema entries shown in user settings."""
     if req is None:
         req = extensions_pb2.RegisterUserPreferenceRequest()
     cmd = extensions_pb2.MainCommand()
@@ -371,6 +406,7 @@ def register_user_preference(req: extensions_pb2.RegisterUserPreferenceRequest |
         return getattr(res, "register_user_preference")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def unregister_user_preference(req: extensions_pb2.UnregisterUserPreferenceRequest | None = None) -> extensions_pb2.UnregisterUserPreferenceResponse:
+    """Unregisters dynamic preference schema entries previously registered."""
     if req is None:
         req = extensions_pb2.UnregisterUserPreferenceRequest()
     cmd = extensions_pb2.MainCommand()
@@ -383,6 +419,7 @@ def unregister_user_preference(req: extensions_pb2.UnregisterUserPreferenceReque
         return getattr(res, "unregister_user_preference")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def extensions_updated(req: extensions_pb2.ExtensionsUpdatedRequest | None = None) -> extensions_pb2.ExtensionsUpdatedResponse:
+    """Notifies the host that extension configuration or available extensions changed."""
     if req is None:
         req = extensions_pb2.ExtensionsUpdatedRequest()
     cmd = extensions_pb2.MainCommand()
@@ -395,6 +432,7 @@ def extensions_updated(req: extensions_pb2.ExtensionsUpdatedRequest | None = Non
         return getattr(res, "extensions_updated")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_app_version(req: extensions_pb2.GetAppVersionRequest | None = None) -> extensions_pb2.GetAppVersionResponse:
+    """Retrieves the host application version string."""
     if req is None:
         req = extensions_pb2.GetAppVersionRequest()
     cmd = extensions_pb2.MainCommand()
@@ -407,6 +445,7 @@ def get_app_version(req: extensions_pb2.GetAppVersionRequest | None = None) -> e
         return getattr(res, "get_app_version")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_cache(req: extensions_pb2.GetCacheRequest | None = None) -> extensions_pb2.GetCacheResponse:
+    """Retrieves cached binary data associated with the specified cache key."""
     if req is None:
         req = extensions_pb2.GetCacheRequest()
     cmd = extensions_pb2.MainCommand()
@@ -419,6 +458,7 @@ def get_cache(req: extensions_pb2.GetCacheRequest | None = None) -> extensions_p
         return getattr(res, "get_cache")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def set_cache(req: extensions_pb2.SetCacheRequest | None = None) -> extensions_pb2.SetCacheResponse:
+    """Stores binary data in the host cache with an optional time-to-live (TTL)."""
     if req is None:
         req = extensions_pb2.SetCacheRequest()
     cmd = extensions_pb2.MainCommand()
@@ -431,6 +471,7 @@ def set_cache(req: extensions_pb2.SetCacheRequest | None = None) -> extensions_p
         return getattr(res, "set_cache")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def spawn_process(req: extensions_pb2.SpawnProcessRequest | None = None) -> extensions_pb2.SpawnProcessResponse:
+    """Spawns a child process on the host system within permitted binary limits."""
     if req is None:
         req = extensions_pb2.SpawnProcessRequest()
     cmd = extensions_pb2.MainCommand()
@@ -443,6 +484,7 @@ def spawn_process(req: extensions_pb2.SpawnProcessRequest | None = None) -> exte
         return getattr(res, "spawn_process")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def write_process_stdin(req: extensions_pb2.WriteProcessStdinRequest | None = None) -> extensions_pb2.WriteProcessStdinResponse:
+    """Writes input data to standard input of an active spawned child process."""
     if req is None:
         req = extensions_pb2.WriteProcessStdinRequest()
     cmd = extensions_pb2.MainCommand()
@@ -455,6 +497,7 @@ def write_process_stdin(req: extensions_pb2.WriteProcessStdinRequest | None = No
         return getattr(res, "write_process_stdin")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def read_process_stdout(req: extensions_pb2.ReadProcessStdoutRequest | None = None) -> extensions_pb2.ReadProcessStdoutResponse:
+    """Reads standard output or standard error data from an active spawned child process."""
     if req is None:
         req = extensions_pb2.ReadProcessStdoutRequest()
     cmd = extensions_pb2.MainCommand()
@@ -467,6 +510,7 @@ def read_process_stdout(req: extensions_pb2.ReadProcessStdoutRequest | None = No
         return getattr(res, "read_process_stdout")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def kill_process(req: extensions_pb2.KillProcessRequest | None = None) -> extensions_pb2.KillProcessResponse:
+    """Terminates an active spawned child process."""
     if req is None:
         req = extensions_pb2.KillProcessRequest()
     cmd = extensions_pb2.MainCommand()
@@ -479,6 +523,7 @@ def kill_process(req: extensions_pb2.KillProcessRequest | None = None) -> extens
         return getattr(res, "kill_process")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_process_status(req: extensions_pb2.GetProcessStatusRequest | None = None) -> extensions_pb2.GetProcessStatusResponse:
+    """Checks whether a spawned child process is still running and gets its exit code."""
     if req is None:
         req = extensions_pb2.GetProcessStatusRequest()
     cmd = extensions_pb2.MainCommand()
@@ -491,6 +536,7 @@ def get_process_status(req: extensions_pb2.GetProcessStatusRequest | None = None
         return getattr(res, "get_process_status")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def notify_player_event(req: extensions_pb2.NotifyPlayerEventRequest | None = None) -> extensions_pb2.NotifyPlayerEventResponse:
+    """Notifies the host player of custom playback events or state overrides."""
     if req is None:
         req = extensions_pb2.NotifyPlayerEventRequest()
     cmd = extensions_pb2.MainCommand()
@@ -503,6 +549,7 @@ def notify_player_event(req: extensions_pb2.NotifyPlayerEventRequest | None = No
         return getattr(res, "notify_player_event")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def ws_connect(req: extensions_pb2.WsConnectRequest | None = None) -> extensions_pb2.WsConnectResponse:
+    """Establishes a WebSocket client connection to a remote WebSocket server."""
     if req is None:
         req = extensions_pb2.WsConnectRequest()
     cmd = extensions_pb2.MainCommand()
@@ -515,6 +562,7 @@ def ws_connect(req: extensions_pb2.WsConnectRequest | None = None) -> extensions
         return getattr(res, "ws_connect")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def ws_send(req: extensions_pb2.WsSendRequest | None = None) -> extensions_pb2.WsSendResponse:
+    """Sends a text or binary message through an active WebSocket connection."""
     if req is None:
         req = extensions_pb2.WsSendRequest()
     cmd = extensions_pb2.MainCommand()
@@ -527,6 +575,7 @@ def ws_send(req: extensions_pb2.WsSendRequest | None = None) -> extensions_pb2.W
         return getattr(res, "ws_send")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def ws_receive(req: extensions_pb2.WsReceiveRequest | None = None) -> extensions_pb2.WsReceiveResponse:
+    """Receives the next incoming message frame from an active WebSocket connection."""
     if req is None:
         req = extensions_pb2.WsReceiveRequest()
     cmd = extensions_pb2.MainCommand()
@@ -539,6 +588,7 @@ def ws_receive(req: extensions_pb2.WsReceiveRequest | None = None) -> extensions
         return getattr(res, "ws_receive")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def ws_close(req: extensions_pb2.WsCloseRequest | None = None) -> extensions_pb2.WsCloseResponse:
+    """Closes an active WebSocket connection with an optional code and reason."""
     if req is None:
         req = extensions_pb2.WsCloseRequest()
     cmd = extensions_pb2.MainCommand()
@@ -555,74 +605,109 @@ def ws_close(req: extensions_pb2.WsCloseRequest | None = None) -> extensions_pb2
 class ExtensionApi:
     """Strongly-typed Host API client for Moosync extensions."""
     def get_song(self, req: extensions_pb2.GetSongRequest | None = None) -> extensions_pb2.GetSongResponse:
+        """Queries and retrieves song entities matching the given criteria from the host database."""
         return get_song(req)
     def get_entity(self, req: extensions_pb2.GetEntityRequest | None = None) -> extensions_pb2.GetEntityResponse:
+        """Retrieves detailed entity information (such as artist or album) from the host database."""
         return get_entity(req)
     def get_current_song(self, req: extensions_pb2.GetCurrentSongRequest | None = None) -> extensions_pb2.GetCurrentSongResponse:
+        """Retrieves the currently playing song from the active player session."""
         return get_current_song(req)
     def get_player_state(self, req: extensions_pb2.GetPlayerStateRequest | None = None) -> extensions_pb2.GetPlayerStateResponse:
+        """Retrieves the current playback state (e.g. playing, paused, stopped) of the player."""
         return get_player_state(req)
     def get_volume(self, req: extensions_pb2.GetVolumeRequest | None = None) -> extensions_pb2.GetVolumeResponse:
+        """Retrieves the current master playback volume level (0.0 to 1.0)."""
         return get_volume(req)
     def get_time(self, req: extensions_pb2.GetTimeRequest | None = None) -> extensions_pb2.GetTimeResponse:
+        """Retrieves the current playback position timestamp in seconds."""
         return get_time(req)
     def get_queue(self, req: extensions_pb2.GetQueueRequest | None = None) -> extensions_pb2.GetQueueResponse:
+        """Retrieves the current player queue state and list of queued tracks."""
         return get_queue(req)
     def get_preference(self, req: extensions_pb2.GetPreferenceRequest | None = None) -> extensions_pb2.GetPreferenceResponse:
+        """Retrieves an extension preference value by key."""
         return get_preference(req)
     def set_preference(self, req: extensions_pb2.SetPreferenceRequest | None = None) -> extensions_pb2.SetPreferenceResponse:
+        """Stores an extension preference value by key."""
         return set_preference(req)
     def get_secure(self, req: extensions_pb2.GetSecureRequest | None = None) -> extensions_pb2.GetSecureResponse:
+        """Retrieves a securely stored credential or secret by key from the host keyring."""
         return get_secure(req)
     def set_secure(self, req: extensions_pb2.SetSecureRequest | None = None) -> extensions_pb2.SetSecureResponse:
+        """Stores a credential or secret securely in the host keyring/vault."""
         return set_secure(req)
     def add_songs(self, req: extensions_pb2.AddSongsRequest | None = None) -> extensions_pb2.AddSongsResponse:
+        """Inserts one or more songs into the host music database."""
         return add_songs(req)
     def remove_song(self, req: extensions_pb2.RemoveSongRequest | None = None) -> extensions_pb2.RemoveSongResponse:
+        """Removes a song from the host music database by its ID."""
         return remove_song(req)
     def update_song(self, req: extensions_pb2.UpdateSongRequest | None = None) -> extensions_pb2.UpdateSongResponse:
+        """Updates metadata for an existing song in the host database."""
         return update_song(req)
     def add_playlist(self, req: extensions_pb2.AddPlaylistRequest | None = None) -> extensions_pb2.AddPlaylistResponse:
+        """Creates a new playlist in the host database."""
         return add_playlist(req)
     def add_to_playlist(self, req: extensions_pb2.AddToPlaylistRequest | None = None) -> extensions_pb2.AddToPlaylistResponse:
+        """Appends songs to an existing playlist in the host database."""
         return add_to_playlist(req)
     def register_oauth(self, req: extensions_pb2.RegisterOauthRequest | None = None) -> extensions_pb2.RegisterOauthResponse:
+        """Registers OAuth configuration details for account authentication flows."""
         return register_oauth(req)
     def open_external_url(self, req: extensions_pb2.OpenExternalUrlRequest | None = None) -> extensions_pb2.OpenExternalUrlResponse:
+        """Requests the host to open a URL in the user's default system browser."""
         return open_external_url(req)
     def set_account(self, req: extensions_pb2.SetAccountRequest | None = None) -> extensions_pb2.SetAccountResponse:
+        """Updates account login credentials and details for this extension."""
         return set_account(req)
     def register_user_preference(self, req: extensions_pb2.RegisterUserPreferenceRequest | None = None) -> extensions_pb2.RegisterUserPreferenceResponse:
+        """Registers dynamic preference schema entries shown in user settings."""
         return register_user_preference(req)
     def unregister_user_preference(self, req: extensions_pb2.UnregisterUserPreferenceRequest | None = None) -> extensions_pb2.UnregisterUserPreferenceResponse:
+        """Unregisters dynamic preference schema entries previously registered."""
         return unregister_user_preference(req)
     def extensions_updated(self, req: extensions_pb2.ExtensionsUpdatedRequest | None = None) -> extensions_pb2.ExtensionsUpdatedResponse:
+        """Notifies the host that extension configuration or available extensions changed."""
         return extensions_updated(req)
     def get_app_version(self, req: extensions_pb2.GetAppVersionRequest | None = None) -> extensions_pb2.GetAppVersionResponse:
+        """Retrieves the host application version string."""
         return get_app_version(req)
     def get_cache(self, req: extensions_pb2.GetCacheRequest | None = None) -> extensions_pb2.GetCacheResponse:
+        """Retrieves cached binary data associated with the specified cache key."""
         return get_cache(req)
     def set_cache(self, req: extensions_pb2.SetCacheRequest | None = None) -> extensions_pb2.SetCacheResponse:
+        """Stores binary data in the host cache with an optional time-to-live (TTL)."""
         return set_cache(req)
     def spawn_process(self, req: extensions_pb2.SpawnProcessRequest | None = None) -> extensions_pb2.SpawnProcessResponse:
+        """Spawns a child process on the host system within permitted binary limits."""
         return spawn_process(req)
     def write_process_stdin(self, req: extensions_pb2.WriteProcessStdinRequest | None = None) -> extensions_pb2.WriteProcessStdinResponse:
+        """Writes input data to standard input of an active spawned child process."""
         return write_process_stdin(req)
     def read_process_stdout(self, req: extensions_pb2.ReadProcessStdoutRequest | None = None) -> extensions_pb2.ReadProcessStdoutResponse:
+        """Reads standard output or standard error data from an active spawned child process."""
         return read_process_stdout(req)
     def kill_process(self, req: extensions_pb2.KillProcessRequest | None = None) -> extensions_pb2.KillProcessResponse:
+        """Terminates an active spawned child process."""
         return kill_process(req)
     def get_process_status(self, req: extensions_pb2.GetProcessStatusRequest | None = None) -> extensions_pb2.GetProcessStatusResponse:
+        """Checks whether a spawned child process is still running and gets its exit code."""
         return get_process_status(req)
     def notify_player_event(self, req: extensions_pb2.NotifyPlayerEventRequest | None = None) -> extensions_pb2.NotifyPlayerEventResponse:
+        """Notifies the host player of custom playback events or state overrides."""
         return notify_player_event(req)
     def ws_connect(self, req: extensions_pb2.WsConnectRequest | None = None) -> extensions_pb2.WsConnectResponse:
+        """Establishes a WebSocket client connection to a remote WebSocket server."""
         return ws_connect(req)
     def ws_send(self, req: extensions_pb2.WsSendRequest | None = None) -> extensions_pb2.WsSendResponse:
+        """Sends a text or binary message through an active WebSocket connection."""
         return ws_send(req)
     def ws_receive(self, req: extensions_pb2.WsReceiveRequest | None = None) -> extensions_pb2.WsReceiveResponse:
+        """Receives the next incoming message frame from an active WebSocket connection."""
         return ws_receive(req)
     def ws_close(self, req: extensions_pb2.WsCloseRequest | None = None) -> extensions_pb2.WsCloseResponse:
+        """Closes an active WebSocket connection with an optional code and reason."""
         return ws_close(req)
 
 

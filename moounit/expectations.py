@@ -299,7 +299,6 @@ class ExpectationManager:
             if resp is not None:
                 return resp
             if err and not self.recorder.has_replay_expectations(Scope.SESSION):
-                print(f"DEBUG MISMATCH: call_type={call_type}, req={request_obj}, err={err}", flush=True)
                 raise AssertionError(err)
 
         if scope == Scope.LOCAL and self.recorder.has_replay_expectations(
@@ -494,6 +493,25 @@ class ExpectationManager:
         plugin.memory(mem)[:] = headers_json
         return mem.offset
 
+    def _get_main_command_passthrough(
+        self, command: MainCommand, which: str | None
+    ) -> Callable[[], MainCommandResponse] | None:
+        if not which or not self.moounit:
+            return None
+        for mgr_attr in ("ws_manager", "process_manager"):
+            mgr = getattr(self.moounit, mgr_attr, None)
+            handler = getattr(mgr, which, None) if mgr else None
+            if handler:
+                def _invoke(h=handler, w=which, c=command):
+                    try:
+                        return MainCommandResponse(
+                            **{w: h(getattr(c, w))}
+                        )
+                    except Exception as e:
+                        return MainCommandResponse(error=Error(message=str(e)))
+                return _invoke
+        return None
+
     def handle_main_command(self, data: bytes) -> bytes:
         command = MainCommand.FromString(data)
         pkg_name = getattr(self.moounit, "package_name", "") if self.moounit else ""
@@ -506,58 +524,11 @@ class ExpectationManager:
             "send_main_command", command
         )
 
-        if command.WhichOneof("command") in (
-            "set_account",
-            "get_cache",
-            "set_cache",
-        ):
-            if command.WhichOneof("command") == "set_account":
-                self.accounts[command.set_account.account.id] = command.set_account.account
-            try:
-                resp = self._dispatch(
-                    "send_main_command",
-                    self.local_expectations,
-                    self.session_expectations,
-                    lambda e: partial_match(
-                        e.command,
-                        command,
-                        ignored_fields=ignore_rules,
-                        root_call="send_main_command",
-                    )[0],
-                    command,
-                    None,
-                    lambda: default_main_command_response(command),
-                    "send_main_command",
-                    None,
-                )
-                return resp.SerializeToString()
-            except AssertionError:
-                resp = default_main_command_response(command)
-                self.recorder.record_call(
-                    "send_main_command", command, resp, current_scope.get()
-                )
-                return resp.SerializeToString()
         which = command.WhichOneof("command")
-        passthrough_fn = None
-        if which in ("ws_connect", "ws_send", "ws_receive", "ws_close"):
-            ws_mgr = getattr(self.moounit, "ws_manager", None)
-            if ws_mgr:
-                if which == "ws_connect":
-                    passthrough_fn = lambda: MainCommandResponse(
-                        ws_connect=ws_mgr.ws_connect(command.ws_connect)
-                    )
-                elif which == "ws_send":
-                    passthrough_fn = lambda: MainCommandResponse(
-                        ws_send=ws_mgr.ws_send(command.ws_send)
-                    )
-                elif which == "ws_receive":
-                    passthrough_fn = lambda: MainCommandResponse(
-                        ws_receive=ws_mgr.ws_receive(command.ws_receive)
-                    )
-                elif which == "ws_close":
-                    passthrough_fn = lambda: MainCommandResponse(
-                        ws_close=ws_mgr.ws_close(command.ws_close)
-                    )
+        if which == "set_account":
+            self.accounts[command.set_account.account.id] = command.set_account.account
+
+        passthrough_fn = self._get_main_command_passthrough(command, which)
 
         resp = self._dispatch(
             "send_main_command",

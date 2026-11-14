@@ -1254,7 +1254,7 @@ def test_process_and_player_defaults():
         write_process_stdin=WriteProcessStdinRequest(process_id=1, data=b"hi")
     )
     res = default_main_command_response(write_cmd)
-    assert res.write_process_stdin.bytes_written == 0
+    assert res.write_process_stdin.bytes_written == 2
 
     read_cmd = MainCommand(read_process_stdout=ReadProcessStdoutRequest(process_id=1))
     res = default_main_command_response(read_cmd)

@@ -6,7 +6,6 @@ package api
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 
 	pdk "github.com/extism/go-pdk"
 	"google.golang.org/protobuf/proto"
@@ -15,122 +14,132 @@ import (
 )
 
 type Provider interface {
+ // GetRemoteUrl Resolves playback streaming URL or resource location for a remote track.
 	GetRemoteUrl(req *extensions.GetRemoteUrlRequest) (*extensions.GetRemoteUrlResponse, error)
+ // RequestedSearchResult Performs search query for songs, albums, artists, or playlists.
 	RequestedSearchResult(req *extensions.RequestedSearchResultRequest) (*extensions.RequestedSearchResultResponse, error)
+ // RequestedPlaylists Fetches user playlists or remote playlists available from this provider.
 	RequestedPlaylists(req *extensions.RequestedPlaylistsRequest) (*extensions.RequestedPlaylistsResponse, error)
+ // RequestedPlaylistSongs Fetches songs contained within a specified playlist.
 	RequestedPlaylistSongs(req *extensions.RequestedPlaylistSongsRequest) (*extensions.RequestedPlaylistSongsResponse, error)
+ // RequestedArtistSongs Fetches songs associated with a specified artist.
 	RequestedArtistSongs(req *extensions.RequestedArtistSongsRequest) (*extensions.RequestedArtistSongsResponse, error)
+ // RequestedAlbumSongs Fetches songs belonging to a specified album.
 	RequestedAlbumSongs(req *extensions.RequestedAlbumSongsRequest) (*extensions.RequestedAlbumSongsResponse, error)
+ // RequestedRecommendations Fetches recommended tracks based on listening history or seed items.
 	RequestedRecommendations(req *extensions.RequestedRecommendationsRequest) (*extensions.RequestedRecommendationsResponse, error)
+ // RequestedSongFromId Fetches full song metadata for a provider-specific track ID.
 	RequestedSongFromId(req *extensions.RequestedSongFromIdRequest) (*extensions.RequestedSongFromIdResponse, error)
+ // PlaybackDetailsRequested Fetches detailed playback streaming information (URL, duration, keys).
 	PlaybackDetailsRequested(req *extensions.PlaybackDetailsRequestedRequest) (*extensions.PlaybackDetailsRequestedResponse, error)
+ // RequestedLyrics Fetches synchronized or plain lyrics for a given song.
 	RequestedLyrics(req *extensions.RequestedLyricsRequest) (*extensions.RequestedLyricsResponse, error)
+ // RequestedCoverArt Fetches album artwork or cover image URLs for a given entity.
 	RequestedCoverArt(req *extensions.RequestedCoverArtRequest) (*extensions.RequestedCoverArtResponse, error)
+ // Scrobble Receives track scrobble notification when playback reaches threshold.
 	Scrobble(req *extensions.ScrobbleRequest) error
+ // CustomRequest Handles generic or provider-specific custom extension RPC requests.
 	CustomRequest(req *extensions.CustomRequest) (*extensions.CustomRequestResponse, error)
 }
 type Accounts interface {
+ // PerformAccountLogin Initiates user login or credentials prompt for extension account.
 	PerformAccountLogin(req *extensions.PerformAccountLoginRequest) (*extensions.PerformAccountLoginResponse, error)
+ // OauthCallback Handles OAuth authorization redirection callback token exchange.
 	OauthCallback(req *extensions.OauthCallbackRequest) (*extensions.OauthCallbackResponse, error)
 }
 type ContextMenu interface {
+ // RequestedSongContextMenu Provides custom contextual menu items for a selected song.
 	RequestedSongContextMenu(req *extensions.RequestedSongContextMenuRequest) (*extensions.RequestedSongContextMenuResponse, error)
+ // RequestedPlaylistContextMenu Provides custom contextual menu items for a selected playlist.
 	RequestedPlaylistContextMenu(req *extensions.RequestedPlaylistContextMenuRequest) (*extensions.RequestedPlaylistContextMenuResponse, error)
+ // ContextMenuAction Invoked when a user selects a custom context menu item.
 	ContextMenuAction(req *extensions.ContextMenuActionRequest) (*extensions.ContextMenuActionResponse, error)
 }
 type PlayerEvents interface {
+ // SongQueueChanged Notified when the playback queue order or track list changes.
 	SongQueueChanged(req *extensions.SongQueueChangedRequest) error
+ // Seeked Notified when playback position is seeked to a new timestamp.
 	Seeked(req *extensions.SeekedRequest) error
+ // VolumeChanged Notified when playback volume level changes.
 	VolumeChanged(req *extensions.VolumeChangedRequest) error
+ // PlayerStateChanged Notified when player transitions between play, pause, and stop states.
 	PlayerStateChanged(req *extensions.PlayerStateChangedRequest) error
+ // SongChanged Notified when the currently playing track changes.
 	SongChanged(req *extensions.SongChangedRequest) error
 }
 type DatabaseEvents interface {
+ // SongAdded Notified when a new song is added to the host database.
 	SongAdded(req *extensions.SongAddedRequest) error
+ // SongRemoved Notified when a song is removed from the host database.
 	SongRemoved(req *extensions.SongRemovedRequest) error
+ // PlaylistAdded Notified when a new playlist is created in the host database.
 	PlaylistAdded(req *extensions.PlaylistAddedRequest) error
+ // PlaylistRemoved Notified when a playlist is deleted from the host database.
 	PlaylistRemoved(req *extensions.PlaylistRemovedRequest) error
 }
 type PreferenceEvents interface {
+ // PreferenceChanged Notified when an extension preference value is modified by user.
 	PreferenceChanged(req *extensions.PreferenceChangedRequest) error
 }
 type PlayerProvider interface {
+ // CanPlay Determines whether this player provider is capable of playing the given track.
 	CanPlay(req *extensions.CanPlayRequest) (*extensions.CanPlayResponse, error)
+ // PlayerPlay Commands the custom player engine to resume playback.
 	PlayerPlay(req *extensions.PlayerPlayRequest) (*extensions.PlayerPlayResponse, error)
+ // PlayerPause Commands the custom player engine to pause playback.
 	PlayerPause(req *extensions.PlayerPauseRequest) (*extensions.PlayerPauseResponse, error)
+ // PlayerStop Commands the custom player engine to stop playback.
 	PlayerStop(req *extensions.PlayerStopRequest) (*extensions.PlayerStopResponse, error)
+ // PlayerSeek Commands the custom player engine to seek to a given position.
 	PlayerSeek(req *extensions.PlayerSeekRequest) (*extensions.PlayerSeekResponse, error)
+ // PlayerSetVolume Commands the custom player engine to set playback volume.
 	PlayerSetVolume(req *extensions.PlayerSetVolumeRequest) (*extensions.PlayerSetVolumeResponse, error)
+ // PlayerLoadTrack Commands the custom player engine to load a track for playback.
 	PlayerLoadTrack(req *extensions.PlayerLoadTrackRequest) (*extensions.PlayerLoadTrackResponse, error)
 }
 
-//go:wasmimport extism:host/user send_main_command
-func send_main_command(uint64) uint64
-
-func DispatchMainCommand(cmd *extensions.MainCommand) (*extensions.MainCommandResponse, error) {
-	cmdBytes, err := proto.Marshal(cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	mem := pdk.AllocateBytes(cmdBytes)
-	ptr := send_main_command(mem.Offset())
-	resMem := pdk.FindMemory(ptr)
-
-	res := &extensions.MainCommandResponse{}
-	if err := proto.Unmarshal(resMem.ReadBytes(), res); err != nil {
-		return nil, err
-	}
-
-	if errResp, ok := res.Response.(*extensions.MainCommandResponse_Error); ok {
-		return nil, fmt.Errorf("Host error: %s", errResp.Error.Message)
-	}
-
-	return res, nil
-}
-
-// Low-level WASM imports
 //go:wasmimport extism:host/user system_time
 func system_time() uint64
 
+// SystemTime Returns current host system time in seconds since Unix epoch.
 func SystemTime() uint64 {
 	rPtr := system_time()
 	rMem := pdk.FindMemory(rPtr)
 	return binary.LittleEndian.Uint64(rMem.ReadBytes())
 }
-
 //go:wasmimport extism:host/user open_clientfd
 func open_clientfd(uint64) uint64
 
+// OpenClientFd Opens a client socket at the specified path and returns a file descriptor handle.
 func OpenClientFd(path string) int64 {
-	mem := pdk.AllocateString(path)
-	rPtr := open_clientfd(mem.Offset())
+	pathMem := pdk.AllocateString(path)
+	rPtr := open_clientfd(pathMem.Offset())
 	rMem := pdk.FindMemory(rPtr)
 	return int64(binary.LittleEndian.Uint64(rMem.ReadBytes()))
 }
-
 //go:wasmimport extism:host/user write_sock
 func write_sock(int64, uint64) uint64
 
+// WriteSock Writes a byte buffer to the socket associated with the given file descriptor handle.
 func WriteSock(sockId int64, buf []byte) int64 {
-	mem := pdk.AllocateBytes(buf)
-	rPtr := write_sock(sockId, mem.Offset())
+	bufMem := pdk.AllocateBytes(buf)
+	rPtr := write_sock(sockId, bufMem.Offset())
 	rMem := pdk.FindMemory(rPtr)
 	return int64(binary.LittleEndian.Uint64(rMem.ReadBytes()))
 }
-
 //go:wasmimport extism:host/user read_sock
 func read_sock(int64, uint64) uint64
 
+// ReadSock Reads up to max_bytes from the socket associated with the given file descriptor handle.
 func ReadSock(sockId int64, readLen uint64) []byte {
 	rPtr := read_sock(sockId, readLen)
 	rMem := pdk.FindMemory(rPtr)
 	return rMem.ReadBytes()
 }
-
 //go:wasmimport extism:host/user batch_http_request
 func batch_http_request(uint64) uint64
 
+// BatchHttpRequest Executes a batch of HTTP requests via the host network runner.
 func BatchHttpRequest(req *extensions.BatchHttpRequest) (*extensions.BatchHttpResponse, error) {
 	batchBytes, err := proto.Marshal(req)
 	if err != nil {
@@ -145,8 +154,7 @@ func BatchHttpRequest(req *extensions.BatchHttpRequest) (*extensions.BatchHttpRe
 	}
 	return respBatch, nil
 }
-
-// Multiplexed MainCommands
+// GetSong Queries and retrieves song entities matching the given criteria from the host database.
 func GetSong(req *extensions.GetSongRequest) (*extensions.GetSongResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetSong{
@@ -162,6 +170,7 @@ func GetSong(req *extensions.GetSongRequest) (*extensions.GetSongResponse, error
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// GetEntity Retrieves detailed entity information (such as artist or album) from the host database.
 func GetEntity(req *extensions.GetEntityRequest) (*extensions.GetEntityResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetEntity{
@@ -177,6 +186,7 @@ func GetEntity(req *extensions.GetEntityRequest) (*extensions.GetEntityResponse,
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// GetCurrentSong Retrieves the currently playing song from the active player session.
 func GetCurrentSong(req *extensions.GetCurrentSongRequest) (*extensions.GetCurrentSongResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetCurrentSong{
@@ -192,6 +202,7 @@ func GetCurrentSong(req *extensions.GetCurrentSongRequest) (*extensions.GetCurre
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// GetPlayerState Retrieves the current playback state (e.g. playing, paused, stopped) of the player.
 func GetPlayerState(req *extensions.GetPlayerStateRequest) (*extensions.GetPlayerStateResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetPlayerState{
@@ -207,6 +218,7 @@ func GetPlayerState(req *extensions.GetPlayerStateRequest) (*extensions.GetPlaye
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// GetVolume Retrieves the current master playback volume level (0.0 to 1.0).
 func GetVolume(req *extensions.GetVolumeRequest) (*extensions.GetVolumeResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetVolume{
@@ -222,6 +234,7 @@ func GetVolume(req *extensions.GetVolumeRequest) (*extensions.GetVolumeResponse,
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// GetTime Retrieves the current playback position timestamp in seconds.
 func GetTime(req *extensions.GetTimeRequest) (*extensions.GetTimeResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetTime{
@@ -237,6 +250,7 @@ func GetTime(req *extensions.GetTimeRequest) (*extensions.GetTimeResponse, error
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// GetQueue Retrieves the current player queue state and list of queued tracks.
 func GetQueue(req *extensions.GetQueueRequest) (*extensions.GetQueueResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetQueue{
@@ -252,6 +266,7 @@ func GetQueue(req *extensions.GetQueueRequest) (*extensions.GetQueueResponse, er
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// GetPreference Retrieves an extension preference value by key.
 func GetPreference(req *extensions.GetPreferenceRequest) (*extensions.GetPreferenceResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetPreference{
@@ -267,6 +282,7 @@ func GetPreference(req *extensions.GetPreferenceRequest) (*extensions.GetPrefere
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// SetPreference Stores an extension preference value by key.
 func SetPreference(req *extensions.SetPreferenceRequest) (*extensions.SetPreferenceResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_SetPreference{
@@ -282,6 +298,7 @@ func SetPreference(req *extensions.SetPreferenceRequest) (*extensions.SetPrefere
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// GetSecure Retrieves a securely stored credential or secret by key from the host keyring.
 func GetSecure(req *extensions.GetSecureRequest) (*extensions.GetSecureResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetSecure{
@@ -297,6 +314,7 @@ func GetSecure(req *extensions.GetSecureRequest) (*extensions.GetSecureResponse,
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// SetSecure Stores a credential or secret securely in the host keyring/vault.
 func SetSecure(req *extensions.SetSecureRequest) (*extensions.SetSecureResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_SetSecure{
@@ -312,6 +330,7 @@ func SetSecure(req *extensions.SetSecureRequest) (*extensions.SetSecureResponse,
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// AddSongs Inserts one or more songs into the host music database.
 func AddSongs(req *extensions.AddSongsRequest) (*extensions.AddSongsResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_AddSongs{
@@ -327,6 +346,7 @@ func AddSongs(req *extensions.AddSongsRequest) (*extensions.AddSongsResponse, er
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// RemoveSong Removes a song from the host music database by its ID.
 func RemoveSong(req *extensions.RemoveSongRequest) (*extensions.RemoveSongResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_RemoveSong{
@@ -342,6 +362,7 @@ func RemoveSong(req *extensions.RemoveSongRequest) (*extensions.RemoveSongRespon
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// UpdateSong Updates metadata for an existing song in the host database.
 func UpdateSong(req *extensions.UpdateSongRequest) (*extensions.UpdateSongResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_UpdateSong{
@@ -357,6 +378,7 @@ func UpdateSong(req *extensions.UpdateSongRequest) (*extensions.UpdateSongRespon
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// AddPlaylist Creates a new playlist in the host database.
 func AddPlaylist(req *extensions.AddPlaylistRequest) (*extensions.AddPlaylistResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_AddPlaylist{
@@ -372,6 +394,7 @@ func AddPlaylist(req *extensions.AddPlaylistRequest) (*extensions.AddPlaylistRes
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// AddToPlaylist Appends songs to an existing playlist in the host database.
 func AddToPlaylist(req *extensions.AddToPlaylistRequest) (*extensions.AddToPlaylistResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_AddToPlaylist{
@@ -387,6 +410,7 @@ func AddToPlaylist(req *extensions.AddToPlaylistRequest) (*extensions.AddToPlayl
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// RegisterOauth Registers OAuth configuration details for account authentication flows.
 func RegisterOauth(req *extensions.RegisterOauthRequest) (*extensions.RegisterOauthResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_RegisterOauth{
@@ -402,6 +426,7 @@ func RegisterOauth(req *extensions.RegisterOauthRequest) (*extensions.RegisterOa
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// OpenExternalUrl Requests the host to open a URL in the user's default system browser.
 func OpenExternalUrl(req *extensions.OpenExternalUrlRequest) (*extensions.OpenExternalUrlResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_OpenExternalUrl{
@@ -417,6 +442,7 @@ func OpenExternalUrl(req *extensions.OpenExternalUrlRequest) (*extensions.OpenEx
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// SetAccount Updates account login credentials and details for this extension.
 func SetAccount(req *extensions.SetAccountRequest) (*extensions.SetAccountResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_SetAccount{
@@ -432,6 +458,7 @@ func SetAccount(req *extensions.SetAccountRequest) (*extensions.SetAccountRespon
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// RegisterUserPreference Registers dynamic preference schema entries shown in user settings.
 func RegisterUserPreference(req *extensions.RegisterUserPreferenceRequest) (*extensions.RegisterUserPreferenceResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_RegisterUserPreference{
@@ -447,6 +474,7 @@ func RegisterUserPreference(req *extensions.RegisterUserPreferenceRequest) (*ext
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// UnregisterUserPreference Unregisters dynamic preference schema entries previously registered.
 func UnregisterUserPreference(req *extensions.UnregisterUserPreferenceRequest) (*extensions.UnregisterUserPreferenceResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_UnregisterUserPreference{
@@ -462,6 +490,7 @@ func UnregisterUserPreference(req *extensions.UnregisterUserPreferenceRequest) (
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// ExtensionsUpdated Notifies the host that extension configuration or available extensions changed.
 func ExtensionsUpdated(req *extensions.ExtensionsUpdatedRequest) (*extensions.ExtensionsUpdatedResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_ExtensionsUpdated{
@@ -477,6 +506,7 @@ func ExtensionsUpdated(req *extensions.ExtensionsUpdatedRequest) (*extensions.Ex
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// GetAppVersion Retrieves the host application version string.
 func GetAppVersion(req *extensions.GetAppVersionRequest) (*extensions.GetAppVersionResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetAppVersion{
@@ -492,7 +522,8 @@ func GetAppVersion(req *extensions.GetAppVersionRequest) (*extensions.GetAppVers
 	}
 	return nil, errors.New("Invalid response type from host")
 }
-func GetCache(req *extensions.GetCacheRequest) (*extensions.GetCacheResponse, error) {
+// HostGetCache Retrieves cached binary data associated with the specified cache key.
+func HostGetCache(req *extensions.GetCacheRequest) (*extensions.GetCacheResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetCache{
 			GetCache: req,
@@ -507,7 +538,8 @@ func GetCache(req *extensions.GetCacheRequest) (*extensions.GetCacheResponse, er
 	}
 	return nil, errors.New("Invalid response type from host")
 }
-func SetCache(req *extensions.SetCacheRequest) (*extensions.SetCacheResponse, error) {
+// HostSetCache Stores binary data in the host cache with an optional time-to-live (TTL).
+func HostSetCache(req *extensions.SetCacheRequest) (*extensions.SetCacheResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_SetCache{
 			SetCache: req,
@@ -522,7 +554,8 @@ func SetCache(req *extensions.SetCacheRequest) (*extensions.SetCacheResponse, er
 	}
 	return nil, errors.New("Invalid response type from host")
 }
-func SpawnProcess(req *extensions.SpawnProcessRequest) (*extensions.SpawnProcessResponse, error) {
+// HostSpawnProcess Spawns a child process on the host system within permitted binary limits.
+func HostSpawnProcess(req *extensions.SpawnProcessRequest) (*extensions.SpawnProcessResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_SpawnProcess{
 			SpawnProcess: req,
@@ -537,6 +570,7 @@ func SpawnProcess(req *extensions.SpawnProcessRequest) (*extensions.SpawnProcess
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// WriteProcessStdin Writes input data to standard input of an active spawned child process.
 func WriteProcessStdin(req *extensions.WriteProcessStdinRequest) (*extensions.WriteProcessStdinResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_WriteProcessStdin{
@@ -552,6 +586,7 @@ func WriteProcessStdin(req *extensions.WriteProcessStdinRequest) (*extensions.Wr
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// ReadProcessStdout Reads standard output or standard error data from an active spawned child process.
 func ReadProcessStdout(req *extensions.ReadProcessStdoutRequest) (*extensions.ReadProcessStdoutResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_ReadProcessStdout{
@@ -567,6 +602,7 @@ func ReadProcessStdout(req *extensions.ReadProcessStdoutRequest) (*extensions.Re
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// KillProcess Terminates an active spawned child process.
 func KillProcess(req *extensions.KillProcessRequest) (*extensions.KillProcessResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_KillProcess{
@@ -582,6 +618,7 @@ func KillProcess(req *extensions.KillProcessRequest) (*extensions.KillProcessRes
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// GetProcessStatus Checks whether a spawned child process is still running and gets its exit code.
 func GetProcessStatus(req *extensions.GetProcessStatusRequest) (*extensions.GetProcessStatusResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_GetProcessStatus{
@@ -597,6 +634,7 @@ func GetProcessStatus(req *extensions.GetProcessStatusRequest) (*extensions.GetP
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// NotifyPlayerEvent Notifies the host player of custom playback events or state overrides.
 func NotifyPlayerEvent(req *extensions.NotifyPlayerEventRequest) (*extensions.NotifyPlayerEventResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_NotifyPlayerEvent{
@@ -612,6 +650,7 @@ func NotifyPlayerEvent(req *extensions.NotifyPlayerEventRequest) (*extensions.No
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// WsConnect Establishes a WebSocket client connection to a remote WebSocket server.
 func WsConnect(req *extensions.WsConnectRequest) (*extensions.WsConnectResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_WsConnect{
@@ -627,6 +666,7 @@ func WsConnect(req *extensions.WsConnectRequest) (*extensions.WsConnectResponse,
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// WsSend Sends a text or binary message through an active WebSocket connection.
 func WsSend(req *extensions.WsSendRequest) (*extensions.WsSendResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_WsSend{
@@ -642,6 +682,7 @@ func WsSend(req *extensions.WsSendRequest) (*extensions.WsSendResponse, error) {
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// WsReceive Receives the next incoming message frame from an active WebSocket connection.
 func WsReceive(req *extensions.WsReceiveRequest) (*extensions.WsReceiveResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_WsReceive{
@@ -657,6 +698,7 @@ func WsReceive(req *extensions.WsReceiveRequest) (*extensions.WsReceiveResponse,
 	}
 	return nil, errors.New("Invalid response type from host")
 }
+// WsClose Closes an active WebSocket connection with an optional code and reason.
 func WsClose(req *extensions.WsCloseRequest) (*extensions.WsCloseResponse, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_WsClose{

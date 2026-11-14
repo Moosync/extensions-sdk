@@ -17,9 +17,15 @@ export interface WebSocketMessage {
   binary?: Uint8Array;
 }
 
+/**
+ * Client for managing a host-mediated WebSocket connection.
+ */
 export class WebSocketClient {
   constructor(readonly connectionId: bigint) {}
 
+  /**
+   * Opens a new WebSocket connection to the specified URL via the host.
+   */
   static async connect(url: string): Promise<WebSocketClient> {
     const res = await generatedWsConnect(new WsConnectRequest({ url }));
     if (!res) {
@@ -28,6 +34,9 @@ export class WebSocketClient {
     return new WebSocketClient(res.connectionId);
   }
 
+  /**
+   * Sends a UTF-8 text frame over the WebSocket connection.
+   */
   async sendText(text: string): Promise<void> {
     await generatedWsSend(
       new WsSendRequest({
@@ -37,6 +46,9 @@ export class WebSocketClient {
     );
   }
 
+  /**
+   * Sends a binary frame over the WebSocket connection.
+   */
   async sendBinary(data: Uint8Array): Promise<void> {
     await generatedWsSend(
       new WsSendRequest({
@@ -46,6 +58,9 @@ export class WebSocketClient {
     );
   }
 
+  /**
+   * Waits for and receives the next message frame from the WebSocket connection.
+   */
   async receive(timeoutMs?: number): Promise<WebSocketMessage | undefined> {
     const res = await generatedWsReceive(
       new WsReceiveRequest({
@@ -71,6 +86,9 @@ export class WebSocketClient {
     return undefined;
   }
 
+  /**
+   * Closes the WebSocket connection with an optional close code and reason.
+   */
   async close(code?: number, reason?: string): Promise<void> {
     await generatedWsClose(
       new WsCloseRequest({

@@ -3,17 +3,7 @@
 
 import extism
 from core.types.protos import extensions_pb2
-
-_extension_instance = None
-
-
-def register_extension(instance):
-    global _extension_instance
-    _extension_instance = instance
-
-
-def get_extension():
-    return _extension_instance
+from . import get_extension
 
 
 @extism.plugin_fn
@@ -37,130 +27,88 @@ def handle_extension_command() -> int:
         if handler is not None:
             res = handler(getattr(cmd, "get_remote_url"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "get_remote_url").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "get_remote_url").CopyFrom(res)
+                getattr(response, "get_remote_url").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "requested_search_result":
         handler = getattr(inst, "requested_search_result", None)
-        if handler is None:
-            handler = getattr(inst, "get_search_result", None)
         if handler is not None:
             res = handler(getattr(cmd, "requested_search_result"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "requested_search_result").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "requested_search_result").CopyFrom(res)
+                getattr(response, "requested_search_result").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "requested_playlists":
         handler = getattr(inst, "requested_playlists", None)
-        if handler is None:
-            handler = getattr(inst, "get_playlists", None)
         if handler is not None:
             res = handler(getattr(cmd, "requested_playlists"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "requested_playlists").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "requested_playlists").CopyFrom(res)
+                getattr(response, "requested_playlists").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "requested_playlist_songs":
         handler = getattr(inst, "requested_playlist_songs", None)
-        if handler is None:
-            handler = getattr(inst, "get_playlist_songs", None)
         if handler is not None:
             res = handler(getattr(cmd, "requested_playlist_songs"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "requested_playlist_songs").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "requested_playlist_songs").CopyFrom(res)
+                getattr(response, "requested_playlist_songs").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "requested_artist_songs":
         handler = getattr(inst, "requested_artist_songs", None)
-        if handler is None:
-            handler = getattr(inst, "get_artist_songs", None)
         if handler is not None:
             res = handler(getattr(cmd, "requested_artist_songs"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "requested_artist_songs").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "requested_artist_songs").CopyFrom(res)
+                getattr(response, "requested_artist_songs").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "requested_album_songs":
         handler = getattr(inst, "requested_album_songs", None)
-        if handler is None:
-            handler = getattr(inst, "get_album_songs", None)
         if handler is not None:
             res = handler(getattr(cmd, "requested_album_songs"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "requested_album_songs").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "requested_album_songs").CopyFrom(res)
+                getattr(response, "requested_album_songs").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "requested_recommendations":
         handler = getattr(inst, "requested_recommendations", None)
-        if handler is None:
-            handler = getattr(inst, "get_recommendations", None)
         if handler is not None:
             res = handler(getattr(cmd, "requested_recommendations"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "requested_recommendations").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "requested_recommendations").CopyFrom(res)
+                getattr(response, "requested_recommendations").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "requested_song_from_id":
         handler = getattr(inst, "requested_song_from_id", None)
-        if handler is None:
-            handler = getattr(inst, "get_song_from_id", None)
         if handler is not None:
             res = handler(getattr(cmd, "requested_song_from_id"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "requested_song_from_id").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "requested_song_from_id").CopyFrom(res)
+                getattr(response, "requested_song_from_id").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "playback_details_requested":
         handler = getattr(inst, "playback_details_requested", None)
-        if handler is None:
-            handler = getattr(inst, "get_playback_details", None)
         if handler is not None:
             res = handler(getattr(cmd, "playback_details_requested"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "playback_details_requested").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "playback_details_requested").CopyFrom(res)
+                getattr(response, "playback_details_requested").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "requested_lyrics":
         handler = getattr(inst, "requested_lyrics", None)
-        if handler is None:
-            handler = getattr(inst, "get_lyrics", None)
         if handler is not None:
             res = handler(getattr(cmd, "requested_lyrics"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "requested_lyrics").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "requested_lyrics").CopyFrom(res)
+                getattr(response, "requested_lyrics").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "requested_cover_art":
         handler = getattr(inst, "requested_cover_art", None)
-        if handler is None:
-            handler = getattr(inst, "get_cover_art", None)
         if handler is not None:
             res = handler(getattr(cmd, "requested_cover_art"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "requested_cover_art").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "requested_cover_art").CopyFrom(res)
+                getattr(response, "requested_cover_art").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "scrobble":
         handler = getattr(inst, "scrobble", None)
@@ -169,137 +117,99 @@ def handle_extension_command() -> int:
         return 0
     if which == "custom_request":
         handler = getattr(inst, "custom_request", None)
-        if handler is None:
-            handler = getattr(inst, "handle_custom_request", None)
         if handler is not None:
             res = handler(getattr(cmd, "custom_request"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "custom_request").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "custom_request").CopyFrom(res)
+                getattr(response, "custom_request").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "perform_account_login":
         handler = getattr(inst, "perform_account_login", None)
         if handler is not None:
             res = handler(getattr(cmd, "perform_account_login"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "perform_account_login").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "perform_account_login").CopyFrom(res)
+                getattr(response, "perform_account_login").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "oauth_callback":
         handler = getattr(inst, "oauth_callback", None)
         if handler is not None:
             res = handler(getattr(cmd, "oauth_callback"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "oauth_callback").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "oauth_callback").CopyFrom(res)
+                getattr(response, "oauth_callback").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "requested_song_context_menu":
         handler = getattr(inst, "requested_song_context_menu", None)
-        if handler is None:
-            handler = getattr(inst, "get_song_context_menu", None)
         if handler is not None:
             res = handler(getattr(cmd, "requested_song_context_menu"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "requested_song_context_menu").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "requested_song_context_menu").CopyFrom(res)
+                getattr(response, "requested_song_context_menu").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "requested_playlist_context_menu":
         handler = getattr(inst, "requested_playlist_context_menu", None)
-        if handler is None:
-            handler = getattr(inst, "get_playlist_context_menu", None)
         if handler is not None:
             res = handler(getattr(cmd, "requested_playlist_context_menu"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "requested_playlist_context_menu").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "requested_playlist_context_menu").CopyFrom(res)
+                getattr(response, "requested_playlist_context_menu").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "context_menu_action":
         handler = getattr(inst, "context_menu_action", None)
         if handler is not None:
             res = handler(getattr(cmd, "context_menu_action"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "context_menu_action").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "context_menu_action").CopyFrom(res)
+                getattr(response, "context_menu_action").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "song_queue_changed":
         handler = getattr(inst, "song_queue_changed", None)
-        if handler is None:
-            handler = getattr(inst, "on_song_queue_changed", None)
         if handler is not None:
             handler(getattr(cmd, "song_queue_changed"))
         return 0
     if which == "seeked":
         handler = getattr(inst, "seeked", None)
-        if handler is None:
-            handler = getattr(inst, "on_seeked", None)
         if handler is not None:
             handler(getattr(cmd, "seeked"))
         return 0
     if which == "volume_changed":
         handler = getattr(inst, "volume_changed", None)
-        if handler is None:
-            handler = getattr(inst, "on_volume_changed", None)
         if handler is not None:
             handler(getattr(cmd, "volume_changed"))
         return 0
     if which == "player_state_changed":
         handler = getattr(inst, "player_state_changed", None)
-        if handler is None:
-            handler = getattr(inst, "on_player_state_changed", None)
         if handler is not None:
             handler(getattr(cmd, "player_state_changed"))
         return 0
     if which == "song_changed":
         handler = getattr(inst, "song_changed", None)
-        if handler is None:
-            handler = getattr(inst, "on_song_changed", None)
         if handler is not None:
             handler(getattr(cmd, "song_changed"))
         return 0
     if which == "song_added":
         handler = getattr(inst, "song_added", None)
-        if handler is None:
-            handler = getattr(inst, "on_song_added", None)
         if handler is not None:
             handler(getattr(cmd, "song_added"))
         return 0
     if which == "song_removed":
         handler = getattr(inst, "song_removed", None)
-        if handler is None:
-            handler = getattr(inst, "on_song_removed", None)
         if handler is not None:
             handler(getattr(cmd, "song_removed"))
         return 0
     if which == "playlist_added":
         handler = getattr(inst, "playlist_added", None)
-        if handler is None:
-            handler = getattr(inst, "on_playlist_added", None)
         if handler is not None:
             handler(getattr(cmd, "playlist_added"))
         return 0
     if which == "playlist_removed":
         handler = getattr(inst, "playlist_removed", None)
-        if handler is None:
-            handler = getattr(inst, "on_playlist_removed", None)
         if handler is not None:
             handler(getattr(cmd, "playlist_removed"))
         return 0
     if which == "preference_changed":
         handler = getattr(inst, "preference_changed", None)
-        if handler is None:
-            handler = getattr(inst, "on_preference_changed", None)
         if handler is not None:
             handler(getattr(cmd, "preference_changed"))
         return 0
@@ -308,82 +218,56 @@ def handle_extension_command() -> int:
         if handler is not None:
             res = handler(getattr(cmd, "can_play"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "can_play").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "can_play").CopyFrom(res)
+                getattr(response, "can_play").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "player_play":
         handler = getattr(inst, "player_play", None)
-        if handler is None:
-            handler = getattr(inst, "on_player_play", None)
         if handler is not None:
             res = handler(getattr(cmd, "player_play"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "player_play").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "player_play").CopyFrom(res)
+                getattr(response, "player_play").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "player_pause":
         handler = getattr(inst, "player_pause", None)
-        if handler is None:
-            handler = getattr(inst, "on_player_pause", None)
         if handler is not None:
             res = handler(getattr(cmd, "player_pause"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "player_pause").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "player_pause").CopyFrom(res)
+                getattr(response, "player_pause").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "player_stop":
         handler = getattr(inst, "player_stop", None)
-        if handler is None:
-            handler = getattr(inst, "on_player_stop", None)
         if handler is not None:
             res = handler(getattr(cmd, "player_stop"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "player_stop").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "player_stop").CopyFrom(res)
+                getattr(response, "player_stop").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "player_seek":
         handler = getattr(inst, "player_seek", None)
-        if handler is None:
-            handler = getattr(inst, "on_player_seek", None)
         if handler is not None:
             res = handler(getattr(cmd, "player_seek"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "player_seek").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "player_seek").CopyFrom(res)
+                getattr(response, "player_seek").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "player_set_volume":
         handler = getattr(inst, "player_set_volume", None)
-        if handler is None:
-            handler = getattr(inst, "on_player_set_volume", None)
         if handler is not None:
             res = handler(getattr(cmd, "player_set_volume"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "player_set_volume").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "player_set_volume").CopyFrom(res)
+                getattr(response, "player_set_volume").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
     if which == "player_load_track":
         handler = getattr(inst, "player_load_track", None)
-        if handler is None:
-            handler = getattr(inst, "on_player_load_track", None)
         if handler is not None:
             res = handler(getattr(cmd, "player_load_track"))
             if res is not None:
-                if hasattr(res, "to_proto"):
-                    getattr(response, "player_load_track").CopyFrom(res.to_proto())
-                else:
-                    getattr(response, "player_load_track").CopyFrom(res)
+                getattr(response, "player_load_track").CopyFrom(res)
+                extism.output_bytes(response.SerializeToString())
         return 0
 
     extism.output_bytes(response.SerializeToString())

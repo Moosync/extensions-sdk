@@ -6,7 +6,6 @@ package api
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 
 	pdk "github.com/extism/go-pdk"
 	"google.golang.org/protobuf/proto"
@@ -17,6 +16,9 @@ import (
 {% for s in guest_services %}
 type {{ s.trait_name }} interface {
 {% for m in s.methods %}
+{% if m.doc %}
+{{ m.doc | format_doc("godoc", 1, m.pascal_name) }}
+{% endif %}
 {% if m.is_event %}
 	{{ m.pascal_name }}(req *extensions.{{ m.req_type }}) error
 {% else %}
@@ -26,92 +28,63 @@ type {{ s.trait_name }} interface {
 }
 {% endfor %}
 
-//go:wasmimport extism:host/user send_main_command
-func send_main_command(uint64) uint64
+{% for m in host_methods %}
+{% if m.transport == 1 %}
+//go:wasmimport extism:host/user {{ m.wasm_symbol }}
+func {{ m.wasm_symbol }}({% if m.is_proto_payload %}uint64{% else %}{% for p in m.params %}{{ p.go_wasm_type }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}) uint64
 
-func DispatchMainCommand(cmd *extensions.MainCommand) (*extensions.MainCommandResponse, error) {
-	cmdBytes, err := proto.Marshal(cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	mem := pdk.AllocateBytes(cmdBytes)
-	ptr := send_main_command(mem.Offset())
-	resMem := pdk.FindMemory(ptr)
-
-	res := &extensions.MainCommandResponse{}
-	if err := proto.Unmarshal(resMem.ReadBytes(), res); err != nil {
-		return nil, err
-	}
-
-	if errResp, ok := res.Response.(*extensions.MainCommandResponse_Error); ok {
-		return nil, fmt.Errorf("Host error: %s", errResp.Error.Message)
-	}
-
-	return res, nil
-}
-
-// Low-level WASM imports
-//go:wasmimport extism:host/user system_time
-func system_time() uint64
-
-func SystemTime() uint64 {
-	rPtr := system_time()
-	rMem := pdk.FindMemory(rPtr)
-	return binary.LittleEndian.Uint64(rMem.ReadBytes())
-}
-
-//go:wasmimport extism:host/user open_clientfd
-func open_clientfd(uint64) uint64
-
-func OpenClientFd(path string) int64 {
-	mem := pdk.AllocateString(path)
-	rPtr := open_clientfd(mem.Offset())
-	rMem := pdk.FindMemory(rPtr)
-	return int64(binary.LittleEndian.Uint64(rMem.ReadBytes()))
-}
-
-//go:wasmimport extism:host/user write_sock
-func write_sock(int64, uint64) uint64
-
-func WriteSock(sockId int64, buf []byte) int64 {
-	mem := pdk.AllocateBytes(buf)
-	rPtr := write_sock(sockId, mem.Offset())
-	rMem := pdk.FindMemory(rPtr)
-	return int64(binary.LittleEndian.Uint64(rMem.ReadBytes()))
-}
-
-//go:wasmimport extism:host/user read_sock
-func read_sock(int64, uint64) uint64
-
-func ReadSock(sockId int64, readLen uint64) []byte {
-	rPtr := read_sock(sockId, readLen)
-	rMem := pdk.FindMemory(rPtr)
-	return rMem.ReadBytes()
-}
-
-//go:wasmimport extism:host/user batch_http_request
-func batch_http_request(uint64) uint64
-
-func BatchHttpRequest(req *extensions.BatchHttpRequest) (*extensions.BatchHttpResponse, error) {
+{% if m.doc %}
+{{ m.doc | format_doc("godoc", 0, m.pascal_name) }}
+{% endif %}
+{% if m.is_proto_payload %}
+func {{ m.pascal_name }}(req *extensions.{{ m.req_type }}) (*extensions.{{ m.resp_type }}, error) {
 	batchBytes, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
 	mem := pdk.AllocateBytes(batchBytes)
-	rPtr := batch_http_request(mem.Offset())
+	rPtr := {{ m.wasm_symbol }}(mem.Offset())
 	rMem := pdk.FindMemory(rPtr)
-	respBatch := &extensions.BatchHttpResponse{}
+	respBatch := &extensions.{{ m.resp_type }}{}
 	if err := proto.Unmarshal(rMem.ReadBytes(), respBatch); err != nil {
 		return nil, err
 	}
 	return respBatch, nil
 }
-
-// Multiplexed MainCommands
-{% for m in host_methods %}
-{% if m.transport == 0 %}
-func {{ m.pascal_name }}(req *extensions.{{ m.req_type }}) (*extensions.{{ m.resp_type }}, error) {
+{% else %}
+func {{ m.pascal_name }}({% for p in m.params %}{{ p.camel_name }} {{ p.go_type }}{% if not loop.last %}, {% endif %}{% endfor %}) {{ m.ret_go_type }} {
+{% for p in m.params %}
+{% if p.kind == "string" %}
+	{{ p.camel_name }}Mem := pdk.AllocateString({{ p.camel_name }})
+{% elif p.kind == "bytes" %}
+	{{ p.camel_name }}Mem := pdk.AllocateBytes({{ p.camel_name }})
+{% endif %}
+{% endfor %}
+{% set call_args = [] %}
+{% for p in m.params %}
+{% if p.kind in ["string", "bytes"] %}
+{% set _ = call_args.append(p.camel_name ~ "Mem.Offset()") %}
+{% else %}
+{% set _ = call_args.append(p.camel_name) %}
+{% endif %}
+{% endfor %}
+	rPtr := {{ m.wasm_symbol }}({{ call_args | join(", ") }})
+	rMem := pdk.FindMemory(rPtr)
+{% if m.ret_kind == "bytes" %}
+	return rMem.ReadBytes()
+{% elif m.ret_kind == "int64" %}
+	return int64(binary.LittleEndian.Uint64(rMem.ReadBytes()))
+{% else %}
+	return binary.LittleEndian.Uint64(rMem.ReadBytes())
+{% endif %}
+}
+{% endif %}
+{% else %}
+{% set fn_name = "Host" ~ m.pascal_name if m.has_wrapper else m.pascal_name %}
+{% if m.doc %}
+{{ m.doc | format_doc("godoc", 0, fn_name) }}
+{% endif %}
+func {{ fn_name }}(req *extensions.{{ m.req_type }}) (*extensions.{{ m.resp_type }}, error) {
 	cmd := &extensions.MainCommand{
 		Command: &extensions.MainCommand_{{ m.pascal_name }}{
 			{{ m.pascal_name }}: req,

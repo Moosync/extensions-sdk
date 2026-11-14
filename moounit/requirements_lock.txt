@@ -61,3 +61,5 @@ toml==0.10.2
     # via pytest-black
 tomlkit==0.13.3
     # via pylint
+websocket-client==1.9.2
+    # via -r moounit/requirements.txt

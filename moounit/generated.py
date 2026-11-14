@@ -16,128 +16,113 @@ PLAYER_COMMANDS: tuple[str, ...] = (
 )
 
 
-def default_main_command_response(cmd: extensions_pb2.MainCommand) -> extensions_pb2.MainCommandResponse:
-    which = cmd.WhichOneof("command")
-    if not which:
-        return extensions_pb2.MainCommandResponse()
-
-    mapping = {
-        "get_preference": lambda: extensions_pb2.MainCommandResponse(
-            get_preference=extensions_pb2.GetPreferenceResponse(
-                data=extensions_pb2.PreferenceData(key=cmd.get_preference.data.key)
-            )
-        ),
-        "get_secure": lambda: extensions_pb2.MainCommandResponse(
-            get_secure=extensions_pb2.GetSecureResponse(
-                data=extensions_pb2.PreferenceData(key=cmd.get_secure.data.key)
-            )
-        ),
-        "set_preference": lambda: extensions_pb2.MainCommandResponse(
-            set_preference=extensions_pb2.SetPreferenceResponse(success=True)
-        ),
-        "set_secure": lambda: extensions_pb2.MainCommandResponse(
-            set_secure=extensions_pb2.SetSecureResponse(success=True)
-        ),
-        "remove_song": lambda: extensions_pb2.MainCommandResponse(
-            remove_song=extensions_pb2.RemoveSongResponse(success=True)
-        ),
-        "add_playlist": lambda: extensions_pb2.MainCommandResponse(
-            add_playlist=extensions_pb2.AddPlaylistResponse(playlist_id="default-playlist")
-        ),
-        "add_to_playlist": lambda: extensions_pb2.MainCommandResponse(
-            add_to_playlist=extensions_pb2.AddToPlaylistResponse(success=True)
-        ),
-        "register_oauth": lambda: extensions_pb2.MainCommandResponse(
-            register_oauth=extensions_pb2.RegisterOauthResponse(success=True)
-        ),
-        "open_external_url": lambda: extensions_pb2.MainCommandResponse(
-            open_external_url=extensions_pb2.OpenExternalUrlResponse(success=True)
-        ),
-        "set_account": lambda: extensions_pb2.MainCommandResponse(
-            set_account=extensions_pb2.SetAccountResponse(success=True)
-        ),
-        "register_user_preference": lambda: extensions_pb2.MainCommandResponse(
-            register_user_preference=extensions_pb2.RegisterUserPreferenceResponse(success=True)
-        ),
-        "unregister_user_preference": lambda: extensions_pb2.MainCommandResponse(
-            unregister_user_preference=extensions_pb2.UnregisterUserPreferenceResponse(success=True)
-        ),
-        "get_volume": lambda: extensions_pb2.MainCommandResponse(
-            get_volume=extensions_pb2.GetVolumeResponse(volume=1.0)
-        ),
-        "get_time": lambda: extensions_pb2.MainCommandResponse(
-            get_time=extensions_pb2.GetTimeResponse(time=0.0)
-        ),
-        "get_app_version": lambda: extensions_pb2.MainCommandResponse(
-            get_app_version=extensions_pb2.GetAppVersionResponse(version="1.0.0")
-        ),
-        "set_cache": lambda: extensions_pb2.MainCommandResponse(
-            set_cache=extensions_pb2.SetCacheResponse(success=True)
-        ),
-        "spawn_process": lambda: extensions_pb2.MainCommandResponse(
-            spawn_process=extensions_pb2.SpawnProcessResponse(process_id=1, pid=1234)
-        ),
-        "write_process_stdin": lambda: extensions_pb2.MainCommandResponse(
-            write_process_stdin=extensions_pb2.WriteProcessStdinResponse(bytes_written=0)
-        ),
-        "read_process_stdout": lambda: extensions_pb2.MainCommandResponse(
-            read_process_stdout=extensions_pb2.ReadProcessStdoutResponse(data=b"")
-        ),
-        "kill_process": lambda: extensions_pb2.MainCommandResponse(
-            kill_process=extensions_pb2.KillProcessResponse(success=True)
-        ),
-        "get_process_status": lambda: extensions_pb2.MainCommandResponse(
-            get_process_status=extensions_pb2.GetProcessStatusResponse(is_running=True, exit_code=0)
-        ),
-        "get_song": lambda: extensions_pb2.MainCommandResponse(
-            get_song=extensions_pb2.GetSongResponse()
-        ),
-        "get_entity": lambda: extensions_pb2.MainCommandResponse(
-            get_entity=extensions_pb2.GetEntityResponse()
-        ),
-        "get_current_song": lambda: extensions_pb2.MainCommandResponse(
-            get_current_song=extensions_pb2.GetCurrentSongResponse()
-        ),
-        "get_player_state": lambda: extensions_pb2.MainCommandResponse(
-            get_player_state=extensions_pb2.GetPlayerStateResponse()
-        ),
-        "get_queue": lambda: extensions_pb2.MainCommandResponse(
-            get_queue=extensions_pb2.GetQueueResponse()
-        ),
-        "add_songs": lambda: extensions_pb2.MainCommandResponse(
-            add_songs=extensions_pb2.AddSongsResponse()
-        ),
-        "update_song": lambda: extensions_pb2.MainCommandResponse(
-            update_song=extensions_pb2.UpdateSongResponse()
-        ),
-        "extensions_updated": lambda: extensions_pb2.MainCommandResponse(
-            extensions_updated=extensions_pb2.ExtensionsUpdatedResponse()
-        ),
-        "get_cache": lambda: extensions_pb2.MainCommandResponse(
-            get_cache=extensions_pb2.GetCacheResponse()
-        ),
-        "notify_player_event": lambda: extensions_pb2.MainCommandResponse(
-            notify_player_event=extensions_pb2.NotifyPlayerEventResponse()
-        ),
-        "ws_connect": lambda: extensions_pb2.MainCommandResponse(
-            ws_connect=extensions_pb2.WsConnectResponse()
-        ),
-        "ws_send": lambda: extensions_pb2.MainCommandResponse(
-            ws_send=extensions_pb2.WsSendResponse()
-        ),
-        "ws_receive": lambda: extensions_pb2.MainCommandResponse(
-            ws_receive=extensions_pb2.WsReceiveResponse()
-        ),
-        "ws_close": lambda: extensions_pb2.MainCommandResponse(
-            ws_close=extensions_pb2.WsCloseResponse()
-        ),
-    }
-
-    builder = mapping.get(which)
-    if builder:
-        return builder()
-
-    return extensions_pb2.MainCommandResponse()
+MAIN_COMMAND_DEFAULT_RESPONSES: dict[str, Callable[[], extensions_pb2.MainCommandResponse]] = {
+    "get_song": lambda: extensions_pb2.MainCommandResponse(
+        get_song=extensions_pb2.GetSongResponse()
+    ),
+    "get_entity": lambda: extensions_pb2.MainCommandResponse(
+        get_entity=extensions_pb2.GetEntityResponse()
+    ),
+    "get_current_song": lambda: extensions_pb2.MainCommandResponse(
+        get_current_song=extensions_pb2.GetCurrentSongResponse()
+    ),
+    "get_player_state": lambda: extensions_pb2.MainCommandResponse(
+        get_player_state=extensions_pb2.GetPlayerStateResponse()
+    ),
+    "get_volume": lambda: extensions_pb2.MainCommandResponse(
+        get_volume=extensions_pb2.GetVolumeResponse()
+    ),
+    "get_time": lambda: extensions_pb2.MainCommandResponse(
+        get_time=extensions_pb2.GetTimeResponse()
+    ),
+    "get_queue": lambda: extensions_pb2.MainCommandResponse(
+        get_queue=extensions_pb2.GetQueueResponse()
+    ),
+    "get_preference": lambda: extensions_pb2.MainCommandResponse(
+        get_preference=extensions_pb2.GetPreferenceResponse()
+    ),
+    "set_preference": lambda: extensions_pb2.MainCommandResponse(
+        set_preference=extensions_pb2.SetPreferenceResponse()
+    ),
+    "get_secure": lambda: extensions_pb2.MainCommandResponse(
+        get_secure=extensions_pb2.GetSecureResponse()
+    ),
+    "set_secure": lambda: extensions_pb2.MainCommandResponse(
+        set_secure=extensions_pb2.SetSecureResponse()
+    ),
+    "add_songs": lambda: extensions_pb2.MainCommandResponse(
+        add_songs=extensions_pb2.AddSongsResponse()
+    ),
+    "remove_song": lambda: extensions_pb2.MainCommandResponse(
+        remove_song=extensions_pb2.RemoveSongResponse()
+    ),
+    "update_song": lambda: extensions_pb2.MainCommandResponse(
+        update_song=extensions_pb2.UpdateSongResponse()
+    ),
+    "add_playlist": lambda: extensions_pb2.MainCommandResponse(
+        add_playlist=extensions_pb2.AddPlaylistResponse()
+    ),
+    "add_to_playlist": lambda: extensions_pb2.MainCommandResponse(
+        add_to_playlist=extensions_pb2.AddToPlaylistResponse()
+    ),
+    "register_oauth": lambda: extensions_pb2.MainCommandResponse(
+        register_oauth=extensions_pb2.RegisterOauthResponse()
+    ),
+    "open_external_url": lambda: extensions_pb2.MainCommandResponse(
+        open_external_url=extensions_pb2.OpenExternalUrlResponse()
+    ),
+    "set_account": lambda: extensions_pb2.MainCommandResponse(
+        set_account=extensions_pb2.SetAccountResponse()
+    ),
+    "register_user_preference": lambda: extensions_pb2.MainCommandResponse(
+        register_user_preference=extensions_pb2.RegisterUserPreferenceResponse()
+    ),
+    "unregister_user_preference": lambda: extensions_pb2.MainCommandResponse(
+        unregister_user_preference=extensions_pb2.UnregisterUserPreferenceResponse()
+    ),
+    "extensions_updated": lambda: extensions_pb2.MainCommandResponse(
+        extensions_updated=extensions_pb2.ExtensionsUpdatedResponse()
+    ),
+    "get_app_version": lambda: extensions_pb2.MainCommandResponse(
+        get_app_version=extensions_pb2.GetAppVersionResponse()
+    ),
+    "get_cache": lambda: extensions_pb2.MainCommandResponse(
+        get_cache=extensions_pb2.GetCacheResponse()
+    ),
+    "set_cache": lambda: extensions_pb2.MainCommandResponse(
+        set_cache=extensions_pb2.SetCacheResponse()
+    ),
+    "spawn_process": lambda: extensions_pb2.MainCommandResponse(
+        spawn_process=extensions_pb2.SpawnProcessResponse()
+    ),
+    "write_process_stdin": lambda: extensions_pb2.MainCommandResponse(
+        write_process_stdin=extensions_pb2.WriteProcessStdinResponse()
+    ),
+    "read_process_stdout": lambda: extensions_pb2.MainCommandResponse(
+        read_process_stdout=extensions_pb2.ReadProcessStdoutResponse()
+    ),
+    "kill_process": lambda: extensions_pb2.MainCommandResponse(
+        kill_process=extensions_pb2.KillProcessResponse()
+    ),
+    "get_process_status": lambda: extensions_pb2.MainCommandResponse(
+        get_process_status=extensions_pb2.GetProcessStatusResponse()
+    ),
+    "notify_player_event": lambda: extensions_pb2.MainCommandResponse(
+        notify_player_event=extensions_pb2.NotifyPlayerEventResponse()
+    ),
+    "ws_connect": lambda: extensions_pb2.MainCommandResponse(
+        ws_connect=extensions_pb2.WsConnectResponse()
+    ),
+    "ws_send": lambda: extensions_pb2.MainCommandResponse(
+        ws_send=extensions_pb2.WsSendResponse()
+    ),
+    "ws_receive": lambda: extensions_pb2.MainCommandResponse(
+        ws_receive=extensions_pb2.WsReceiveResponse()
+    ),
+    "ws_close": lambda: extensions_pb2.MainCommandResponse(
+        ws_close=extensions_pb2.WsCloseResponse()
+    ),
+}
 
 
 class GeneratedMoounitExpectationClient:
@@ -149,6 +134,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetSongResponse | Callable[[], extensions_pb2.GetSongResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_song: Queries and retrieves song entities matching the given criteria from the host database."""
         cmd = extensions_pb2.MainCommand(get_song=req)
         res_val = response if response is not None else extensions_pb2.GetSongResponse()
         res = (
@@ -164,6 +150,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetEntityResponse | Callable[[], extensions_pb2.GetEntityResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_entity: Retrieves detailed entity information (such as artist or album) from the host database."""
         cmd = extensions_pb2.MainCommand(get_entity=req)
         res_val = response if response is not None else extensions_pb2.GetEntityResponse()
         res = (
@@ -179,6 +166,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetCurrentSongResponse | Callable[[], extensions_pb2.GetCurrentSongResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_current_song: Retrieves the currently playing song from the active player session."""
         cmd = extensions_pb2.MainCommand(get_current_song=req)
         res_val = response if response is not None else extensions_pb2.GetCurrentSongResponse()
         res = (
@@ -194,6 +182,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetPlayerStateResponse | Callable[[], extensions_pb2.GetPlayerStateResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_player_state: Retrieves the current playback state (e.g. playing, paused, stopped) of the player."""
         cmd = extensions_pb2.MainCommand(get_player_state=req)
         res_val = response if response is not None else extensions_pb2.GetPlayerStateResponse()
         res = (
@@ -209,6 +198,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetVolumeResponse | Callable[[], extensions_pb2.GetVolumeResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_volume: Retrieves the current master playback volume level (0.0 to 1.0)."""
         cmd = extensions_pb2.MainCommand(get_volume=req)
         res_val = response if response is not None else extensions_pb2.GetVolumeResponse()
         res = (
@@ -224,6 +214,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetTimeResponse | Callable[[], extensions_pb2.GetTimeResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_time: Retrieves the current playback position timestamp in seconds."""
         cmd = extensions_pb2.MainCommand(get_time=req)
         res_val = response if response is not None else extensions_pb2.GetTimeResponse()
         res = (
@@ -239,6 +230,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetQueueResponse | Callable[[], extensions_pb2.GetQueueResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_queue: Retrieves the current player queue state and list of queued tracks."""
         cmd = extensions_pb2.MainCommand(get_queue=req)
         res_val = response if response is not None else extensions_pb2.GetQueueResponse()
         res = (
@@ -254,6 +246,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetPreferenceResponse | Callable[[], extensions_pb2.GetPreferenceResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_preference: Retrieves an extension preference value by key."""
         cmd = extensions_pb2.MainCommand(get_preference=req)
         res_val = response if response is not None else extensions_pb2.GetPreferenceResponse()
         res = (
@@ -269,6 +262,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.SetPreferenceResponse | Callable[[], extensions_pb2.SetPreferenceResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to set_preference: Stores an extension preference value by key."""
         cmd = extensions_pb2.MainCommand(set_preference=req)
         res_val = response if response is not None else extensions_pb2.SetPreferenceResponse()
         res = (
@@ -284,6 +278,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetSecureResponse | Callable[[], extensions_pb2.GetSecureResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_secure: Retrieves a securely stored credential or secret by key from the host keyring."""
         cmd = extensions_pb2.MainCommand(get_secure=req)
         res_val = response if response is not None else extensions_pb2.GetSecureResponse()
         res = (
@@ -299,6 +294,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.SetSecureResponse | Callable[[], extensions_pb2.SetSecureResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to set_secure: Stores a credential or secret securely in the host keyring/vault."""
         cmd = extensions_pb2.MainCommand(set_secure=req)
         res_val = response if response is not None else extensions_pb2.SetSecureResponse()
         res = (
@@ -314,6 +310,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.AddSongsResponse | Callable[[], extensions_pb2.AddSongsResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to add_songs: Inserts one or more songs into the host music database."""
         cmd = extensions_pb2.MainCommand(add_songs=req)
         res_val = response if response is not None else extensions_pb2.AddSongsResponse()
         res = (
@@ -329,6 +326,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.RemoveSongResponse | Callable[[], extensions_pb2.RemoveSongResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to remove_song: Removes a song from the host music database by its ID."""
         cmd = extensions_pb2.MainCommand(remove_song=req)
         res_val = response if response is not None else extensions_pb2.RemoveSongResponse()
         res = (
@@ -344,6 +342,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.UpdateSongResponse | Callable[[], extensions_pb2.UpdateSongResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to update_song: Updates metadata for an existing song in the host database."""
         cmd = extensions_pb2.MainCommand(update_song=req)
         res_val = response if response is not None else extensions_pb2.UpdateSongResponse()
         res = (
@@ -359,6 +358,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.AddPlaylistResponse | Callable[[], extensions_pb2.AddPlaylistResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to add_playlist: Creates a new playlist in the host database."""
         cmd = extensions_pb2.MainCommand(add_playlist=req)
         res_val = response if response is not None else extensions_pb2.AddPlaylistResponse()
         res = (
@@ -374,6 +374,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.AddToPlaylistResponse | Callable[[], extensions_pb2.AddToPlaylistResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to add_to_playlist: Appends songs to an existing playlist in the host database."""
         cmd = extensions_pb2.MainCommand(add_to_playlist=req)
         res_val = response if response is not None else extensions_pb2.AddToPlaylistResponse()
         res = (
@@ -389,6 +390,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.RegisterOauthResponse | Callable[[], extensions_pb2.RegisterOauthResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to register_oauth: Registers OAuth configuration details for account authentication flows."""
         cmd = extensions_pb2.MainCommand(register_oauth=req)
         res_val = response if response is not None else extensions_pb2.RegisterOauthResponse()
         res = (
@@ -404,6 +406,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.OpenExternalUrlResponse | Callable[[], extensions_pb2.OpenExternalUrlResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to open_external_url: Requests the host to open a URL in the user's default system browser."""
         cmd = extensions_pb2.MainCommand(open_external_url=req)
         res_val = response if response is not None else extensions_pb2.OpenExternalUrlResponse()
         res = (
@@ -419,6 +422,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.SetAccountResponse | Callable[[], extensions_pb2.SetAccountResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to set_account: Updates account login credentials and details for this extension."""
         cmd = extensions_pb2.MainCommand(set_account=req)
         res_val = response if response is not None else extensions_pb2.SetAccountResponse()
         res = (
@@ -434,6 +438,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.RegisterUserPreferenceResponse | Callable[[], extensions_pb2.RegisterUserPreferenceResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to register_user_preference: Registers dynamic preference schema entries shown in user settings."""
         cmd = extensions_pb2.MainCommand(register_user_preference=req)
         res_val = response if response is not None else extensions_pb2.RegisterUserPreferenceResponse()
         res = (
@@ -449,6 +454,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.UnregisterUserPreferenceResponse | Callable[[], extensions_pb2.UnregisterUserPreferenceResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to unregister_user_preference: Unregisters dynamic preference schema entries previously registered."""
         cmd = extensions_pb2.MainCommand(unregister_user_preference=req)
         res_val = response if response is not None else extensions_pb2.UnregisterUserPreferenceResponse()
         res = (
@@ -464,6 +470,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.ExtensionsUpdatedResponse | Callable[[], extensions_pb2.ExtensionsUpdatedResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to extensions_updated: Notifies the host that extension configuration or available extensions changed."""
         cmd = extensions_pb2.MainCommand(extensions_updated=req)
         res_val = response if response is not None else extensions_pb2.ExtensionsUpdatedResponse()
         res = (
@@ -479,6 +486,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetAppVersionResponse | Callable[[], extensions_pb2.GetAppVersionResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_app_version: Retrieves the host application version string."""
         cmd = extensions_pb2.MainCommand(get_app_version=req)
         res_val = response if response is not None else extensions_pb2.GetAppVersionResponse()
         res = (
@@ -494,6 +502,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetCacheResponse | Callable[[], extensions_pb2.GetCacheResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_cache: Retrieves cached binary data associated with the specified cache key."""
         cmd = extensions_pb2.MainCommand(get_cache=req)
         res_val = response if response is not None else extensions_pb2.GetCacheResponse()
         res = (
@@ -509,6 +518,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.SetCacheResponse | Callable[[], extensions_pb2.SetCacheResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to set_cache: Stores binary data in the host cache with an optional time-to-live (TTL)."""
         cmd = extensions_pb2.MainCommand(set_cache=req)
         res_val = response if response is not None else extensions_pb2.SetCacheResponse()
         res = (
@@ -524,6 +534,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.SpawnProcessResponse | Callable[[], extensions_pb2.SpawnProcessResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to spawn_process: Spawns a child process on the host system within permitted binary limits."""
         cmd = extensions_pb2.MainCommand(spawn_process=req)
         res_val = response if response is not None else extensions_pb2.SpawnProcessResponse()
         res = (
@@ -539,6 +550,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.WriteProcessStdinResponse | Callable[[], extensions_pb2.WriteProcessStdinResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to write_process_stdin: Writes input data to standard input of an active spawned child process."""
         cmd = extensions_pb2.MainCommand(write_process_stdin=req)
         res_val = response if response is not None else extensions_pb2.WriteProcessStdinResponse()
         res = (
@@ -554,6 +566,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.ReadProcessStdoutResponse | Callable[[], extensions_pb2.ReadProcessStdoutResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to read_process_stdout: Reads standard output or standard error data from an active spawned child process."""
         cmd = extensions_pb2.MainCommand(read_process_stdout=req)
         res_val = response if response is not None else extensions_pb2.ReadProcessStdoutResponse()
         res = (
@@ -569,6 +582,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.KillProcessResponse | Callable[[], extensions_pb2.KillProcessResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to kill_process: Terminates an active spawned child process."""
         cmd = extensions_pb2.MainCommand(kill_process=req)
         res_val = response if response is not None else extensions_pb2.KillProcessResponse()
         res = (
@@ -584,6 +598,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.GetProcessStatusResponse | Callable[[], extensions_pb2.GetProcessStatusResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to get_process_status: Checks whether a spawned child process is still running and gets its exit code."""
         cmd = extensions_pb2.MainCommand(get_process_status=req)
         res_val = response if response is not None else extensions_pb2.GetProcessStatusResponse()
         res = (
@@ -599,6 +614,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.NotifyPlayerEventResponse | Callable[[], extensions_pb2.NotifyPlayerEventResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to notify_player_event: Notifies the host player of custom playback events or state overrides."""
         cmd = extensions_pb2.MainCommand(notify_player_event=req)
         res_val = response if response is not None else extensions_pb2.NotifyPlayerEventResponse()
         res = (
@@ -614,6 +630,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.WsConnectResponse | Callable[[], extensions_pb2.WsConnectResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to ws_connect: Establishes a WebSocket client connection to a remote WebSocket server."""
         cmd = extensions_pb2.MainCommand(ws_connect=req)
         res_val = response if response is not None else extensions_pb2.WsConnectResponse()
         res = (
@@ -629,6 +646,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.WsSendResponse | Callable[[], extensions_pb2.WsSendResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to ws_send: Sends a text or binary message through an active WebSocket connection."""
         cmd = extensions_pb2.MainCommand(ws_send=req)
         res_val = response if response is not None else extensions_pb2.WsSendResponse()
         res = (
@@ -644,6 +662,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.WsReceiveResponse | Callable[[], extensions_pb2.WsReceiveResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to ws_receive: Receives the next incoming message frame from an active WebSocket connection."""
         cmd = extensions_pb2.MainCommand(ws_receive=req)
         res_val = response if response is not None else extensions_pb2.WsReceiveResponse()
         res = (
@@ -659,6 +678,7 @@ class GeneratedMoounitExpectationClient:
         response: extensions_pb2.WsCloseResponse | Callable[[], extensions_pb2.WsCloseResponse] | None = None,
         times: int = 1,
     ) -> None:
+        """Expects host call to ws_close: Closes an active WebSocket connection with an optional code and reason."""
         cmd = extensions_pb2.MainCommand(ws_close=req)
         res_val = response if response is not None else extensions_pb2.WsCloseResponse()
         res = (
@@ -676,6 +696,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def get_remote_url(
         self, req: extensions_pb2.GetRemoteUrlRequest | None = None
     ) -> extensions_pb2.GetRemoteUrlResponse:
+        """Invokes extension method get_remote_url: Resolves playback streaming URL or resource location for a remote track."""
         req = req or extensions_pb2.GetRemoteUrlRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, get_remote_url=req
@@ -686,6 +707,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def requested_search_result(
         self, req: extensions_pb2.RequestedSearchResultRequest | None = None
     ) -> extensions_pb2.RequestedSearchResultResponse:
+        """Invokes extension method requested_search_result: Performs search query for songs, albums, artists, or playlists."""
         req = req or extensions_pb2.RequestedSearchResultRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, requested_search_result=req
@@ -696,6 +718,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def requested_playlists(
         self, req: extensions_pb2.RequestedPlaylistsRequest | None = None
     ) -> extensions_pb2.RequestedPlaylistsResponse:
+        """Invokes extension method requested_playlists: Fetches user playlists or remote playlists available from this provider."""
         req = req or extensions_pb2.RequestedPlaylistsRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, requested_playlists=req
@@ -706,6 +729,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def requested_playlist_songs(
         self, req: extensions_pb2.RequestedPlaylistSongsRequest | None = None
     ) -> extensions_pb2.RequestedPlaylistSongsResponse:
+        """Invokes extension method requested_playlist_songs: Fetches songs contained within a specified playlist."""
         req = req or extensions_pb2.RequestedPlaylistSongsRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, requested_playlist_songs=req
@@ -716,6 +740,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def requested_artist_songs(
         self, req: extensions_pb2.RequestedArtistSongsRequest | None = None
     ) -> extensions_pb2.RequestedArtistSongsResponse:
+        """Invokes extension method requested_artist_songs: Fetches songs associated with a specified artist."""
         req = req or extensions_pb2.RequestedArtistSongsRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, requested_artist_songs=req
@@ -726,6 +751,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def requested_album_songs(
         self, req: extensions_pb2.RequestedAlbumSongsRequest | None = None
     ) -> extensions_pb2.RequestedAlbumSongsResponse:
+        """Invokes extension method requested_album_songs: Fetches songs belonging to a specified album."""
         req = req or extensions_pb2.RequestedAlbumSongsRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, requested_album_songs=req
@@ -736,6 +762,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def requested_recommendations(
         self, req: extensions_pb2.RequestedRecommendationsRequest | None = None
     ) -> extensions_pb2.RequestedRecommendationsResponse:
+        """Invokes extension method requested_recommendations: Fetches recommended tracks based on listening history or seed items."""
         req = req or extensions_pb2.RequestedRecommendationsRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, requested_recommendations=req
@@ -746,6 +773,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def requested_song_from_id(
         self, req: extensions_pb2.RequestedSongFromIdRequest | None = None
     ) -> extensions_pb2.RequestedSongFromIdResponse:
+        """Invokes extension method requested_song_from_id: Fetches full song metadata for a provider-specific track ID."""
         req = req or extensions_pb2.RequestedSongFromIdRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, requested_song_from_id=req
@@ -756,6 +784,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def playback_details_requested(
         self, req: extensions_pb2.PlaybackDetailsRequestedRequest | None = None
     ) -> extensions_pb2.PlaybackDetailsRequestedResponse:
+        """Invokes extension method playback_details_requested: Fetches detailed playback streaming information (URL, duration, keys)."""
         req = req or extensions_pb2.PlaybackDetailsRequestedRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, playback_details_requested=req
@@ -766,6 +795,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def requested_lyrics(
         self, req: extensions_pb2.RequestedLyricsRequest | None = None
     ) -> extensions_pb2.RequestedLyricsResponse:
+        """Invokes extension method requested_lyrics: Fetches synchronized or plain lyrics for a given song."""
         req = req or extensions_pb2.RequestedLyricsRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, requested_lyrics=req
@@ -776,6 +806,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def requested_cover_art(
         self, req: extensions_pb2.RequestedCoverArtRequest | None = None
     ) -> extensions_pb2.RequestedCoverArtResponse:
+        """Invokes extension method requested_cover_art: Fetches album artwork or cover image URLs for a given entity."""
         req = req or extensions_pb2.RequestedCoverArtRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, requested_cover_art=req
@@ -786,6 +817,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def scrobble(
         self, req: extensions_pb2.ScrobbleRequest | None = None
     ) -> extensions_pb2.ScrobbleResponse:
+        """Invokes extension method scrobble: Receives track scrobble notification when playback reaches threshold."""
         req = req or extensions_pb2.ScrobbleRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, scrobble=req
@@ -796,6 +828,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def custom_request(
         self, req: extensions_pb2.CustomRequest | None = None
     ) -> extensions_pb2.CustomRequestResponse:
+        """Invokes extension method custom_request: Handles generic or provider-specific custom extension RPC requests."""
         req = req or extensions_pb2.CustomRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, custom_request=req
@@ -806,6 +839,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def perform_account_login(
         self, req: extensions_pb2.PerformAccountLoginRequest | None = None
     ) -> extensions_pb2.PerformAccountLoginResponse:
+        """Invokes extension method perform_account_login: Initiates user login or credentials prompt for extension account."""
         req = req or extensions_pb2.PerformAccountLoginRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, perform_account_login=req
@@ -816,6 +850,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def oauth_callback(
         self, req: extensions_pb2.OauthCallbackRequest | None = None
     ) -> extensions_pb2.OauthCallbackResponse:
+        """Invokes extension method oauth_callback: Handles OAuth authorization redirection callback token exchange."""
         req = req or extensions_pb2.OauthCallbackRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, oauth_callback=req
@@ -826,6 +861,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def requested_song_context_menu(
         self, req: extensions_pb2.RequestedSongContextMenuRequest | None = None
     ) -> extensions_pb2.RequestedSongContextMenuResponse:
+        """Invokes extension method requested_song_context_menu: Provides custom contextual menu items for a selected song."""
         req = req or extensions_pb2.RequestedSongContextMenuRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, requested_song_context_menu=req
@@ -836,6 +872,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def requested_playlist_context_menu(
         self, req: extensions_pb2.RequestedPlaylistContextMenuRequest | None = None
     ) -> extensions_pb2.RequestedPlaylistContextMenuResponse:
+        """Invokes extension method requested_playlist_context_menu: Provides custom contextual menu items for a selected playlist."""
         req = req or extensions_pb2.RequestedPlaylistContextMenuRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, requested_playlist_context_menu=req
@@ -846,6 +883,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def context_menu_action(
         self, req: extensions_pb2.ContextMenuActionRequest | None = None
     ) -> extensions_pb2.ContextMenuActionResponse:
+        """Invokes extension method context_menu_action: Invoked when a user selects a custom context menu item."""
         req = req or extensions_pb2.ContextMenuActionRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, context_menu_action=req
@@ -856,6 +894,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def song_queue_changed(
         self, req: extensions_pb2.SongQueueChangedRequest | None = None
     ) -> extensions_pb2.SongQueueChangedResponse:
+        """Invokes extension method song_queue_changed: Notified when the playback queue order or track list changes."""
         req = req or extensions_pb2.SongQueueChangedRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, song_queue_changed=req
@@ -866,6 +905,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def seeked(
         self, req: extensions_pb2.SeekedRequest | None = None
     ) -> extensions_pb2.SeekedResponse:
+        """Invokes extension method seeked: Notified when playback position is seeked to a new timestamp."""
         req = req or extensions_pb2.SeekedRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, seeked=req
@@ -876,6 +916,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def volume_changed(
         self, req: extensions_pb2.VolumeChangedRequest | None = None
     ) -> extensions_pb2.VolumeChangedResponse:
+        """Invokes extension method volume_changed: Notified when playback volume level changes."""
         req = req or extensions_pb2.VolumeChangedRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, volume_changed=req
@@ -886,6 +927,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def player_state_changed(
         self, req: extensions_pb2.PlayerStateChangedRequest | None = None
     ) -> extensions_pb2.PlayerStateChangedResponse:
+        """Invokes extension method player_state_changed: Notified when player transitions between play, pause, and stop states."""
         req = req or extensions_pb2.PlayerStateChangedRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, player_state_changed=req
@@ -896,6 +938,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def song_changed(
         self, req: extensions_pb2.SongChangedRequest | None = None
     ) -> extensions_pb2.SongChangedResponse:
+        """Invokes extension method song_changed: Notified when the currently playing track changes."""
         req = req or extensions_pb2.SongChangedRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, song_changed=req
@@ -906,6 +949,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def song_added(
         self, req: extensions_pb2.SongAddedRequest | None = None
     ) -> extensions_pb2.SongAddedResponse:
+        """Invokes extension method song_added: Notified when a new song is added to the host database."""
         req = req or extensions_pb2.SongAddedRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, song_added=req
@@ -916,6 +960,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def song_removed(
         self, req: extensions_pb2.SongRemovedRequest | None = None
     ) -> extensions_pb2.SongRemovedResponse:
+        """Invokes extension method song_removed: Notified when a song is removed from the host database."""
         req = req or extensions_pb2.SongRemovedRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, song_removed=req
@@ -926,6 +971,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def playlist_added(
         self, req: extensions_pb2.PlaylistAddedRequest | None = None
     ) -> extensions_pb2.PlaylistAddedResponse:
+        """Invokes extension method playlist_added: Notified when a new playlist is created in the host database."""
         req = req or extensions_pb2.PlaylistAddedRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, playlist_added=req
@@ -936,6 +982,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def playlist_removed(
         self, req: extensions_pb2.PlaylistRemovedRequest | None = None
     ) -> extensions_pb2.PlaylistRemovedResponse:
+        """Invokes extension method playlist_removed: Notified when a playlist is deleted from the host database."""
         req = req or extensions_pb2.PlaylistRemovedRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, playlist_removed=req
@@ -946,6 +993,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def preference_changed(
         self, req: extensions_pb2.PreferenceChangedRequest | None = None
     ) -> extensions_pb2.PreferenceChangedResponse:
+        """Invokes extension method preference_changed: Notified when an extension preference value is modified by user."""
         req = req or extensions_pb2.PreferenceChangedRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, preference_changed=req
@@ -956,6 +1004,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def can_play(
         self, req: extensions_pb2.CanPlayRequest | None = None
     ) -> extensions_pb2.CanPlayResponse:
+        """Invokes extension method can_play: Determines whether this player provider is capable of playing the given track."""
         req = req or extensions_pb2.CanPlayRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, can_play=req
@@ -966,6 +1015,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def player_play(
         self, req: extensions_pb2.PlayerPlayRequest | None = None
     ) -> extensions_pb2.PlayerPlayResponse:
+        """Invokes extension method player_play: Commands the custom player engine to resume playback."""
         req = req or extensions_pb2.PlayerPlayRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, player_play=req
@@ -976,6 +1026,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def player_pause(
         self, req: extensions_pb2.PlayerPauseRequest | None = None
     ) -> extensions_pb2.PlayerPauseResponse:
+        """Invokes extension method player_pause: Commands the custom player engine to pause playback."""
         req = req or extensions_pb2.PlayerPauseRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, player_pause=req
@@ -986,6 +1037,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def player_stop(
         self, req: extensions_pb2.PlayerStopRequest | None = None
     ) -> extensions_pb2.PlayerStopResponse:
+        """Invokes extension method player_stop: Commands the custom player engine to stop playback."""
         req = req or extensions_pb2.PlayerStopRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, player_stop=req
@@ -996,6 +1048,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def player_seek(
         self, req: extensions_pb2.PlayerSeekRequest | None = None
     ) -> extensions_pb2.PlayerSeekResponse:
+        """Invokes extension method player_seek: Commands the custom player engine to seek to a given position."""
         req = req or extensions_pb2.PlayerSeekRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, player_seek=req
@@ -1006,6 +1059,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def player_set_volume(
         self, req: extensions_pb2.PlayerSetVolumeRequest | None = None
     ) -> extensions_pb2.PlayerSetVolumeResponse:
+        """Invokes extension method player_set_volume: Commands the custom player engine to set playback volume."""
         req = req or extensions_pb2.PlayerSetVolumeRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, player_set_volume=req
@@ -1016,6 +1070,7 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     def player_load_track(
         self, req: extensions_pb2.PlayerLoadTrackRequest | None = None
     ) -> extensions_pb2.PlayerLoadTrackResponse:
+        """Invokes extension method player_load_track: Commands the custom player engine to load a track for playback."""
         req = req or extensions_pb2.PlayerLoadTrackRequest()
         cmd = extensions_pb2.ExtensionCommand(
             package_name=self.package_name, player_load_track=req

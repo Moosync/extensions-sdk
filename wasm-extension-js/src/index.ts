@@ -22,13 +22,15 @@ import "./platform";
 export * from "./generated_api";
 export * from "./generated_events";
 export type { Extension } from "./generated_events";
-export { ChildProcess, spawnProcess, notifyPlayerEvent } from "./process";
+export { ChildProcess, spawnProcess } from "./process";
+export { SocketClient } from "./socket";
 export { WebSocketClient } from "./websocket";
 export type { WebSocketMessage } from "./websocket";
 export { getPlatform } from "./platform";
 export type { PlatformInfo } from "./platform";
 export * from "./lrc";
 export * from "./http";
+export { getCache, setCache } from "./cache";
 export * from "./utils";
 export * from "./protos/extension_service_pb";
 export * from "./protos/extensions_pb";
@@ -39,23 +41,81 @@ export * from "./protos/themes_pb";
 export * from "@bufbuild/protobuf";
 
 import * as generatedApi from "./generated_api";
-import { on, callListener, registerExtension, getRegisteredExtension } from "./generated_events";
+import type { Extension, ExtensionEventMap } from "./generated_events";
 import { fetch, batchFetch } from "./http";
+import { getCache, setCache } from "./cache";
+import { spawnProcess } from "./process";
 import {
   ExtensionCommand,
   ExtensionCommandResponse,
 } from "./protos/extensions_pb";
 
-export function getApi() {
+let registeredExtension: Extension | undefined;
+
+/**
+ * Registers an object or class instance implementing the {@link Extension} interface to handle incoming host events.
+ */
+export function registerExtension(ext: Extension): void {
+  registeredExtension = ext;
+}
+
+/**
+ * Returns the currently registered extension instance, if any.
+ */
+export function getRegisteredExtension(): Extension | undefined {
+  return registeredExtension;
+}
+
+const listeners: Map<keyof ExtensionEventMap, Function> = new Map();
+
+/**
+ * Registers a callback handler for a specific incoming extension event from the host.
+ */
+export function on<K extends keyof ExtensionEventMap>(
+  event: K,
+  handler: (
+    req: ExtensionEventMap[K]["req"]
+  ) => Promise<ExtensionEventMap[K]["resp"] | void> | ExtensionEventMap[K]["resp"] | void
+): void {
+  listeners.set(event, handler);
+}
+
+export function callListener(event: string, payload: any): any {
+  if (registeredExtension && typeof (registeredExtension as any)[event] === "function") {
+    return (registeredExtension as any)[event](payload);
+  }
+  const handler = listeners.get(event as keyof ExtensionEventMap);
+  if (handler) {
+    return handler(payload);
+  }
+  return undefined;
+}
+
+export type ExtensionApi = typeof generatedApi & {
+  getCache: typeof getCache;
+  setCache: typeof setCache;
+  spawnProcess: typeof spawnProcess;
+  on: typeof on;
+  fetch: typeof fetch;
+  batchFetch: typeof batchFetch;
+};
+
+/**
+ * Returns the Moosync Extension API client containing all host command methods, caching helpers, HTTP fetch utilities, and event registration.
+ */
+export function getApi(): ExtensionApi {
   return {
     ...generatedApi,
+    getCache,
+    setCache,
+    spawnProcess,
     on,
     fetch,
     batchFetch,
   };
 }
 
-async function handle(
+export async function handle(
   command: ExtensionCommand,
 ): Promise<ExtensionCommandResponse | undefined> {
   if (!command.event.case) return undefined;
