@@ -7,14 +7,12 @@ from google.protobuf.message import Message
 from core.types.protos.extensions_pb2 import (
     BatchHttpRequest,
     BatchHttpResponse,
-    HttpRequest,
     MainCommand,
     MainCommandResponse,
 )
 from moounit.matcher import (
     IgnoreRule,
     ReplayIgnoreBuilder,
-    format_colored_diff,
     partial_match,
 )
 from moounit.models import ReplayIgnoreRule, Scope
@@ -34,7 +32,6 @@ def _matches_filter(filter_val: Any, target_val: Any) -> bool:
         return True
 
     if isinstance(filter_val, Message) and isinstance(target_val, Message):
-        # Special case: BatchHttpRequest vs BatchHttpRequest
         if isinstance(filter_val, BatchHttpRequest) and isinstance(
             target_val, BatchHttpRequest
         ):
@@ -48,7 +45,6 @@ def _matches_filter(filter_val: Any, target_val: Any) -> bool:
                     return False
             return True
 
-        # Special case: HttpRequest filter against BatchHttpRequest target
         if filter_val.DESCRIPTOR.name == "HttpRequest" and isinstance(
             target_val, BatchHttpRequest
         ):
@@ -57,7 +53,6 @@ def _matches_filter(filter_val: Any, target_val: Any) -> bool:
                 for req_target in target_val.requests
             )
 
-        # Special case: MainCommand vs MainCommand
         if isinstance(filter_val, MainCommand) and isinstance(target_val, MainCommand):
             cmd_filter = filter_val.WhichOneof("command")
             if not cmd_filter:
@@ -69,14 +64,19 @@ def _matches_filter(filter_val: Any, target_val: Any) -> bool:
                 getattr(filter_val, cmd_filter), getattr(target_val, cmd_target)
             )
 
-        # Special case: Inner command (e.g. GetSongRequest) against MainCommand target
         if isinstance(target_val, MainCommand) and not isinstance(
             filter_val, MainCommand
         ):
             cmd_target = target_val.WhichOneof("command")
             if cmd_target:
                 inner = getattr(target_val, cmd_target)
-                if inner.DESCRIPTOR == filter_val.DESCRIPTOR:
+                if (
+                    inner.DESCRIPTOR == filter_val.DESCRIPTOR
+                    or (
+                        filter_val.DESCRIPTOR.name == "HttpRequest"
+                        and isinstance(inner, BatchHttpRequest)
+                    )
+                ):
                     return _matches_filter(filter_val, inner)
             return False
 
@@ -136,24 +136,14 @@ class Recorder:
             self.filters = None
             self.filter = None
 
-        # Recorded expectations structure:
-        # {
-        #   "session": [ ... ],
-        #   "tests": {
-        #       "test_foo": [ ... ],
-        #       "test_bar": [ ... ]
-        #   }
-        # }
         self.recorded_session_calls: list[dict[str, Any]] = []
         self.recorded_test_calls: dict[str, list[dict[str, Any]]] = {}
 
-        # Replay expectations structure:
         self.replay_session_calls: list[dict[str, Any]] = []
         self.replay_test_calls: dict[str, list[dict[str, Any]]] = {}
 
         self.current_test_name: str | None = None
 
-        # Per-test and per-session replay ignore rules
         self.session_replay_ignore_rules: list[ReplayIgnoreRule] = []
         self.local_replay_ignore_rules: list[ReplayIgnoreRule] = []
 
@@ -266,7 +256,6 @@ class Recorder:
                         k: list(v) for k, v in data.get("tests", {}).items()
                     }
                 elif isinstance(data, list):
-                    # Fallback / backward compatibility if simple list
                     self.existing_data = {"tests": {}}
                     self.replay_session_calls = list(data)
                     self.replay_test_calls = {}
@@ -302,7 +291,6 @@ class Recorder:
         elif self.existing_data:
             existing_payload = dict(self.existing_data)
 
-        # Duplicate recorded session calls into each test's recorded calls
         new_tests_data = {}
         for test_name, calls in self.recorded_test_calls.items():
             new_tests_data[test_name] = list(self.recorded_session_calls) + calls
@@ -361,13 +349,6 @@ class Recorder:
         if isinstance(obj, (list, tuple)):
             return [self._serialize(v) for v in obj]
         return str(obj)
-
-    def _deserialize_bytes(self, obj: Any) -> bytes:
-        if isinstance(obj, dict) and "__bytes__" in obj:
-            return b64_to_bytes(obj["__bytes__"])
-        if isinstance(obj, str):
-            return obj.encode("utf-8")
-        return b""
 
     def _collect_ignore_rules_for_request(
         self,
@@ -455,35 +436,6 @@ class Recorder:
                 ignored_fields=ignore_rules,
                 root_call=call_type,
             )
-        elif call_type == "batch_http_request":
-            expected_req = BatchHttpRequest()
-            ParseDict(saved_req, expected_req)
-            matched, err = partial_match(
-                expected_req,
-                request_obj,
-                ignored_fields=ignore_rules,
-                root_call=call_type,
-            )
-        elif call_type == "system_time":
-            matched = True
-        elif call_type == "open_clientfd":
-            matched = saved_req == request_obj
-            if not matched:
-                err = format_colored_diff(
-                    saved_req, request_obj, label="Mismatched open_clientfd path"
-                )
-        elif call_type == "write_sock":
-            matched = saved_req.get("sock_id") == request_obj.get("sock_id")
-            if not matched:
-                err = format_colored_diff(
-                    saved_req, request_obj, label="Mismatched write_sock request"
-                )
-        elif call_type == "read_sock":
-            matched = saved_req.get("sock_id") == request_obj.get("sock_id")
-            if not matched:
-                err = format_colored_diff(
-                    saved_req, request_obj, label="Mismatched read_sock request"
-                )
 
         if matched:
             calls_list.pop(0)
@@ -503,12 +455,4 @@ class Recorder:
             resp = MainCommandResponse()
             ParseDict(resp_payload, resp)
             return resp
-        if call_type == "batch_http_request":
-            resp = BatchHttpResponse()
-            ParseDict(resp_payload, resp)
-            return resp
-        if call_type == "read_sock":
-            return self._deserialize_bytes(resp_payload)
-        if call_type in ("system_time", "open_clientfd", "write_sock"):
-            return int(resp_payload)
         return resp_payload

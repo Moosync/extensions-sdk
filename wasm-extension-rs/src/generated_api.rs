@@ -10,6 +10,7 @@ pub use crate::handler::register_extension;
 pub use crate::platform::get_platform;
 pub use crate::process::spawn_process;
 pub use crate::response_utils::{duration_to_proto, parse_lrc, proto_to_duration, Extract};
+pub use crate::socket::{open_sock, SocketClient};
 
 pub type MoosyncResult<T> = Result<T, MoosyncError>;
 
@@ -191,35 +192,107 @@ mod raw_host {
     #[host_fn]
     extern "ExtismHost" {
         pub(super) fn send_main_command(command: Prost<MainCommand>) -> Prost<MainCommandResponse>;
-        pub(super) fn system_time() -> u64;
-        pub(super) fn open_clientfd(path: String) -> i64;
-        pub(super) fn write_sock(sock_id: i64, buf: Vec<u8>) -> i64;
-        pub(super) fn read_sock(sock_id: i64, read_len: u64) -> Vec<u8>;
-        pub(super) fn batch_http_request(req: Prost<BatchHttpRequest>) -> Prost<BatchHttpResponse>;
     }
 }
 
 /// Returns current host system time in seconds since Unix epoch.
-pub fn system_time() -> MoosyncResult<u64> {
-    unsafe { Ok(raw_host::system_time()?) }
+pub fn system_time(req: SystemTimeRequest) -> MoosyncResult<SystemTimeResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::SystemTime(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
+        }
+
+        if let Some(main_command_response::Response::SystemTime(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
+    }
 }
 /// Opens a client socket at the specified path and returns a file descriptor handle.
-pub fn open_clientfd(path: String) -> MoosyncResult<i64> {
-    unsafe { Ok(raw_host::open_clientfd(path)?) }
+pub fn host_open_client_fd(req: OpenClientFdRequest) -> MoosyncResult<OpenClientFdResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::OpenClientFd(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
+        }
+
+        if let Some(main_command_response::Response::OpenClientFd(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
+    }
 }
 /// Writes a byte buffer to the socket associated with the given file descriptor handle.
-pub fn write_sock(sock_id: i64, buf: Vec<u8>) -> MoosyncResult<i64> {
-    unsafe { Ok(raw_host::write_sock(sock_id, buf)?) }
+pub fn host_write_sock(req: WriteSockRequest) -> MoosyncResult<WriteSockResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::WriteSock(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
+        }
+
+        if let Some(main_command_response::Response::WriteSock(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
+    }
 }
 /// Reads up to max_bytes from the socket associated with the given file descriptor handle.
-pub fn read_sock(sock_id: i64, read_len: u64) -> MoosyncResult<Vec<u8>> {
-    unsafe { Ok(raw_host::read_sock(sock_id, read_len)?) }
+pub fn host_read_sock(req: ReadSockRequest) -> MoosyncResult<ReadSockResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::ReadSock(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
+        }
+
+        if let Some(main_command_response::Response::ReadSock(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
+    }
 }
 /// Executes a batch of HTTP requests via the host network runner.
-pub fn batch_http_request(req: BatchHttpRequest) -> MoosyncResult<BatchHttpResponse> {
+pub fn host_batch_http_request(req: BatchHttpRequest) -> MoosyncResult<BatchHttpResponse> {
     unsafe {
-        let Prost(res) = raw_host::batch_http_request(Prost(req))?;
-        Ok(res)
+        let cmd = MainCommand {
+            command: Some(main_command::Command::BatchHttpRequest(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
+        }
+
+        if let Some(main_command_response::Response::BatchHttpRequest(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
     }
 }
 /// Queries and retrieves song entities matching the given criteria from the host database.

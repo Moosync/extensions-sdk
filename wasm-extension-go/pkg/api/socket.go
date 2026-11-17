@@ -1,25 +1,52 @@
 package api
 
-import "errors"
+import (
+	"errors"
+
+	extensions "github.com/moosync/moosync/types/extensions"
+)
 
 type SocketClient struct {
 	SockID int64
 }
 
 func ConnectSocket(path string) (*SocketClient, error) {
-	sockID := OpenClientFd(path)
-	if sockID < 0 {
+	resp, err := HostOpenClientFd(&extensions.OpenClientFdRequest{
+		Path: path,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp.SockId < 0 {
 		return nil, errors.New("failed to connect to socket")
 	}
 	return &SocketClient{
-		SockID: sockID,
+		SockID: resp.SockId,
 	}, nil
 }
 
+func OpenSock(path string) (*SocketClient, error) {
+	return ConnectSocket(path)
+}
+
 func (c *SocketClient) Write(data []byte) (int64, error) {
-	return WriteSock(c.SockID, data), nil
+	resp, err := HostWriteSock(&extensions.WriteSockRequest{
+		SockId: c.SockID,
+		Buf:    data,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return resp.BytesWritten, nil
 }
 
 func (c *SocketClient) Read(readLen uint64) ([]byte, error) {
-	return ReadSock(c.SockID, readLen), nil
+	resp, err := HostReadSock(&extensions.ReadSockRequest{
+		SockId:  c.SockID,
+		ReadLen: readLen,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
 }

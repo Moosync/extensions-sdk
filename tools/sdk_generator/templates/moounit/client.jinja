@@ -18,11 +18,9 @@ PLAYER_COMMANDS: tuple[str, ...] = (
 
 MAIN_COMMAND_DEFAULT_RESPONSES: dict[str, Callable[[], extensions_pb2.MainCommandResponse]] = {
 {% for m in host_methods %}
-{% if m.transport == 0 %}
     "{{ m.oneof_variant }}": lambda: extensions_pb2.MainCommandResponse(
         {{ m.resp_oneof_variant }}=extensions_pb2.{{ m.resp_type }}()
     ),
-{% endif %}
 {% endfor %}
 }
 
@@ -31,7 +29,6 @@ class GeneratedMoounitExpectationClient:
     """Strongly-typed host command expectation helper methods generated from protobuf service definitions."""
 
 {% for m in host_methods %}
-{% if m.transport == 0 %}
     def expect_{{ m.snake_name }}(
         self,
         req: extensions_pb2.{{ m.req_type }},
@@ -50,7 +47,6 @@ class GeneratedMoounitExpectationClient:
         )
         self.expect_command(cmd, res, times=times)
 
-{% endif %}
 {% endfor %}
 
 

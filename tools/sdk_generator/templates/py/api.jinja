@@ -2,7 +2,6 @@
 # Regenerate with: bazel run //tools/sdk_generator:update
 
 from abc import ABC
-import extism
 from core.types.protos import extensions_pb2
 from . import send_main_command
 
@@ -26,16 +25,6 @@ class {{ s.trait_name }}(ABC):
 
 {% endfor %}
 {% for m in host_methods %}
-{% if m.transport == 1 %}
-@extism.import_fn("extism:host/user", "{{ m.wasm_symbol }}")
-{% if m.is_proto_payload %}
-def {{ m.wasm_symbol }}(data: int) -> int: ...
-{% else %}
-def {{ m.wasm_symbol }}({% for p in m.params %}{{ p.snake_name }}: {{ p.py_type }}{% if not loop.last %}, {% endif %}{% endfor %}) -> {{ m.ret_py_type }}: ...
-{% endif %}
-
-
-{% else %}
 def {{ m.snake_name }}(req: extensions_pb2.{{ m.req_type }} | None = None) -> extensions_pb2.{{ m.resp_type }}:
 {% if m.doc %}
 {{ m.doc | format_doc("pydoc", 4) }}
@@ -51,20 +40,17 @@ def {{ m.snake_name }}(req: extensions_pb2.{{ m.req_type }} | None = None) -> ex
     if which == "{{ m.resp_oneof_variant }}":
         return getattr(res, "{{ m.resp_oneof_variant }}")
     raise RuntimeError(f"Unexpected response variant: {which}")
-{% endif %}
 {% endfor %}
 
 
 class ExtensionApi:
     """Strongly-typed Host API client for Moosync extensions."""
 {% for m in host_methods %}
-{% if m.transport == 0 %}
     def {{ m.snake_name }}(self, req: extensions_pb2.{{ m.req_type }} | None = None) -> extensions_pb2.{{ m.resp_type }}:
 {% if m.doc %}
 {{ m.doc | format_doc("pydoc", 8) }}
 {% endif %}
         return {{ m.snake_name }}(req)
-{% endif %}
 {% endfor %}
 
 

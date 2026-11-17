@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::api::{self, MoosyncResult};
+use extensions_proto::moosync::types::{OpenClientFdRequest, ReadSockRequest, WriteSockRequest};
 
 #[derive(Debug, Clone)]
 pub struct SocketClient {
@@ -23,18 +24,32 @@ pub struct SocketClient {
 
 impl SocketClient {
     pub fn connect(path: impl Into<String>) -> MoosyncResult<Self> {
-        let sock_id = api::open_clientfd(path.into())?;
-        if sock_id < 0 {
+        let resp = api::host_open_client_fd(OpenClientFdRequest { path: path.into() })?;
+        if resp.sock_id < 0 {
             return Err("Failed to connect to socket".into());
         }
-        Ok(Self { sock_id })
+        Ok(Self {
+            sock_id: resp.sock_id,
+        })
     }
 
     pub fn write(&self, data: &[u8]) -> MoosyncResult<i64> {
-        api::write_sock(self.sock_id, data.to_vec())
+        let resp = api::host_write_sock(WriteSockRequest {
+            sock_id: self.sock_id,
+            buf: data.to_vec(),
+        })?;
+        Ok(resp.bytes_written)
     }
 
     pub fn read(&self, read_len: u64) -> MoosyncResult<Vec<u8>> {
-        api::read_sock(self.sock_id, read_len)
+        let resp = api::host_read_sock(ReadSockRequest {
+            sock_id: self.sock_id,
+            read_len,
+        })?;
+        Ok(resp.data)
     }
+}
+
+pub fn open_sock(path: impl Into<String>) -> MoosyncResult<SocketClient> {
+    SocketClient::connect(path)
 }

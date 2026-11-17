@@ -4,11 +4,7 @@
 package api
 
 import (
-	"encoding/binary"
 	"errors"
-
-	pdk "github.com/extism/go-pdk"
-	"google.golang.org/protobuf/proto"
 
 	extensions "github.com/moosync/moosync/types/extensions"
 )
@@ -29,57 +25,6 @@ type {{ s.trait_name }} interface {
 {% endfor %}
 
 {% for m in host_methods %}
-{% if m.transport == 1 %}
-//go:wasmimport extism:host/user {{ m.wasm_symbol }}
-func {{ m.wasm_symbol }}({% if m.is_proto_payload %}uint64{% else %}{% for p in m.params %}{{ p.go_wasm_type }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}) uint64
-
-{% if m.doc %}
-{{ m.doc | format_doc("godoc", 0, m.pascal_name) }}
-{% endif %}
-{% if m.is_proto_payload %}
-func {{ m.pascal_name }}(req *extensions.{{ m.req_type }}) (*extensions.{{ m.resp_type }}, error) {
-	batchBytes, err := proto.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
-	mem := pdk.AllocateBytes(batchBytes)
-	rPtr := {{ m.wasm_symbol }}(mem.Offset())
-	rMem := pdk.FindMemory(rPtr)
-	respBatch := &extensions.{{ m.resp_type }}{}
-	if err := proto.Unmarshal(rMem.ReadBytes(), respBatch); err != nil {
-		return nil, err
-	}
-	return respBatch, nil
-}
-{% else %}
-func {{ m.pascal_name }}({% for p in m.params %}{{ p.camel_name }} {{ p.go_type }}{% if not loop.last %}, {% endif %}{% endfor %}) {{ m.ret_go_type }} {
-{% for p in m.params %}
-{% if p.kind == "string" %}
-	{{ p.camel_name }}Mem := pdk.AllocateString({{ p.camel_name }})
-{% elif p.kind == "bytes" %}
-	{{ p.camel_name }}Mem := pdk.AllocateBytes({{ p.camel_name }})
-{% endif %}
-{% endfor %}
-{% set call_args = [] %}
-{% for p in m.params %}
-{% if p.kind in ["string", "bytes"] %}
-{% set _ = call_args.append(p.camel_name ~ "Mem.Offset()") %}
-{% else %}
-{% set _ = call_args.append(p.camel_name) %}
-{% endif %}
-{% endfor %}
-	rPtr := {{ m.wasm_symbol }}({{ call_args | join(", ") }})
-	rMem := pdk.FindMemory(rPtr)
-{% if m.ret_kind == "bytes" %}
-	return rMem.ReadBytes()
-{% elif m.ret_kind == "int64" %}
-	return int64(binary.LittleEndian.Uint64(rMem.ReadBytes()))
-{% else %}
-	return binary.LittleEndian.Uint64(rMem.ReadBytes())
-{% endif %}
-}
-{% endif %}
-{% else %}
 {% set fn_name = "Host" ~ m.pascal_name if m.has_wrapper else m.pascal_name %}
 {% if m.doc %}
 {{ m.doc | format_doc("godoc", 0, fn_name) }}
@@ -99,5 +44,4 @@ func {{ fn_name }}(req *extensions.{{ m.req_type }}) (*extensions.{{ m.resp_type
 	}
 	return nil, errors.New("Invalid response type from host")
 }
-{% endif %}
 {% endfor %}

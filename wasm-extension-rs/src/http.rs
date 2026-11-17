@@ -19,13 +19,7 @@ pub use extensions_proto::moosync::types::{
     http_result, BatchHttpRequest, BatchHttpResponse, HttpRequest as ProtoHttpRequest,
     HttpResponse as ProtoHttpResponse, HttpResult,
 };
-use extism_pdk::{host_fn, Prost};
 use std::collections::HashMap;
-
-#[host_fn]
-extern "ExtismHost" {
-    fn batch_http_request(req: Prost<BatchHttpRequest>) -> Prost<BatchHttpResponse>;
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct HttpRequest {
@@ -187,15 +181,15 @@ pub fn batch_request(requests: &[HttpRequest]) -> Result<Vec<HttpResponse>, Moos
     let batch = BatchHttpRequest {
         requests: proto_requests,
     };
-    let res = unsafe { batch_http_request(Prost(batch)) }
+    let res = crate::api::host_batch_http_request(batch)
         .map_err(|e| MoosyncError::String(format!("batch_http_request failed: {e:?}")))?;
 
-    if let Some(err) = res.0.error {
+    if let Some(err) = res.error {
         return Err(MoosyncError::String(err));
     }
 
     let mut results = Vec::new();
-    for (idx, item) in res.0.responses.into_iter().enumerate() {
+    for (idx, item) in res.responses.into_iter().enumerate() {
         match item.result {
             Some(http_result::Result::Response(r)) => {
                 results.push(r.into());

@@ -21,258 +21,145 @@ package moosync.types;
 import "core/types/protos/extensions.proto";
 import "google/protobuf/descriptor.proto";
 
-enum TransportType {
-  MAIN_COMMAND = 0;   // Multiplexed via send_main_command
-  DIRECT_HOST_FN = 1; // Direct Extism host function
-}
-
 extend google.protobuf.MethodOptions {
   optional bool is_event_notification = 60001;
-  optional TransportType transport = 60002;
-  optional string wasm_symbol = 60003;
   optional bool has_wrapper = 60004;
-}
-
-message SystemTimeRequest {}
-
-message SystemTimeResponse {
-  uint64 seconds_since_epoch = 1;
-}
-
-message OpenClientFdRequest {
-  string path = 1;
-}
-
-message OpenClientFdResponse {
-  int64 fd = 1;
-}
-
-message WriteSockRequest {
-  int64 sock_id = 1;
-  bytes buf = 2;
-}
-
-message WriteSockResponse {
-  int64 bytes_written = 1;
-}
-
-message ReadSockRequest {
-  int64 sock_id = 1;
-  uint64 read_len = 2;
-}
-
-message ReadSockResponse {
-  bytes data = 1;
 }
 
 service ExtensionHostService {
   // Returns current host system time in seconds since Unix epoch.
-  rpc SystemTime(SystemTimeRequest) returns (SystemTimeResponse) {
-    option (moosync.types.transport) = DIRECT_HOST_FN;
-    option (moosync.types.wasm_symbol) = "system_time";
-  }
+  rpc SystemTime(SystemTimeRequest) returns (SystemTimeResponse);
 
   // Opens a client socket at the specified path and returns a file descriptor handle.
   rpc OpenClientFd(OpenClientFdRequest) returns (OpenClientFdResponse) {
-    option (moosync.types.transport) = DIRECT_HOST_FN;
-    option (moosync.types.wasm_symbol) = "open_clientfd";
+    option (has_wrapper) = true;
   }
 
   // Writes a byte buffer to the socket associated with the given file descriptor handle.
   rpc WriteSock(WriteSockRequest) returns (WriteSockResponse) {
-    option (moosync.types.transport) = DIRECT_HOST_FN;
-    option (moosync.types.wasm_symbol) = "write_sock";
+    option (has_wrapper) = true;
   }
 
   // Reads up to max_bytes from the socket associated with the given file descriptor handle.
   rpc ReadSock(ReadSockRequest) returns (ReadSockResponse) {
-    option (moosync.types.transport) = DIRECT_HOST_FN;
-    option (moosync.types.wasm_symbol) = "read_sock";
+    option (has_wrapper) = true;
   }
 
   // Executes a batch of HTTP requests via the host network runner.
   rpc BatchHttpRequest(moosync.types.BatchHttpRequest) returns (moosync.types.BatchHttpResponse) {
-    option (moosync.types.transport) = DIRECT_HOST_FN;
-    option (moosync.types.wasm_symbol) = "batch_http_request";
+    option (has_wrapper) = true;
   }
 
   // Queries and retrieves song entities matching the given criteria from the host database.
-  rpc GetSong(GetSongRequest) returns (GetSongResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc GetSong(GetSongRequest) returns (GetSongResponse);
 
   // Retrieves detailed entity information (such as artist or album) from the host database.
-  rpc GetEntity(GetEntityRequest) returns (GetEntityResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc GetEntity(GetEntityRequest) returns (GetEntityResponse);
 
   // Retrieves the currently playing song from the active player session.
-  rpc GetCurrentSong(GetCurrentSongRequest) returns (GetCurrentSongResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc GetCurrentSong(GetCurrentSongRequest) returns (GetCurrentSongResponse);
 
   // Retrieves the current playback state (e.g. playing, paused, stopped) of the player.
-  rpc GetPlayerState(GetPlayerStateRequest) returns (GetPlayerStateResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc GetPlayerState(GetPlayerStateRequest) returns (GetPlayerStateResponse);
 
   // Retrieves the current master playback volume level (0.0 to 1.0).
-  rpc GetVolume(GetVolumeRequest) returns (GetVolumeResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc GetVolume(GetVolumeRequest) returns (GetVolumeResponse);
 
   // Retrieves the current playback position timestamp in seconds.
-  rpc GetTime(GetTimeRequest) returns (GetTimeResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc GetTime(GetTimeRequest) returns (GetTimeResponse);
 
   // Retrieves the current player queue state and list of queued tracks.
-  rpc GetQueue(GetQueueRequest) returns (GetQueueResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc GetQueue(GetQueueRequest) returns (GetQueueResponse);
 
   // Retrieves an extension preference value by key.
-  rpc GetPreference(GetPreferenceRequest) returns (GetPreferenceResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc GetPreference(GetPreferenceRequest) returns (GetPreferenceResponse);
 
   // Stores an extension preference value by key.
-  rpc SetPreference(SetPreferenceRequest) returns (SetPreferenceResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc SetPreference(SetPreferenceRequest) returns (SetPreferenceResponse);
 
   // Retrieves a securely stored credential or secret by key from the host keyring.
-  rpc GetSecure(GetSecureRequest) returns (GetSecureResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc GetSecure(GetSecureRequest) returns (GetSecureResponse);
 
   // Stores a credential or secret securely in the host keyring/vault.
-  rpc SetSecure(SetSecureRequest) returns (SetSecureResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc SetSecure(SetSecureRequest) returns (SetSecureResponse);
 
   // Inserts one or more songs into the host music database.
-  rpc AddSongs(AddSongsRequest) returns (AddSongsResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc AddSongs(AddSongsRequest) returns (AddSongsResponse);
 
   // Removes a song from the host music database by its ID.
-  rpc RemoveSong(RemoveSongRequest) returns (RemoveSongResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc RemoveSong(RemoveSongRequest) returns (RemoveSongResponse);
 
   // Updates metadata for an existing song in the host database.
-  rpc UpdateSong(UpdateSongRequest) returns (UpdateSongResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc UpdateSong(UpdateSongRequest) returns (UpdateSongResponse);
 
   // Creates a new playlist in the host database.
-  rpc AddPlaylist(AddPlaylistRequest) returns (AddPlaylistResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc AddPlaylist(AddPlaylistRequest) returns (AddPlaylistResponse);
 
   // Appends songs to an existing playlist in the host database.
-  rpc AddToPlaylist(AddToPlaylistRequest) returns (AddToPlaylistResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc AddToPlaylist(AddToPlaylistRequest) returns (AddToPlaylistResponse);
 
   // Registers OAuth configuration details for account authentication flows.
-  rpc RegisterOauth(RegisterOauthRequest) returns (RegisterOauthResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc RegisterOauth(RegisterOauthRequest) returns (RegisterOauthResponse);
 
   // Requests the host to open a URL in the user's default system browser.
-  rpc OpenExternalUrl(OpenExternalUrlRequest) returns (OpenExternalUrlResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc OpenExternalUrl(OpenExternalUrlRequest) returns (OpenExternalUrlResponse);
 
   // Updates account login credentials and details for this extension.
-  rpc SetAccount(SetAccountRequest) returns (SetAccountResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc SetAccount(SetAccountRequest) returns (SetAccountResponse);
 
   // Registers dynamic preference schema entries shown in user settings.
-  rpc RegisterUserPreference(RegisterUserPreferenceRequest) returns (RegisterUserPreferenceResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc RegisterUserPreference(RegisterUserPreferenceRequest) returns (RegisterUserPreferenceResponse);
 
   // Unregisters dynamic preference schema entries previously registered.
-  rpc UnregisterUserPreference(UnregisterUserPreferenceRequest) returns (UnregisterUserPreferenceResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc UnregisterUserPreference(UnregisterUserPreferenceRequest) returns (UnregisterUserPreferenceResponse);
 
   // Notifies the host that extension configuration or available extensions changed.
-  rpc ExtensionsUpdated(ExtensionsUpdatedRequest) returns (ExtensionsUpdatedResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc ExtensionsUpdated(ExtensionsUpdatedRequest) returns (ExtensionsUpdatedResponse);
 
   // Retrieves the host application version string.
-  rpc GetAppVersion(GetAppVersionRequest) returns (GetAppVersionResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc GetAppVersion(GetAppVersionRequest) returns (GetAppVersionResponse);
 
   // Retrieves cached binary data associated with the specified cache key.
   rpc GetCache(GetCacheRequest) returns (GetCacheResponse) {
-    option (transport) = MAIN_COMMAND;
     option (has_wrapper) = true;
   }
 
   // Stores binary data in the host cache with an optional time-to-live (TTL).
   rpc SetCache(SetCacheRequest) returns (SetCacheResponse) {
-    option (transport) = MAIN_COMMAND;
     option (has_wrapper) = true;
   }
 
   // Spawns a child process on the host system within permitted binary limits.
   rpc SpawnProcess(SpawnProcessRequest) returns (SpawnProcessResponse) {
-    option (transport) = MAIN_COMMAND;
     option (has_wrapper) = true;
   }
 
   // Writes input data to standard input of an active spawned child process.
-  rpc WriteProcessStdin(WriteProcessStdinRequest) returns (WriteProcessStdinResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc WriteProcessStdin(WriteProcessStdinRequest) returns (WriteProcessStdinResponse);
 
   // Reads standard output or standard error data from an active spawned child process.
-  rpc ReadProcessStdout(ReadProcessStdoutRequest) returns (ReadProcessStdoutResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc ReadProcessStdout(ReadProcessStdoutRequest) returns (ReadProcessStdoutResponse);
 
   // Terminates an active spawned child process.
-  rpc KillProcess(KillProcessRequest) returns (KillProcessResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc KillProcess(KillProcessRequest) returns (KillProcessResponse);
 
   // Checks whether a spawned child process is still running and gets its exit code.
-  rpc GetProcessStatus(GetProcessStatusRequest) returns (GetProcessStatusResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc GetProcessStatus(GetProcessStatusRequest) returns (GetProcessStatusResponse);
 
   // Notifies the host player of custom playback events or state overrides.
-  rpc NotifyPlayerEvent(NotifyPlayerEventRequest) returns (NotifyPlayerEventResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc NotifyPlayerEvent(NotifyPlayerEventRequest) returns (NotifyPlayerEventResponse);
 
   // Establishes a WebSocket client connection to a remote WebSocket server.
-  rpc WsConnect(WsConnectRequest) returns (WsConnectResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc WsConnect(WsConnectRequest) returns (WsConnectResponse);
 
   // Sends a text or binary message through an active WebSocket connection.
-  rpc WsSend(WsSendRequest) returns (WsSendResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc WsSend(WsSendRequest) returns (WsSendResponse);
 
   // Receives the next incoming message frame from an active WebSocket connection.
-  rpc WsReceive(WsReceiveRequest) returns (WsReceiveResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc WsReceive(WsReceiveRequest) returns (WsReceiveResponse);
 
   // Closes an active WebSocket connection with an optional code and reason.
-  rpc WsClose(WsCloseRequest) returns (WsCloseResponse) {
-    option (transport) = MAIN_COMMAND;
-  }
+  rpc WsClose(WsCloseRequest) returns (WsCloseResponse);
 }
 
 service ProviderService {

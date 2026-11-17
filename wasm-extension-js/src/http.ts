@@ -2,8 +2,8 @@ import {
   HttpRequest,
   HttpResponse,
   BatchHttpRequest,
-  BatchHttpResponse,
 } from "./protos/extensions_pb.js";
+import { hostBatchHttpRequest } from "./generated_api.js";
 
 export interface BatchFetchRequest {
   url: string;
@@ -55,16 +55,10 @@ export class BatchFetchResponse {
 /**
  * Executes multiple HTTP requests in a single host batch call.
  */
-export function batchFetch(
+export async function batchFetch(
   requests: (string | BatchFetchRequest)[],
   options?: BatchFetchOptions,
 ): Promise<BatchFetchResponse[]> {
-  const fns = Host.getFunctions() as any;
-  const { batch_http_request } = fns;
-  if (!batch_http_request) {
-    throw new Error("batch_http_request host function is not available");
-  }
-
   const protoRequests: HttpRequest[] = requests.map((req) => {
     if (typeof req === "string") {
       return new HttpRequest({
@@ -101,17 +95,10 @@ export function batchFetch(
     requests: protoRequests,
   });
 
-  const bytes = batchReq.toBinary();
-  // @ts-ignore
-  const mem = Memory.fromBuffer(bytes.buffer);
-  const res_offset = batch_http_request(mem.offset);
-
-  // @ts-ignore
-  const res_mem = Memory.find(res_offset);
-  const res_bytes_buffer = res_mem.readBytes();
-  const res_bytes = new Uint8Array(res_bytes_buffer);
-
-  const batchResp = BatchHttpResponse.fromBinary(res_bytes);
+  const batchResp = await hostBatchHttpRequest(batchReq);
+  if (!batchResp) {
+    throw new Error("Failed to execute batch HTTP request: no response from host");
+  }
   if (batchResp.error) {
     throw new Error(batchResp.error);
   }
@@ -128,7 +115,7 @@ export function batchFetch(
     }
   }
 
-  return Promise.resolve(responses);
+  return responses;
 }
 
 function resolveUrl(input: string | URL | Request): string {

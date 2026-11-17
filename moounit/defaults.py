@@ -11,6 +11,22 @@ from core.types.protos.extensions_pb2 import (
 from moounit.generated import MAIN_COMMAND_DEFAULT_RESPONSES
 
 
+def default_batch_http_response(req: BatchHttpRequest) -> BatchHttpResponse:
+    results = []
+    for _ in req.requests:
+        results.append(
+            HttpResult(
+                response=HttpResponse(
+                    status_code=200,
+                    status_text="OK",
+                    headers={},
+                    body=b"",
+                )
+            )
+        )
+    return BatchHttpResponse(responses=results)
+
+
 def default_main_command_response(cmd: MainCommand) -> MainCommandResponse:
     which = cmd.WhichOneof("command")
     if not which:
@@ -46,7 +62,9 @@ def default_main_command_response(cmd: MainCommand) -> MainCommandResponse:
             update_song=extensions_pb2.UpdateSongResponse(success=True)
         ),
         "add_playlist": lambda: MainCommandResponse(
-            add_playlist=extensions_pb2.AddPlaylistResponse(playlist_id="default-playlist")
+            add_playlist=extensions_pb2.AddPlaylistResponse(
+                playlist_id="default-playlist"
+            )
         ),
         "add_to_playlist": lambda: MainCommandResponse(
             add_to_playlist=extensions_pb2.AddToPlaylistResponse(success=True)
@@ -61,13 +79,17 @@ def default_main_command_response(cmd: MainCommand) -> MainCommandResponse:
             set_account=extensions_pb2.SetAccountResponse(success=True)
         ),
         "register_user_preference": lambda: MainCommandResponse(
-            register_user_preference=extensions_pb2.RegisterUserPreferenceResponse(success=True)
+            register_user_preference=extensions_pb2.RegisterUserPreferenceResponse(
+                success=True
+            )
         ),
         "unregister_user_preference": lambda: MainCommandResponse(
-            unregister_user_preference=extensions_pb2.UnregisterUserPreferenceResponse(success=True)
+            unregister_user_preference=extensions_pb2.UnregisterUserPreferenceResponse(
+                success=True
+            )
         ),
         "extensions_updated": lambda: MainCommandResponse(
-            extensions_updated=extensions_pb2.ExtensionsUpdatedResponse(success=True)
+            extensions_updated=extensions_pb2.ExtensionsUpdatedResponse()
         ),
         "get_app_version": lambda: MainCommandResponse(
             get_app_version=extensions_pb2.GetAppVersionResponse(version="1.0.0")
@@ -80,14 +102,18 @@ def default_main_command_response(cmd: MainCommand) -> MainCommandResponse:
         ),
         "write_process_stdin": lambda: MainCommandResponse(
             write_process_stdin=extensions_pb2.WriteProcessStdinResponse(
-                bytes_written=len(cmd.write_process_stdin.data) if cmd.write_process_stdin else 0
+                bytes_written=len(cmd.write_process_stdin.data)
+                if cmd.write_process_stdin
+                else 0
             )
         ),
         "kill_process": lambda: MainCommandResponse(
             kill_process=extensions_pb2.KillProcessResponse(success=True)
         ),
         "get_process_status": lambda: MainCommandResponse(
-            get_process_status=extensions_pb2.GetProcessStatusResponse(is_running=True, exit_code=0)
+            get_process_status=extensions_pb2.GetProcessStatusResponse(
+                is_running=True, exit_code=0
+            )
         ),
         "ws_connect": lambda: MainCommandResponse(
             ws_connect=extensions_pb2.WsConnectResponse(connection_id=1)
@@ -98,6 +124,23 @@ def default_main_command_response(cmd: MainCommand) -> MainCommandResponse:
         "ws_close": lambda: MainCommandResponse(
             ws_close=extensions_pb2.WsCloseResponse(success=True)
         ),
+        "system_time": lambda: MainCommandResponse(
+            system_time=extensions_pb2.SystemTimeResponse(timestamp=0)
+        ),
+        "open_client_fd": lambda: MainCommandResponse(
+            open_client_fd=extensions_pb2.OpenClientFdResponse(sock_id=100)
+        ),
+        "write_sock": lambda: MainCommandResponse(
+            write_sock=extensions_pb2.WriteSockResponse(
+                bytes_written=len(cmd.write_sock.buf) if cmd.write_sock else 0
+            )
+        ),
+        "read_sock": lambda: MainCommandResponse(
+            read_sock=extensions_pb2.ReadSockResponse(data=b"")
+        ),
+        "batch_http_request": lambda: MainCommandResponse(
+            batch_http_request=default_batch_http_response(cmd.batch_http_request)
+        ),
     }
 
     builder = overrides.get(which) or MAIN_COMMAND_DEFAULT_RESPONSES.get(which)
@@ -105,35 +148,3 @@ def default_main_command_response(cmd: MainCommand) -> MainCommandResponse:
         return builder()
 
     return MainCommandResponse()
-
-
-def default_batch_http_response(req: BatchHttpRequest) -> BatchHttpResponse:
-    results = []
-    for _ in req.requests:
-        results.append(
-            HttpResult(
-                response=HttpResponse(
-                    status_code=200,
-                    status_text="OK",
-                    headers={},
-                    body=b"",
-                )
-            )
-        )
-    return BatchHttpResponse(responses=results)
-
-
-def default_system_time() -> int:
-    return 0
-
-
-def default_open_clientfd(_path: str) -> int:
-    return 100
-
-
-def default_write_sock(_sock_id: int, buf: bytes) -> int:
-    return len(buf)
-
-
-def default_read_sock(_sock_id: int, _read_len: int) -> bytes:
-    return b""

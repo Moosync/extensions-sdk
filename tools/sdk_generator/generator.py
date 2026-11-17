@@ -18,7 +18,6 @@
 import argparse
 import os
 import re
-import sys
 from typing import Any, Dict, List, Optional
 
 from google.protobuf import (
@@ -34,44 +33,7 @@ import jinja2
 
 
 TAG_IS_EVENT_NOTIFICATION = 60001
-TAG_TRANSPORT = 60002
-TAG_WASM_SYMBOL = 60003
 TAG_HAS_WRAPPER = 60004
-
-FIELD_TYPE_MAP = {
-    3: {
-        "kind": "int64",
-        "rust_type": "i64",
-        "go_type": "int64",
-        "go_wasm_type": "int64",
-        "ts_type": "number",
-        "py_type": "int",
-    },
-    4: {
-        "kind": "uint64",
-        "rust_type": "u64",
-        "go_type": "uint64",
-        "go_wasm_type": "uint64",
-        "ts_type": "number",
-        "py_type": "int",
-    },
-    9: {
-        "kind": "string",
-        "rust_type": "String",
-        "go_type": "string",
-        "go_wasm_type": "uint64",
-        "ts_type": "string",
-        "py_type": "str",
-    },
-    12: {
-        "kind": "bytes",
-        "rust_type": "Vec<u8>",
-        "go_type": "[]byte",
-        "go_wasm_type": "uint64",
-        "ts_type": "Uint8Array",
-        "py_type": "bytes",
-    },
-}
 
 
 def to_snake_case(name: str) -> str:
@@ -177,7 +139,9 @@ def decode_method_options(options_bytes: bytes) -> Dict[int, Any]:
             opts[field_num] = val
         elif wire_type == 2:
             length, pos = decoder._DecodeVarint(options_bytes, pos)
-            opts[field_num] = options_bytes[pos:pos+length].decode("utf-8", errors="replace")
+            opts[field_num] = options_bytes[pos : pos + length].decode(
+                "utf-8", errors="replace"
+            )
             pos += length
         else:
             break
@@ -226,7 +190,6 @@ def extract_metadata(
 
     service_file = pool.FindFileByName("core/types/protos/extension_service.proto")
     host_service = service_file.services_by_name.get("ExtensionHostService")
-    guest_service = service_file.services_by_name.get("ExtensionGuestService")
 
     host_methods = []
     if host_service:
@@ -234,33 +197,9 @@ def extract_metadata(
             raw_opts = m.GetOptions().SerializeToString()
             custom_opts = decode_method_options(raw_opts)
 
-            transport_val = custom_opts.get(TAG_TRANSPORT, 0)
-            wasm_symbol_val = custom_opts.get(TAG_WASM_SYMBOL, "")
             has_wrapper_val = bool(custom_opts.get(TAG_HAS_WRAPPER, 0))
-
             req_name = m.input_type.name
             resp_name = m.output_type.name
-            is_proto_payload = m.input_type.file.name != service_file.name
-
-            params = []
-            ret_info = {
-                "kind": "void",
-                "rust_type": "()",
-                "go_type": "",
-                "ts_type": "void",
-                "py_type": "None",
-            }
-            if not is_proto_payload:
-                for f in m.input_type.fields:
-                    type_meta = FIELD_TYPE_MAP.get(f.type, FIELD_TYPE_MAP[9])
-                    params.append({
-                        "snake_name": f.name,
-                        "camel_name": to_camel_case(f.name),
-                        **type_meta,
-                    })
-                if m.output_type.fields:
-                    ret_f = m.output_type.fields[0]
-                    ret_info = FIELD_TYPE_MAP.get(ret_f.type, FIELD_TYPE_MAP[4])
 
             host_methods.append({
                 "name": m.name,
@@ -269,16 +208,7 @@ def extract_metadata(
                 "pascal_name": to_pascal_case(m.name),
                 "req_type": req_name,
                 "resp_type": resp_name,
-                "transport": transport_val,  # 0: MAIN_COMMAND, 1: DIRECT_HOST_FN
-                "wasm_symbol": wasm_symbol_val or to_snake_case(m.name),
                 "has_wrapper": has_wrapper_val,
-                "is_proto_payload": is_proto_payload,
-                "params": params,
-                "ret_kind": ret_info["kind"],
-                "ret_rust_type": ret_info["rust_type"],
-                "ret_go_type": ret_info["go_type"],
-                "ret_ts_type": ret_info["ts_type"],
-                "ret_py_type": ret_info["py_type"],
                 "oneof_variant": host_req_to_oneof.get(req_name, to_snake_case(m.name)),
                 "resp_oneof_variant": host_resp_to_oneof.get(resp_name, to_snake_case(m.name)),
                 "doc": proto_docs.get(m.name, ""),
@@ -292,7 +222,7 @@ def extract_metadata(
 
         trait_name = service_name
         if trait_name.endswith("Service"):
-            trait_name = trait_name[:-len("Service")]
+            trait_name = trait_name[: -len("Service")]
 
         methods_in_service = []
         for m in s.methods:
@@ -300,7 +230,6 @@ def extract_metadata(
             custom_opts = decode_method_options(raw_opts)
 
             is_event_val = bool(custom_opts.get(TAG_IS_EVENT_NOTIFICATION, 0))
-
             req_name = m.input_type.name
             resp_name = m.output_type.name
 
@@ -394,7 +323,6 @@ def main():
             render_template(templates_lang_dir, "api.jinja", metadata, out_api)
             render_template(templates_lang_dir, "dispatcher.jinja", metadata, out_disp)
 
-        # Generate moounit
         moounit_templates_dir = os.path.join(args.templates_dir, "moounit")
         moounit_out = os.path.join(workspace_dir, "moounit/generated.py")
         render_template(moounit_templates_dir, "client.jinja", metadata, moounit_out)

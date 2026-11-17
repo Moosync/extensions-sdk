@@ -1,6 +1,4 @@
-from datetime import timedelta
 from typing import Any, Dict, List, Optional, Sequence, Union
-import extism
 from core.types.protos import extensions_pb2
 from moosync_edk.generated_api import batch_http_request as batch_http_request_host
 
@@ -77,21 +75,7 @@ def http_batch_request(requests: Sequence[Union[HttpRequest, Dict[str, Any]]]) -
             raise ValueError(f"Invalid request type: {type(r)}")
 
     batch = extensions_pb2.BatchHttpRequest(requests=proto_reqs)
-    data = batch.SerializeToString()
-    mem = extism.memory.alloc(data)
-    if mem is None:
-        raise Exception("Failed to allocate memory for HTTP batch request")
-    res_offset = batch_http_request_host(mem.offset)
-
-    res_mem_handle = extism.memory.find(res_offset)
-    if res_mem_handle is None:
-        raise Exception(f"Failed to find memory for batch HTTP response at offset {res_offset}")
-
-    res_bytes = extism.memory.bytes(res_mem_handle)
-    extism.memory.free(mem)
-
-    batch_resp = extensions_pb2.BatchHttpResponse()
-    batch_resp.ParseFromString(res_bytes)
+    batch_resp = batch_http_request_host(batch)
 
     if batch_resp.HasField("error") and batch_resp.error:
         raise Exception(batch_resp.error)

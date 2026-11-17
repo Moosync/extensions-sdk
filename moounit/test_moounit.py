@@ -26,7 +26,11 @@ from core.types.protos.extensions_pb2 import (
     HttpResult,
     MainCommand,
     MainCommandResponse,
+    OpenClientFdRequest,
+    OpenClientFdResponse,
     PreferenceData,
+    ReadSockRequest,
+    ReadSockResponse,
     RemoveSongRequest,
     RequestedAlbumSongsResponse,
     RequestedArtistSongsResponse,
@@ -41,8 +45,12 @@ from core.types.protos.extensions_pb2 import (
     SetSecureRequest,
     SpawnProcessRequest,
     SpawnProcessResponse,
+    SystemTimeRequest,
+    SystemTimeResponse,
     WriteProcessStdinRequest,
     WriteProcessStdinResponse,
+    WriteSockRequest,
+    WriteSockResponse,
     ReadProcessStdoutRequest,
     ReadProcessStdoutResponse,
     KillProcessRequest,
@@ -69,10 +77,6 @@ from moounit.core import Moounit
 from moounit.defaults import (
     default_batch_http_response,
     default_main_command_response,
-    default_open_clientfd,
-    default_read_sock,
-    default_system_time,
-    default_write_sock,
 )
 from moounit.expectations import ExpectationManager, current_scope
 from moounit.matcher import partial_match
@@ -261,43 +265,48 @@ def test_replay_ignore_batch_http_request_header(tmp_path):
     recorder = Recorder(record_mode=True, expectations_file=expectations_path)
 
     recorder.set_current_test("test_search")
-    recorded_req = BatchHttpRequest(
-        requests=[
-            HttpRequest(
-                url="https://www.google.com/search?q=rust",
-                method="GET",
-                headers={"user-agent": "Agent-v1.0", "accept": "text/html"},
-            )
-        ]
+    recorded_req = MainCommand(
+        batch_http_request=BatchHttpRequest(
+            requests=[
+                HttpRequest(
+                    url="https://www.google.com/search?q=rust",
+                    method="GET",
+                    headers={"user-agent": "Agent-v1.0", "accept": "text/html"},
+                )
+            ]
+        )
     )
-    resp = BatchHttpResponse(
-        responses=[HttpResult(response=HttpResponse(status_code=200, status_text="OK"))]
+    resp = MainCommandResponse(
+        batch_http_request=BatchHttpResponse(
+            responses=[
+                HttpResult(response=HttpResponse(status_code=200, status_text="OK"))
+            ]
+        )
     )
-    recorder.record_call("batch_http_request", recorded_req, resp, Scope.LOCAL)
+    recorder.record_call("send_main_command", recorded_req, resp, Scope.LOCAL)
     recorder.clear_current_test()
     recorder.save_recorded_expectations()
 
-    # Replay with mismatched user-agent
-    incoming_req = BatchHttpRequest(
-        requests=[
-            HttpRequest(
-                url="https://www.google.com/search?q=rust",
-                method="GET",
-                headers={"user-agent": "Agent-v2.0", "accept": "text/html"},
-            )
-        ]
+    incoming_req = MainCommand(
+        batch_http_request=BatchHttpRequest(
+            requests=[
+                HttpRequest(
+                    url="https://www.google.com/search?q=rust",
+                    method="GET",
+                    headers={"user-agent": "Agent-v2.0", "accept": "text/html"},
+                )
+            ]
+        )
     )
 
-    # Without ignore rule: fails
     replay = Recorder(record_mode=False, expectations_file=expectations_path)
     replay.set_current_test("test_search")
     res, err = replay.match_and_consume_replay(
-        "batch_http_request", incoming_req, Scope.LOCAL
+        "send_main_command", incoming_req, Scope.LOCAL
     )
     assert res is None
     assert err is not None
 
-    # With replay_ignore: succeeds
     replay = Recorder(record_mode=False, expectations_file=expectations_path)
     replay.set_current_test("test_search")
     replay.replay_ignore(
@@ -305,11 +314,11 @@ def test_replay_ignore_batch_http_request_header(tmp_path):
         ignore_field=["headers.user-agent"],
     )
     res, err = replay.match_and_consume_replay(
-        "batch_http_request", incoming_req, Scope.LOCAL
+        "send_main_command", incoming_req, Scope.LOCAL
     )
     assert err is None
-    assert isinstance(res, BatchHttpResponse)
-    assert res.responses[0].response.status_code == 200
+    assert isinstance(res, MainCommandResponse)
+    assert res.batch_http_request.responses[0].response.status_code == 200
 
 
 def test_replay_ignore_times_limit(tmp_path):
@@ -317,33 +326,38 @@ def test_replay_ignore_times_limit(tmp_path):
     recorder = Recorder(record_mode=True, expectations_file=expectations_path)
 
     recorder.set_current_test("test_search")
-    req1 = BatchHttpRequest(
-        requests=[
-            HttpRequest(
-                url="https://www.google.com/api/v1",
-                method="GET",
-                headers={"user-agent": "v1"},
-            )
-        ]
+    req1 = MainCommand(
+        batch_http_request=BatchHttpRequest(
+            requests=[
+                HttpRequest(
+                    url="https://www.google.com/api/v1",
+                    method="GET",
+                    headers={"user-agent": "v1"},
+                )
+            ]
+        )
     )
-    req2 = BatchHttpRequest(
-        requests=[
-            HttpRequest(
-                url="https://www.google.com/api/v2",
-                method="GET",
-                headers={"user-agent": "v1"},
-            )
-        ]
+    req2 = MainCommand(
+        batch_http_request=BatchHttpRequest(
+            requests=[
+                HttpRequest(
+                    url="https://www.google.com/api/v2",
+                    method="GET",
+                    headers={"user-agent": "v1"},
+                )
+            ]
+        )
     )
-    resp = BatchHttpResponse(
-        responses=[HttpResult(response=HttpResponse(status_code=200))]
+    resp = MainCommandResponse(
+        batch_http_request=BatchHttpResponse(
+            responses=[HttpResult(response=HttpResponse(status_code=200))]
+        )
     )
-    recorder.record_call("batch_http_request", req1, resp, Scope.LOCAL)
-    recorder.record_call("batch_http_request", req2, resp, Scope.LOCAL)
+    recorder.record_call("send_main_command", req1, resp, Scope.LOCAL)
+    recorder.record_call("send_main_command", req2, resp, Scope.LOCAL)
     recorder.clear_current_test()
     recorder.save_recorded_expectations()
 
-    # Replay: rule only configured for times(1)
     replay = Recorder(record_mode=False, expectations_file=expectations_path)
     replay.set_current_test("test_search")
     replay.replay_ignore(
@@ -351,34 +365,36 @@ def test_replay_ignore_times_limit(tmp_path):
         ignore_field=["headers.user-agent"],
     ).times(1)
 
-    # First call: mismatched user-agent is ignored
-    incoming1 = BatchHttpRequest(
-        requests=[
-            HttpRequest(
-                url="https://www.google.com/api/v1",
-                method="GET",
-                headers={"user-agent": "v2"},
-            )
-        ]
+    incoming1 = MainCommand(
+        batch_http_request=BatchHttpRequest(
+            requests=[
+                HttpRequest(
+                    url="https://www.google.com/api/v1",
+                    method="GET",
+                    headers={"user-agent": "v2"},
+                )
+            ]
+        )
     )
     res1, err1 = replay.match_and_consume_replay(
-        "batch_http_request", incoming1, Scope.LOCAL
+        "send_main_command", incoming1, Scope.LOCAL
     )
     assert err1 is None
     assert res1 is not None
 
-    # Second call: times(1) exhausted, so mismatched user-agent causes failure
-    incoming2 = BatchHttpRequest(
-        requests=[
-            HttpRequest(
-                url="https://www.google.com/api/v2",
-                method="GET",
-                headers={"user-agent": "v2"},
-            )
-        ]
+    incoming2 = MainCommand(
+        batch_http_request=BatchHttpRequest(
+            requests=[
+                HttpRequest(
+                    url="https://www.google.com/api/v2",
+                    method="GET",
+                    headers={"user-agent": "v2"},
+                )
+            ]
+        )
     )
     res2, err2 = replay.match_and_consume_replay(
-        "batch_http_request", incoming2, Scope.LOCAL
+        "send_main_command", incoming2, Scope.LOCAL
     )
     assert res2 is None
     assert err2 is not None
@@ -390,32 +406,37 @@ def test_replay_ignore_regex_body(tmp_path):
 
     recorder.set_current_test("test_search")
     body_recorded = b'{"system_time": 1000000000, "client": "web", "version": "1.0"}'
-    recorded_req = BatchHttpRequest(
-        requests=[
-            HttpRequest(
-                url="https://www.google.com/search",
-                method="POST",
-                body=body_recorded,
-            )
-        ]
+    recorded_req = MainCommand(
+        batch_http_request=BatchHttpRequest(
+            requests=[
+                HttpRequest(
+                    url="https://www.google.com/search",
+                    method="POST",
+                    body=body_recorded,
+                )
+            ]
+        )
     )
-    resp = BatchHttpResponse(
-        responses=[HttpResult(response=HttpResponse(status_code=200))]
+    resp = MainCommandResponse(
+        batch_http_request=BatchHttpResponse(
+            responses=[HttpResult(response=HttpResponse(status_code=200))]
+        )
     )
-    recorder.record_call("batch_http_request", recorded_req, resp, Scope.LOCAL)
+    recorder.record_call("send_main_command", recorded_req, resp, Scope.LOCAL)
     recorder.clear_current_test()
     recorder.save_recorded_expectations()
 
-    # Replay with different system_time in body
     body_incoming = b'{"system_time": 9999999999, "client": "web", "version": "1.0"}'
-    incoming_req = BatchHttpRequest(
-        requests=[
-            HttpRequest(
-                url="https://www.google.com/search",
-                method="POST",
-                body=body_incoming,
-            )
-        ]
+    incoming_req = MainCommand(
+        batch_http_request=BatchHttpRequest(
+            requests=[
+                HttpRequest(
+                    url="https://www.google.com/search",
+                    method="POST",
+                    body=body_incoming,
+                )
+            ]
+        )
     )
 
     replay = Recorder(record_mode=False, expectations_file=expectations_path)
@@ -427,21 +448,22 @@ def test_replay_ignore_regex_body(tmp_path):
     )
 
     res, err = replay.match_and_consume_replay(
-        "batch_http_request", incoming_req, Scope.LOCAL
+        "send_main_command", incoming_req, Scope.LOCAL
     )
     assert err is None
     assert res is not None
 
-    # Should still fail if client differs
     body_bad = b'{"system_time": 9999999999, "client": "mobile", "version": "1.0"}'
-    incoming_bad = BatchHttpRequest(
-        requests=[
-            HttpRequest(
-                url="https://www.google.com/search",
-                method="POST",
-                body=body_bad,
-            )
-        ]
+    incoming_bad = MainCommand(
+        batch_http_request=BatchHttpRequest(
+            requests=[
+                HttpRequest(
+                    url="https://www.google.com/search",
+                    method="POST",
+                    body=body_bad,
+                )
+            ]
+        )
     )
     replay2 = Recorder(record_mode=False, expectations_file=expectations_path)
     replay2.set_current_test("test_search")
@@ -451,7 +473,7 @@ def test_replay_ignore_regex_body(tmp_path):
         regex=r'"system_time":\s*\d+',
     )
     res_bad, err_bad = replay2.match_and_consume_replay(
-        "batch_http_request", incoming_bad, Scope.LOCAL
+        "send_main_command", incoming_bad, Scope.LOCAL
     )
     assert res_bad is None
     assert err_bad is not None
@@ -461,25 +483,28 @@ def test_replay_ignore_test_name_scoping(tmp_path):
     expectations_path = str(tmp_path / "expectations.json")
     recorder = Recorder(record_mode=True, expectations_file=expectations_path)
 
-    # Record test_search
     recorder.set_current_test("test_search")
-    req = BatchHttpRequest(
-        requests=[HttpRequest(url="https://www.google.com", headers={"token": "t1"})]
+    req = MainCommand(
+        batch_http_request=BatchHttpRequest(
+            requests=[
+                HttpRequest(url="https://www.google.com", headers={"token": "t1"})
+            ]
+        )
     )
-    resp = BatchHttpResponse(
-        responses=[HttpResult(response=HttpResponse(status_code=200))]
+    resp = MainCommandResponse(
+        batch_http_request=BatchHttpResponse(
+            responses=[HttpResult(response=HttpResponse(status_code=200))]
+        )
     )
-    recorder.record_call("batch_http_request", req, resp, Scope.LOCAL)
+    recorder.record_call("send_main_command", req, resp, Scope.LOCAL)
     recorder.clear_current_test()
 
-    # Record test_other
     recorder.set_current_test("test_other")
-    recorder.record_call("batch_http_request", req, resp, Scope.LOCAL)
+    recorder.record_call("send_main_command", req, resp, Scope.LOCAL)
     recorder.clear_current_test()
 
     recorder.save_recorded_expectations()
 
-    # Replay test_search with rule registered specifically for test_search
     replay = Recorder(record_mode=False, expectations_file=expectations_path)
     replay.set_current_test("test_search")
     replay.replay_ignore(
@@ -488,20 +513,23 @@ def test_replay_ignore_test_name_scoping(tmp_path):
         test_name="test_search",
     )
 
-    incoming = BatchHttpRequest(
-        requests=[HttpRequest(url="https://www.google.com", headers={"token": "t2"})]
+    incoming = MainCommand(
+        batch_http_request=BatchHttpRequest(
+            requests=[
+                HttpRequest(url="https://www.google.com", headers={"token": "t2"})
+            ]
+        )
     )
     res_search, err_search = replay.match_and_consume_replay(
-        "batch_http_request", incoming, Scope.LOCAL
+        "send_main_command", incoming, Scope.LOCAL
     )
     assert err_search is None
     assert res_search is not None
 
-    # In test_other: the rule for test_search does NOT apply, so it fails
     replay.clear_local_replay_ignore_rules()
     replay.set_current_test("test_other")
     res_other, err_other = replay.match_and_consume_replay(
-        "batch_http_request", incoming, Scope.LOCAL
+        "send_main_command", incoming, Scope.LOCAL
     )
     assert res_other is None
     assert err_other is not None
@@ -547,12 +575,21 @@ def test_replay_ignore_other_calls(tmp_path):
     recorder = Recorder(record_mode=True, expectations_file=expectations_path)
     recorder.set_current_test("test_primitives")
 
-    recorder.record_call("open_clientfd", "/var/run/moosync.sock", 10, Scope.LOCAL)
-    recorder.record_call("write_sock", {"sock_id": 10, "buf": b"data"}, 4, Scope.LOCAL)
-    recorder.record_call(
-        "read_sock", {"sock_id": 10, "read_len": 4}, b"resp", Scope.LOCAL
+    open_cmd = MainCommand(
+        open_client_fd=OpenClientFdRequest(path="/var/run/moosync.sock")
     )
-    recorder.record_call("system_time", {}, 12345, Scope.LOCAL)
+    open_resp = MainCommandResponse(open_client_fd=OpenClientFdResponse(sock_id=10))
+    write_cmd = MainCommand(write_sock=WriteSockRequest(sock_id=10, buf=b"data"))
+    write_resp = MainCommandResponse(write_sock=WriteSockResponse(bytes_written=4))
+    read_cmd = MainCommand(read_sock=ReadSockRequest(sock_id=10, read_len=4))
+    read_resp = MainCommandResponse(read_sock=ReadSockResponse(data=b"resp"))
+    time_cmd = MainCommand(system_time=SystemTimeRequest())
+    time_resp = MainCommandResponse(system_time=SystemTimeResponse(timestamp=12345))
+
+    recorder.record_call("send_main_command", open_cmd, open_resp, Scope.LOCAL)
+    recorder.record_call("send_main_command", write_cmd, write_resp, Scope.LOCAL)
+    recorder.record_call("send_main_command", read_cmd, read_resp, Scope.LOCAL)
+    recorder.record_call("send_main_command", time_cmd, time_resp, Scope.LOCAL)
 
     recorder.clear_current_test()
     recorder.save_recorded_expectations()
@@ -560,27 +597,25 @@ def test_replay_ignore_other_calls(tmp_path):
     replay = Recorder(record_mode=False, expectations_file=expectations_path)
     replay.set_current_test("test_primitives")
 
-    # open_clientfd
     res, err = replay.match_and_consume_replay(
-        "open_clientfd", "/var/run/moosync.sock", Scope.LOCAL
+        "send_main_command", open_cmd, Scope.LOCAL
     )
-    assert err is None and res == 10
+    assert err is None and res.open_client_fd.sock_id == 10
 
-    # write_sock
     res, err = replay.match_and_consume_replay(
-        "write_sock", {"sock_id": 10, "buf": b"data"}, Scope.LOCAL
+        "send_main_command", write_cmd, Scope.LOCAL
     )
-    assert err is None and res == 4
+    assert err is None and res.write_sock.bytes_written == 4
 
-    # read_sock
     res, err = replay.match_and_consume_replay(
-        "read_sock", {"sock_id": 10, "read_len": 4}, Scope.LOCAL
+        "send_main_command", read_cmd, Scope.LOCAL
     )
-    assert err is None and res == b"resp"
+    assert err is None and res.read_sock.data == b"resp"
 
-    # system_time
-    res, err = replay.match_and_consume_replay("system_time", {}, Scope.LOCAL)
-    assert err is None and res == 12345
+    res, err = replay.match_and_consume_replay(
+        "send_main_command", time_cmd, Scope.LOCAL
+    )
+    assert err is None and res.system_time.timestamp == 12345
 
 
 class FakeMoounit:
@@ -599,20 +634,17 @@ def test_expect_command_and_handle_main_command():
     expected_resp = MainCommandResponse(get_song=GetSongResponse(songs=[Song()]))
     manager.expect_command(cmd, expected_resp)
 
-    # Matching command returns expected response
     res_bytes = manager.handle_main_command(cmd.SerializeToString())
     res = MainCommandResponse.FromString(res_bytes)
     assert res.WhichOneof("response") == "get_song"
     assert len(res.get_song.songs) == 1
 
-    # Unmatched command in replay mode raises AssertionError
     wrong_cmd = MainCommand(
         get_secure=GetSecureRequest(data=PreferenceData(key="secret"))
     )
     with pytest.raises(AssertionError, match="Unexpected command"):
         manager.handle_main_command(wrong_cmd.SerializeToString())
 
-    # In record mode, unmatched command falls back to default response
     rec_manager = ExpectationManager(recorder=Recorder(record_mode=True))
     rec_res_bytes = rec_manager.handle_main_command(wrong_cmd.SerializeToString())
     rec_res = MainCommandResponse.FromString(rec_res_bytes)
@@ -624,28 +656,39 @@ def test_default_response_fallback():
     manager = ExpectationManager(recorder=Recorder(record_mode=True), moounit=fake)
     assert not manager.passthrough_enabled
 
-    # system_time fallback to default_system_time
-    assert manager._check_system_time() == default_system_time()
-
-    # open_clientfd fallback to default_open_clientfd
-    assert manager._check_open_clientfd("test.sock") == default_open_clientfd(
-        "test.sock"
+    time_cmd = MainCommand(system_time=SystemTimeRequest())
+    res = MainCommandResponse.FromString(
+        manager.handle_main_command(time_cmd.SerializeToString())
     )
+    assert res.system_time.timestamp == 0
 
-    # write_sock fallback to default_write_sock
-    assert manager._check_write_sock(1, b"hello") == default_write_sock(1, b"hello")
+    open_cmd = MainCommand(open_client_fd=OpenClientFdRequest(path="test.sock"))
+    res = MainCommandResponse.FromString(
+        manager.handle_main_command(open_cmd.SerializeToString())
+    )
+    assert res.open_client_fd.sock_id == 100
 
-    # read_sock fallback to default_read_sock
-    assert manager._check_read_sock(1, 10) == default_read_sock(1, 10)
+    write_cmd = MainCommand(write_sock=WriteSockRequest(sock_id=1, buf=b"hello"))
+    res = MainCommandResponse.FromString(
+        manager.handle_main_command(write_cmd.SerializeToString())
+    )
+    assert res.write_sock.bytes_written == 5
 
-    # batch_http_request fallback to default_batch_http_response
+    read_cmd = MainCommand(read_sock=ReadSockRequest(sock_id=1, read_len=10))
+    res = MainCommandResponse.FromString(
+        manager.handle_main_command(read_cmd.SerializeToString())
+    )
+    assert res.read_sock.data == b""
+
     http_req = BatchHttpRequest(
         requests=[HttpRequest(url="https://fallback.example.com", method="GET")]
     )
-    resp_bytes = manager._check_batch_http_request(http_req.SerializeToString())
-    resp = BatchHttpResponse.FromString(resp_bytes)
+    http_cmd = MainCommand(batch_http_request=http_req)
+    res = MainCommandResponse.FromString(
+        manager.handle_main_command(http_cmd.SerializeToString())
+    )
     assert (
-        resp.SerializeToString()
+        res.batch_http_request.SerializeToString()
         == default_batch_http_response(http_req).SerializeToString()
     )
 
@@ -653,23 +696,37 @@ def test_default_response_fallback():
 def test_callable_return_values():
     manager = ExpectationManager(recorder=Recorder(record_mode=False))
 
-    # _get_value handles both callables and plain values
     assert manager._get_value(lambda: 42) == 42
     assert manager._get_value("static") == "static"
 
-    # Local scope with callable
     token = current_scope.set(Scope.LOCAL)
     try:
-        manager.expect_system_time(lambda: 99999)
-        assert manager._check_system_time() == 99999
+        manager.expect_system_time(
+            SystemTimeRequest(), lambda: SystemTimeResponse(timestamp=99999)
+        )
+        res = MainCommandResponse.FromString(
+            manager.handle_main_command(
+                MainCommand(system_time=SystemTimeRequest()).SerializeToString()
+            )
+        )
+        assert res.system_time.timestamp == 99999
     finally:
         current_scope.reset(token)
 
-    # Session scope with callable
     token = current_scope.set(Scope.SESSION)
     try:
-        manager.expect_open_clientfd("test.sock", lambda: 42)
-        assert manager._check_open_clientfd("test.sock") == 42
+        manager.expect_open_client_fd(
+            OpenClientFdRequest(path="test.sock"),
+            lambda: OpenClientFdResponse(sock_id=42),
+        )
+        res = MainCommandResponse.FromString(
+            manager.handle_main_command(
+                MainCommand(
+                    open_client_fd=OpenClientFdRequest(path="test.sock")
+                ).SerializeToString()
+            )
+        )
+        assert res.open_client_fd.sock_id == 42
     finally:
         current_scope.reset(token)
 
@@ -822,22 +879,27 @@ def test_session_expectations_lifecycle():
     token = current_scope.set(Scope.SESSION)
     try:
         manager = ExpectationManager(recorder=Recorder(record_mode=False))
-        manager.expect_system_time(100)
+        manager.expect_system_time(
+            SystemTimeRequest(), SystemTimeResponse(timestamp=100)
+        )
 
-        # Unconsumed expectation raises AssertionError on verification
-        with pytest.raises(
-            AssertionError, match="Unused session system_time expectations"
-        ):
+        with pytest.raises(AssertionError, match="Unused session command expectations"):
             manager.verify_and_clear_session_expectations()
 
-        # Re-add and consume
-        manager.expect_system_time(100)
-        assert manager._check_system_time() == 100
-        # Verification passes when consumed
+        manager.expect_system_time(
+            SystemTimeRequest(), SystemTimeResponse(timestamp=100)
+        )
+        res = MainCommandResponse.FromString(
+            manager.handle_main_command(
+                MainCommand(system_time=SystemTimeRequest()).SerializeToString()
+            )
+        )
+        assert res.system_time.timestamp == 100
         manager.verify_and_clear_session_expectations()
 
-        # clear_session_expectations empties unconsumed expectations
-        manager.expect_system_time(200)
+        manager.expect_system_time(
+            SystemTimeRequest(), SystemTimeResponse(timestamp=200)
+        )
         manager.clear_session_expectations()
         manager.verify_and_clear_session_expectations()
     finally:
@@ -849,7 +911,6 @@ def test_get_mapped_paths():
     manager = ExpectationManager(moounit=fake)
     assert manager.get_mapped_paths() == {"/ext/data": "/tmp/moosync_test"}
 
-    # Without moounit, returns empty dict
     manager_standalone = ExpectationManager(moounit=None)
     assert manager_standalone.get_mapped_paths() == {}
 
@@ -858,23 +919,30 @@ def test_verify_and_clear_local_expectations():
     token = current_scope.set(Scope.LOCAL)
     try:
         manager = ExpectationManager(recorder=Recorder(record_mode=False))
-        manager.expect_system_time(500)
+        manager.expect_system_time(
+            SystemTimeRequest(), SystemTimeResponse(timestamp=500)
+        )
 
-        # Unconsumed expectation raises AssertionError on verification
-        with pytest.raises(AssertionError, match="Unused system_time expectations"):
+        with pytest.raises(AssertionError, match="Unused command expectations"):
             manager.verify_and_clear_local_expectations()
 
-        # Re-add and consume
-        manager.expect_system_time(500)
-        assert manager._check_system_time() == 500
-        # Verification passes when consumed
+        manager.expect_system_time(
+            SystemTimeRequest(), SystemTimeResponse(timestamp=500)
+        )
+        res = MainCommandResponse.FromString(
+            manager.handle_main_command(
+                MainCommand(system_time=SystemTimeRequest()).SerializeToString()
+            )
+        )
+        assert res.system_time.timestamp == 500
         manager.verify_and_clear_local_expectations()
 
-        # In record mode, unconsumed expectations are cleared without error
         rec_manager = ExpectationManager(recorder=Recorder(record_mode=True))
-        rec_manager.expect_system_time(600)
+        rec_manager.expect_system_time(
+            SystemTimeRequest(), SystemTimeResponse(timestamp=600)
+        )
         rec_manager.verify_and_clear_local_expectations()
-        assert len(rec_manager.local_system_time_expectations) == 0
+        assert len(rec_manager.local_expectations) == 0
     finally:
         current_scope.reset(token)
 
@@ -932,27 +1000,31 @@ def test_extism_http_interception(tmp_path):
     recorder = Recorder(record_mode=False)
     recorder.replay_session_calls = [
         {
-            "type": "batch_http_request",
+            "type": "send_main_command",
             "request": {
-                "requests": [
-                    {
-                        "url": "https://api.test/data",
-                        "method": "POST",
-                        "headers": {"content-type": "application/json"},
-                        "body": "eyJpZCI6MX0=",
-                    }
-                ]
+                "batch_http_request": {
+                    "requests": [
+                        {
+                            "url": "https://api.test/data",
+                            "method": "POST",
+                            "headers": {"content-type": "application/json"},
+                            "body": "eyJpZCI6MX0=",
+                        }
+                    ]
+                }
             },
             "response": {
-                "responses": [
-                    {
-                        "response": {
-                            "status_code": 201,
-                            "headers": {"x-res": "ok"},
-                            "body": "eyJyZXN1bHQiOiAid29ya2VkIn0=",
+                "batch_http_request": {
+                    "responses": [
+                        {
+                            "response": {
+                                "status_code": 201,
+                                "headers": {"x-res": "ok"},
+                                "body": "eyJyZXN1bHQiOiAid29ya2VkIn0=",
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             },
         }
     ]

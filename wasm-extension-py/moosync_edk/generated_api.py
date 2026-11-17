@@ -2,7 +2,6 @@
 # Regenerate with: bazel run //tools/sdk_generator:update
 
 from abc import ABC
-import extism
 from core.types.protos import extensions_pb2
 from . import send_main_command
 
@@ -125,26 +124,71 @@ class PlayerProvider(ABC):
         """Commands the custom player engine to load a track for playback."""
         raise NotImplementedError("player_load_track not implemented")
 
-@extism.import_fn("extism:host/user", "system_time")
-def system_time() -> int: ...
-
-
-@extism.import_fn("extism:host/user", "open_clientfd")
-def open_clientfd(path: str) -> int: ...
-
-
-@extism.import_fn("extism:host/user", "write_sock")
-def write_sock(sock_id: int, buf: bytes) -> int: ...
-
-
-@extism.import_fn("extism:host/user", "read_sock")
-def read_sock(sock_id: int, read_len: int) -> bytes: ...
-
-
-@extism.import_fn("extism:host/user", "batch_http_request")
-def batch_http_request(data: int) -> int: ...
-
-
+def system_time(req: extensions_pb2.SystemTimeRequest | None = None) -> extensions_pb2.SystemTimeResponse:
+    """Returns current host system time in seconds since Unix epoch."""
+    if req is None:
+        req = extensions_pb2.SystemTimeRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "system_time").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "system_time":
+        return getattr(res, "system_time")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def open_client_fd(req: extensions_pb2.OpenClientFdRequest | None = None) -> extensions_pb2.OpenClientFdResponse:
+    """Opens a client socket at the specified path and returns a file descriptor handle."""
+    if req is None:
+        req = extensions_pb2.OpenClientFdRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "open_client_fd").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "open_client_fd":
+        return getattr(res, "open_client_fd")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def write_sock(req: extensions_pb2.WriteSockRequest | None = None) -> extensions_pb2.WriteSockResponse:
+    """Writes a byte buffer to the socket associated with the given file descriptor handle."""
+    if req is None:
+        req = extensions_pb2.WriteSockRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "write_sock").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "write_sock":
+        return getattr(res, "write_sock")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def read_sock(req: extensions_pb2.ReadSockRequest | None = None) -> extensions_pb2.ReadSockResponse:
+    """Reads up to max_bytes from the socket associated with the given file descriptor handle."""
+    if req is None:
+        req = extensions_pb2.ReadSockRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "read_sock").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "read_sock":
+        return getattr(res, "read_sock")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def batch_http_request(req: extensions_pb2.BatchHttpRequest | None = None) -> extensions_pb2.BatchHttpResponse:
+    """Executes a batch of HTTP requests via the host network runner."""
+    if req is None:
+        req = extensions_pb2.BatchHttpRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "batch_http_request").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "batch_http_request":
+        return getattr(res, "batch_http_request")
+    raise RuntimeError(f"Unexpected response variant: {which}")
 def get_song(req: extensions_pb2.GetSongRequest | None = None) -> extensions_pb2.GetSongResponse:
     """Queries and retrieves song entities matching the given criteria from the host database."""
     if req is None:
@@ -604,6 +648,21 @@ def ws_close(req: extensions_pb2.WsCloseRequest | None = None) -> extensions_pb2
 
 class ExtensionApi:
     """Strongly-typed Host API client for Moosync extensions."""
+    def system_time(self, req: extensions_pb2.SystemTimeRequest | None = None) -> extensions_pb2.SystemTimeResponse:
+        """Returns current host system time in seconds since Unix epoch."""
+        return system_time(req)
+    def open_client_fd(self, req: extensions_pb2.OpenClientFdRequest | None = None) -> extensions_pb2.OpenClientFdResponse:
+        """Opens a client socket at the specified path and returns a file descriptor handle."""
+        return open_client_fd(req)
+    def write_sock(self, req: extensions_pb2.WriteSockRequest | None = None) -> extensions_pb2.WriteSockResponse:
+        """Writes a byte buffer to the socket associated with the given file descriptor handle."""
+        return write_sock(req)
+    def read_sock(self, req: extensions_pb2.ReadSockRequest | None = None) -> extensions_pb2.ReadSockResponse:
+        """Reads up to max_bytes from the socket associated with the given file descriptor handle."""
+        return read_sock(req)
+    def batch_http_request(self, req: extensions_pb2.BatchHttpRequest | None = None) -> extensions_pb2.BatchHttpResponse:
+        """Executes a batch of HTTP requests via the host network runner."""
+        return batch_http_request(req)
     def get_song(self, req: extensions_pb2.GetSongRequest | None = None) -> extensions_pb2.GetSongResponse:
         """Queries and retrieves song entities matching the given criteria from the host database."""
         return get_song(req)

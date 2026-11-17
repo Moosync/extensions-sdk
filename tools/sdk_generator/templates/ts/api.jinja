@@ -4,10 +4,8 @@
 import {
   MainCommand,
 {% for m in host_methods %}
-{% if m.is_proto_payload %}
   {{ m.req_type }},
   {{ m.resp_type }},
-{% endif %}
 {% endfor %}
 } from "./protos/extensions_pb.js";
 import { sendMainCommand } from "./utils.js";
@@ -16,55 +14,6 @@ import { sendMainCommand } from "./utils.js";
 {% if m.doc %}
 {{ m.doc | format_doc("jsdoc") }}
 {% endif %}
-{% if m.transport == 1 %}
-{% if m.is_proto_payload %}
-export async function {{ m.camel_name }}(
-  req: {{ m.req_type }}
-): Promise<{{ m.resp_type }}> {
-  const fns = Host.getFunctions() as any;
-  const { {{ m.wasm_symbol }} } = fns;
-  const bytes = req.toBinary();
-  // @ts-ignore
-  const mem = Memory.fromBuffer(bytes.buffer);
-  const resOffset = {{ m.wasm_symbol }}(mem.offset);
-  // @ts-ignore
-  const resMem = Memory.find(resOffset);
-  return {{ m.resp_type }}.fromBinary(new Uint8Array(resMem.readBytes()));
-}
-{% else %}
-export function {{ m.camel_name }}({% for p in m.params %}{{ p.camel_name }}: {{ p.ts_type }}{% if not loop.last %}, {% endif %}{% endfor %}): {{ m.ret_ts_type }} {
-  const fns = Host.getFunctions() as any;
-  const { {{ m.wasm_symbol }} } = fns;
-{% for p in m.params %}
-{% if p.kind == "string" %}
-  // @ts-ignore
-  const {{ p.camel_name }}Mem = Memory.fromString({{ p.camel_name }});
-{% elif p.kind == "bytes" %}
-  // @ts-ignore
-  const {{ p.camel_name }}Mem = Memory.fromBuffer({{ p.camel_name }}.buffer);
-{% endif %}
-{% endfor %}
-{% set call_args = [] %}
-{% for p in m.params %}
-{% if p.kind in ["string", "bytes"] %}
-{% set _ = call_args.append(p.camel_name ~ "Mem.offset") %}
-{% elif p.kind == "uint64" %}
-{% set _ = call_args.append("BigInt(" ~ p.camel_name ~ ")") %}
-{% else %}
-{% set _ = call_args.append(p.camel_name) %}
-{% endif %}
-{% endfor %}
-{% if m.ret_kind == "bytes" %}
-  const resOffset = {{ m.wasm_symbol }}({{ call_args | join(", ") }});
-  // @ts-ignore
-  const resMem = Memory.find(resOffset);
-  return new Uint8Array(resMem.readBytes());
-{% else %}
-  return Number({{ m.wasm_symbol }}({{ call_args | join(", ") }}));
-{% endif %}
-}
-{% endif %}
-{% else %}
 {% set fn_name = "host" ~ m.pascal_name if m.has_wrapper else m.camel_name %}
 export async function {{ fn_name }}(req?: {{ m.req_type }}): Promise<{{ m.resp_type }} | undefined> {
   const response = await sendMainCommand(
@@ -80,6 +29,5 @@ export async function {{ fn_name }}(req?: {{ m.req_type }}): Promise<{{ m.resp_t
   }
   return undefined;
 }
-{% endif %}
 
 {% endfor %}

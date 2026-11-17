@@ -1,5 +1,4 @@
 # pylint: disable=duplicate-code
-import json
 import os
 import platform
 import sys
@@ -20,8 +19,6 @@ from extism.extism import (
     ValType,
 )
 from core.types.protos.extensions_pb2 import (
-    BatchHttpRequest,
-    BatchHttpResponse,
     ExtensionAccountDetail,
     ExtensionCommand,
     ExtensionCommandResponse,
@@ -135,44 +132,10 @@ class Moounit(GeneratedMoounitGuestClient):
                 instance._host_exception = exc
                 raise
 
-        def system_time() -> int:
-            return _guard(
-                lambda i: i.manager._check_system_time(),
-                "Unexpected call to system_time. If this call is expected, please ensure you have set an expectation using expect_system_time.",
-            )
-
-        def open_clientfd(path: str) -> int:
-            return _guard(
-                lambda i: i.manager._check_open_clientfd(path),
-                f"Unexpected call to open_clientfd with path: {path}. If this call is expected, please ensure you have set an expectation using expect_open_clientfd.",
-            )
-
-        def write_sock(sock_id: bytes, buf: bytes) -> int:
-            return _guard(
-                lambda i: i.manager._check_write_sock(
-                    int.from_bytes(sock_id, "little"), buf
-                ),
-                f"Unexpected call to write_sock with sock_id: {sock_id}. If this call is expected, please ensure you have set an expectation using expect_write_sock.",
-            )
-
-        def read_sock(sock_id: bytes, read_len: int) -> bytes:
-            return _guard(
-                lambda i: i.manager._check_read_sock(
-                    int.from_bytes(sock_id, "little"), read_len
-                ),
-                f"Unexpected call to read_sock with sock_id: {sock_id}. If this call is expected, please ensure you have set an expectation using expect_read_sock.",
-            )
-
         def send_main_command(data: bytes) -> bytes:
             return _guard(
                 lambda i: i.manager.handle_main_command(data),
                 "No Moounit instance found for send_main_command",
-            )
-
-        def batch_http_request(data: bytes) -> bytes:
-            return _guard(
-                lambda i: i.manager._check_batch_http_request(data),
-                "Unexpected call to batch_http_request. If this call is expected, please ensure you have set an expectation using expect_batch_http_request.",
             )
 
         def http_request(
@@ -216,39 +179,9 @@ class Moounit(GeneratedMoounitGuestClient):
         fns: list[Function] = [
             TypeInferredFunction(
                 None,
-                system_time.__name__,
-                system_time,
-                [(0).to_bytes(length=4, byteorder="big")],
-            ),
-            TypeInferredFunction(
-                None,
-                open_clientfd.__name__,
-                open_clientfd,
-                [(1).to_bytes(length=4, byteorder="big")],
-            ),
-            TypeInferredFunction(
-                None,
-                write_sock.__name__,
-                write_sock,
-                [(2).to_bytes(length=4, byteorder="big")],
-            ),
-            TypeInferredFunction(
-                None,
-                read_sock.__name__,
-                read_sock,
-                [(3).to_bytes(length=4, byteorder="big")],
-            ),
-            TypeInferredFunction(
-                None,
                 send_main_command.__name__,
                 send_main_command,
-                [(4).to_bytes(length=4, byteorder="big")],
-            ),
-            TypeInferredFunction(
-                None,
-                batch_http_request.__name__,
-                batch_http_request,
-                [(5).to_bytes(length=4, byteorder="big")],
+                [(0).to_bytes(length=4, byteorder="big")],
             ),
             ExplicitFunction(
                 "extism:host/env",
@@ -256,7 +189,7 @@ class Moounit(GeneratedMoounitGuestClient):
                 [ValType.I64, ValType.I64],
                 [ValType.I64],
                 http_request,
-                [(6).to_bytes(length=4, byteorder="big")],
+                [(1).to_bytes(length=4, byteorder="big")],
             ),
             ExplicitFunction(
                 "extism:host/env",
@@ -264,7 +197,7 @@ class Moounit(GeneratedMoounitGuestClient):
                 [],
                 [ValType.I32],
                 http_status_code,
-                [(7).to_bytes(length=4, byteorder="big")],
+                [(2).to_bytes(length=4, byteorder="big")],
             ),
             ExplicitFunction(
                 "extism:host/env",
@@ -272,7 +205,7 @@ class Moounit(GeneratedMoounitGuestClient):
                 [],
                 [ValType.I64],
                 http_headers,
-                [(8).to_bytes(length=4, byteorder="big")],
+                [(3).to_bytes(length=4, byteorder="big")],
             ),
         ]
 
@@ -290,9 +223,6 @@ class Moounit(GeneratedMoounitGuestClient):
         if hasattr(self, "process_manager") and self.process_manager is not None:
             self.process_manager.mapped_paths = self._mapped_paths
 
-        # Mapping Python runtime platform to Rust std target constants:
-        # https://doc.rust-lang.org/std/env/consts/constant.OS.html
-        # https://doc.rust-lang.org/std/env/consts/constant.ARCH.html
         target_os = (
             "linux"
             if sys.platform.startswith("linux")
@@ -466,38 +396,6 @@ class Moounit(GeneratedMoounitGuestClient):
         times: int = 1,
     ) -> None:
         self.manager.expect_command(command, response, times=times)
-
-    def expect_system_time(
-        self, return_value: int | Callable[[], int], times: int = 1
-    ) -> None:
-        self.manager.expect_system_time(return_value, times=times)
-
-    def expect_open_clientfd(
-        self, path: str, return_value: int | Callable[[], int], times: int = 1
-    ) -> None:
-        self.manager.expect_open_clientfd(path, return_value, times=times)
-
-    def expect_write_sock(
-        self, sock_id: int, return_value: int | Callable[[], int], times: int = 1
-    ) -> None:
-        self.manager.expect_write_sock(sock_id, return_value, times=times)
-
-    def expect_read_sock(
-        self,
-        sock_id: int,
-        read_len: int,
-        return_value: bytes | Callable[[], bytes],
-        times: int = 1,
-    ) -> None:
-        self.manager.expect_read_sock(sock_id, read_len, return_value, times=times)
-
-    def expect_batch_http_request(
-        self,
-        requests: BatchHttpRequest,
-        responses: BatchHttpResponse | Callable[[], BatchHttpResponse],
-        times: int = 1,
-    ) -> None:
-        self.manager.expect_batch_http_request(requests, responses, times=times)
 
     def replay_ignore(
         self,

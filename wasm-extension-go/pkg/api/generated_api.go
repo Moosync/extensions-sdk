@@ -4,11 +4,7 @@
 package api
 
 import (
-	"encoding/binary"
 	"errors"
-
-	pdk "github.com/extism/go-pdk"
-	"google.golang.org/protobuf/proto"
 
 	extensions "github.com/moosync/moosync/types/extensions"
 )
@@ -98,61 +94,85 @@ type PlayerProvider interface {
 	PlayerLoadTrack(req *extensions.PlayerLoadTrackRequest) (*extensions.PlayerLoadTrackResponse, error)
 }
 
-//go:wasmimport extism:host/user system_time
-func system_time() uint64
-
 // SystemTime Returns current host system time in seconds since Unix epoch.
-func SystemTime() uint64 {
-	rPtr := system_time()
-	rMem := pdk.FindMemory(rPtr)
-	return binary.LittleEndian.Uint64(rMem.ReadBytes())
-}
-//go:wasmimport extism:host/user open_clientfd
-func open_clientfd(uint64) uint64
-
-// OpenClientFd Opens a client socket at the specified path and returns a file descriptor handle.
-func OpenClientFd(path string) int64 {
-	pathMem := pdk.AllocateString(path)
-	rPtr := open_clientfd(pathMem.Offset())
-	rMem := pdk.FindMemory(rPtr)
-	return int64(binary.LittleEndian.Uint64(rMem.ReadBytes()))
-}
-//go:wasmimport extism:host/user write_sock
-func write_sock(int64, uint64) uint64
-
-// WriteSock Writes a byte buffer to the socket associated with the given file descriptor handle.
-func WriteSock(sockId int64, buf []byte) int64 {
-	bufMem := pdk.AllocateBytes(buf)
-	rPtr := write_sock(sockId, bufMem.Offset())
-	rMem := pdk.FindMemory(rPtr)
-	return int64(binary.LittleEndian.Uint64(rMem.ReadBytes()))
-}
-//go:wasmimport extism:host/user read_sock
-func read_sock(int64, uint64) uint64
-
-// ReadSock Reads up to max_bytes from the socket associated with the given file descriptor handle.
-func ReadSock(sockId int64, readLen uint64) []byte {
-	rPtr := read_sock(sockId, readLen)
-	rMem := pdk.FindMemory(rPtr)
-	return rMem.ReadBytes()
-}
-//go:wasmimport extism:host/user batch_http_request
-func batch_http_request(uint64) uint64
-
-// BatchHttpRequest Executes a batch of HTTP requests via the host network runner.
-func BatchHttpRequest(req *extensions.BatchHttpRequest) (*extensions.BatchHttpResponse, error) {
-	batchBytes, err := proto.Marshal(req)
+func SystemTime(req *extensions.SystemTimeRequest) (*extensions.SystemTimeResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_SystemTime{
+			SystemTime: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
 	if err != nil {
 		return nil, err
 	}
-	mem := pdk.AllocateBytes(batchBytes)
-	rPtr := batch_http_request(mem.Offset())
-	rMem := pdk.FindMemory(rPtr)
-	respBatch := &extensions.BatchHttpResponse{}
-	if err := proto.Unmarshal(rMem.ReadBytes(), respBatch); err != nil {
+	if v, ok := res.Response.(*extensions.MainCommandResponse_SystemTime); ok {
+		return v.SystemTime, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+// HostOpenClientFd Opens a client socket at the specified path and returns a file descriptor handle.
+func HostOpenClientFd(req *extensions.OpenClientFdRequest) (*extensions.OpenClientFdResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_OpenClientFd{
+			OpenClientFd: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
 		return nil, err
 	}
-	return respBatch, nil
+	if v, ok := res.Response.(*extensions.MainCommandResponse_OpenClientFd); ok {
+		return v.OpenClientFd, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+// HostWriteSock Writes a byte buffer to the socket associated with the given file descriptor handle.
+func HostWriteSock(req *extensions.WriteSockRequest) (*extensions.WriteSockResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_WriteSock{
+			WriteSock: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_WriteSock); ok {
+		return v.WriteSock, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+// HostReadSock Reads up to max_bytes from the socket associated with the given file descriptor handle.
+func HostReadSock(req *extensions.ReadSockRequest) (*extensions.ReadSockResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_ReadSock{
+			ReadSock: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_ReadSock); ok {
+		return v.ReadSock, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+// HostBatchHttpRequest Executes a batch of HTTP requests via the host network runner.
+func HostBatchHttpRequest(req *extensions.BatchHttpRequest) (*extensions.BatchHttpResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_BatchHttpRequest{
+			BatchHttpRequest: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_BatchHttpRequest); ok {
+		return v.BatchHttpRequest, nil
+	}
+	return nil, errors.New("Invalid response type from host")
 }
 // GetSong Queries and retrieves song entities matching the given criteria from the host database.
 func GetSong(req *extensions.GetSongRequest) (*extensions.GetSongResponse, error) {

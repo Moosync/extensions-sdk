@@ -60,7 +60,7 @@ from .generated_api import *
 from .generated_dispatcher import *
 from .platform import PlatformInfo, get_platform
 from .cache import get_cache, set_cache
-from .socket import SocketClient
+from .socket import SocketClient, open_sock
 from .websocket import WebSocketClient, WebSocketMessage
 from .lrc import parse_lrc
 from .http import (
@@ -117,3 +117,4 @@ def entry():
         raise Exception("Extension module not loaded")
 
 ExtensionApi.get_platform = staticmethod(get_platform)
+ExtensionApi.open_sock = staticmethod(open_sock)

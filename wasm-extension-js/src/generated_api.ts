@@ -3,6 +3,14 @@
 
 import {
   MainCommand,
+  SystemTimeRequest,
+  SystemTimeResponse,
+  OpenClientFdRequest,
+  OpenClientFdResponse,
+  WriteSockRequest,
+  WriteSockResponse,
+  ReadSockRequest,
+  ReadSockResponse,
   BatchHttpRequest,
   BatchHttpResponse,
   GetSongRequest,
@@ -81,61 +89,91 @@ import { sendMainCommand } from "./utils.js";
 /**
  * Returns current host system time in seconds since Unix epoch.
  */
-export function systemTime(): number {
-  const fns = Host.getFunctions() as any;
-  const { system_time } = fns;
-  return Number(system_time());
+export async function systemTime(req?: SystemTimeRequest): Promise<SystemTimeResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "systemTime",
+        value: req ?? new SystemTimeRequest(),
+      },
+    })
+  );
+  if (response.response.case === "systemTime") {
+    return response.response.value;
+  }
+  return undefined;
 }
 
 /**
  * Opens a client socket at the specified path and returns a file descriptor handle.
  */
-export function openClientFd(path: string): number {
-  const fns = Host.getFunctions() as any;
-  const { open_clientfd } = fns;
-  // @ts-ignore
-  const pathMem = Memory.fromString(path);
-  return Number(open_clientfd(pathMem.offset));
+export async function hostOpenClientFd(req?: OpenClientFdRequest): Promise<OpenClientFdResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "openClientFd",
+        value: req ?? new OpenClientFdRequest(),
+      },
+    })
+  );
+  if (response.response.case === "openClientFd") {
+    return response.response.value;
+  }
+  return undefined;
 }
 
 /**
  * Writes a byte buffer to the socket associated with the given file descriptor handle.
  */
-export function writeSock(sockId: number, buf: Uint8Array): number {
-  const fns = Host.getFunctions() as any;
-  const { write_sock } = fns;
-  // @ts-ignore
-  const bufMem = Memory.fromBuffer(buf.buffer);
-  return Number(write_sock(sockId, bufMem.offset));
+export async function hostWriteSock(req?: WriteSockRequest): Promise<WriteSockResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "writeSock",
+        value: req ?? new WriteSockRequest(),
+      },
+    })
+  );
+  if (response.response.case === "writeSock") {
+    return response.response.value;
+  }
+  return undefined;
 }
 
 /**
  * Reads up to max_bytes from the socket associated with the given file descriptor handle.
  */
-export function readSock(sockId: number, readLen: number): Uint8Array {
-  const fns = Host.getFunctions() as any;
-  const { read_sock } = fns;
-  const resOffset = read_sock(sockId, BigInt(readLen));
-  // @ts-ignore
-  const resMem = Memory.find(resOffset);
-  return new Uint8Array(resMem.readBytes());
+export async function hostReadSock(req?: ReadSockRequest): Promise<ReadSockResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "readSock",
+        value: req ?? new ReadSockRequest(),
+      },
+    })
+  );
+  if (response.response.case === "readSock") {
+    return response.response.value;
+  }
+  return undefined;
 }
 
 /**
  * Executes a batch of HTTP requests via the host network runner.
  */
-export async function batchHttpRequest(
-  req: BatchHttpRequest
-): Promise<BatchHttpResponse> {
-  const fns = Host.getFunctions() as any;
-  const { batch_http_request } = fns;
-  const bytes = req.toBinary();
-  // @ts-ignore
-  const mem = Memory.fromBuffer(bytes.buffer);
-  const resOffset = batch_http_request(mem.offset);
-  // @ts-ignore
-  const resMem = Memory.find(resOffset);
-  return BatchHttpResponse.fromBinary(new Uint8Array(resMem.readBytes()));
+export async function hostBatchHttpRequest(req?: BatchHttpRequest): Promise<BatchHttpResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "batchHttpRequest",
+        value: req ?? new BatchHttpRequest(),
+      },
+    })
+  );
+  if (response.response.case === "batchHttpRequest") {
+    return response.response.value;
+  }
+  return undefined;
 }
 
 /**

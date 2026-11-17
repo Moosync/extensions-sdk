@@ -10,6 +10,7 @@ pub use crate::handler::register_extension;
 pub use crate::platform::get_platform;
 pub use crate::process::spawn_process;
 pub use crate::response_utils::{duration_to_proto, parse_lrc, proto_to_duration, Extract};
+pub use crate::socket::{open_sock, SocketClient};
 
 pub type MoosyncResult<T> = Result<T, MoosyncError>;
 
@@ -45,15 +46,6 @@ mod raw_host {
     #[host_fn]
     extern "ExtismHost" {
         pub(super) fn send_main_command(command: Prost<MainCommand>) -> Prost<MainCommandResponse>;
-{% for m in host_methods %}
-{% if m.transport == 1 %}
-{% if m.is_proto_payload %}
-        pub(super) fn {{ m.wasm_symbol }}(req: Prost<{{ m.req_type }}>) -> Prost<{{ m.resp_type }}>;
-{% else %}
-        pub(super) fn {{ m.wasm_symbol }}({% for p in m.params %}{{ p.snake_name }}: {{ p.rust_type }}{% if not loop.last %}, {% endif %}{% endfor %}) -> {{ m.ret_rust_type }};
-{% endif %}
-{% endif %}
-{% endfor %}
     }
 }
 
@@ -61,20 +53,6 @@ mod raw_host {
 {% if m.doc %}
 {{ m.doc | format_doc("rustdoc", 0) }}
 {% endif %}
-{% if m.transport == 1 %}
-{% if m.is_proto_payload %}
-pub fn {{ m.wasm_symbol }}(req: {{ m.req_type }}) -> MoosyncResult<{{ m.resp_type }}> {
-    unsafe {
-        let Prost(res) = raw_host::{{ m.wasm_symbol }}(Prost(req))?;
-        Ok(res)
-    }
-}
-{% else %}
-pub fn {{ m.wasm_symbol }}({% for p in m.params %}{{ p.snake_name }}: {{ p.rust_type }}{% if not loop.last %}, {% endif %}{% endfor %}) -> MoosyncResult<{{ m.ret_rust_type }}> {
-    unsafe { Ok(raw_host::{{ m.wasm_symbol }}({% for p in m.params %}{{ p.snake_name }}{% if not loop.last %}, {% endif %}{% endfor %})?) }
-}
-{% endif %}
-{% else %}
 {% set fn_name = "host_" ~ m.snake_name if m.has_wrapper else m.snake_name %}
 pub fn {{ fn_name }}(req: {{ m.req_type }}) -> MoosyncResult<{{ m.resp_type }}> {
     unsafe {
@@ -95,5 +73,4 @@ pub fn {{ fn_name }}(req: {{ m.req_type }}) -> MoosyncResult<{{ m.resp_type }}> 
         Err(MoosyncError::String("Host returned invalid response".into()))
     }
 }
-{% endif %}
 {% endfor %}

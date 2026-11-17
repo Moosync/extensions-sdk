@@ -247,7 +247,7 @@ func BatchHttpRequestList(requests []HttpRequest) ([]HttpResponse, []error) {
 		Requests: protoReqs,
 	}
 
-	respBatch, err := BatchHttpRequest(batch)
+	respBatch, err := HostBatchHttpRequest(batch)
 	if err != nil {
 		return nil, []error{err}
 	}

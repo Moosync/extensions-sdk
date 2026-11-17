@@ -17,6 +17,21 @@ PLAYER_COMMANDS: tuple[str, ...] = (
 
 
 MAIN_COMMAND_DEFAULT_RESPONSES: dict[str, Callable[[], extensions_pb2.MainCommandResponse]] = {
+    "system_time": lambda: extensions_pb2.MainCommandResponse(
+        system_time=extensions_pb2.SystemTimeResponse()
+    ),
+    "open_client_fd": lambda: extensions_pb2.MainCommandResponse(
+        open_client_fd=extensions_pb2.OpenClientFdResponse()
+    ),
+    "write_sock": lambda: extensions_pb2.MainCommandResponse(
+        write_sock=extensions_pb2.WriteSockResponse()
+    ),
+    "read_sock": lambda: extensions_pb2.MainCommandResponse(
+        read_sock=extensions_pb2.ReadSockResponse()
+    ),
+    "batch_http_request": lambda: extensions_pb2.MainCommandResponse(
+        batch_http_request=extensions_pb2.BatchHttpResponse()
+    ),
     "get_song": lambda: extensions_pb2.MainCommandResponse(
         get_song=extensions_pb2.GetSongResponse()
     ),
@@ -127,6 +142,86 @@ MAIN_COMMAND_DEFAULT_RESPONSES: dict[str, Callable[[], extensions_pb2.MainComman
 
 class GeneratedMoounitExpectationClient:
     """Strongly-typed host command expectation helper methods generated from protobuf service definitions."""
+
+    def expect_system_time(
+        self,
+        req: extensions_pb2.SystemTimeRequest,
+        response: extensions_pb2.SystemTimeResponse | Callable[[], extensions_pb2.SystemTimeResponse] | None = None,
+        times: int = 1,
+    ) -> None:
+        """Expects host call to system_time: Returns current host system time in seconds since Unix epoch."""
+        cmd = extensions_pb2.MainCommand(system_time=req)
+        res_val = response if response is not None else extensions_pb2.SystemTimeResponse()
+        res = (
+            (lambda r=res_val: extensions_pb2.MainCommandResponse(system_time=r()))
+            if callable(res_val)
+            else extensions_pb2.MainCommandResponse(system_time=res_val)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_open_client_fd(
+        self,
+        req: extensions_pb2.OpenClientFdRequest,
+        response: extensions_pb2.OpenClientFdResponse | Callable[[], extensions_pb2.OpenClientFdResponse] | None = None,
+        times: int = 1,
+    ) -> None:
+        """Expects host call to open_client_fd: Opens a client socket at the specified path and returns a file descriptor handle."""
+        cmd = extensions_pb2.MainCommand(open_client_fd=req)
+        res_val = response if response is not None else extensions_pb2.OpenClientFdResponse()
+        res = (
+            (lambda r=res_val: extensions_pb2.MainCommandResponse(open_client_fd=r()))
+            if callable(res_val)
+            else extensions_pb2.MainCommandResponse(open_client_fd=res_val)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_write_sock(
+        self,
+        req: extensions_pb2.WriteSockRequest,
+        response: extensions_pb2.WriteSockResponse | Callable[[], extensions_pb2.WriteSockResponse] | None = None,
+        times: int = 1,
+    ) -> None:
+        """Expects host call to write_sock: Writes a byte buffer to the socket associated with the given file descriptor handle."""
+        cmd = extensions_pb2.MainCommand(write_sock=req)
+        res_val = response if response is not None else extensions_pb2.WriteSockResponse()
+        res = (
+            (lambda r=res_val: extensions_pb2.MainCommandResponse(write_sock=r()))
+            if callable(res_val)
+            else extensions_pb2.MainCommandResponse(write_sock=res_val)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_read_sock(
+        self,
+        req: extensions_pb2.ReadSockRequest,
+        response: extensions_pb2.ReadSockResponse | Callable[[], extensions_pb2.ReadSockResponse] | None = None,
+        times: int = 1,
+    ) -> None:
+        """Expects host call to read_sock: Reads up to max_bytes from the socket associated with the given file descriptor handle."""
+        cmd = extensions_pb2.MainCommand(read_sock=req)
+        res_val = response if response is not None else extensions_pb2.ReadSockResponse()
+        res = (
+            (lambda r=res_val: extensions_pb2.MainCommandResponse(read_sock=r()))
+            if callable(res_val)
+            else extensions_pb2.MainCommandResponse(read_sock=res_val)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_batch_http_request(
+        self,
+        req: extensions_pb2.BatchHttpRequest,
+        response: extensions_pb2.BatchHttpResponse | Callable[[], extensions_pb2.BatchHttpResponse] | None = None,
+        times: int = 1,
+    ) -> None:
+        """Expects host call to batch_http_request: Executes a batch of HTTP requests via the host network runner."""
+        cmd = extensions_pb2.MainCommand(batch_http_request=req)
+        res_val = response if response is not None else extensions_pb2.BatchHttpResponse()
+        res = (
+            (lambda r=res_val: extensions_pb2.MainCommandResponse(batch_http_request=r()))
+            if callable(res_val)
+            else extensions_pb2.MainCommandResponse(batch_http_request=res_val)
+        )
+        self.expect_command(cmd, res, times=times)
 
     def expect_get_song(
         self,

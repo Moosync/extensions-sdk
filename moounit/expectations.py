@@ -9,7 +9,6 @@ from google.protobuf.message import Message
 
 from core.types.protos.extensions_pb2 import (
     BatchHttpRequest,
-    BatchHttpResponse,
     Error,
     ExtensionAccountDetail,
     HttpRequest,
@@ -23,33 +22,12 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 E = TypeVar("E", bound=object)
-RequestInfoType = Message | int | str | bytes
-from moounit.defaults import (
-    default_batch_http_response,
-    default_main_command_response,
-    default_open_clientfd,
-    default_read_sock,
-    default_system_time,
-    default_write_sock,
-)
+from moounit.defaults import default_main_command_response
+from moounit.generated import GeneratedMoounitExpectationClient
 from moounit.matcher import ReplayIgnoreBuilder, partial_match
 from moounit.models import (
-    BatchHttpRequestExpectation,
     Expectation,
-    OpenClientFdExpectation,
-    ReadSockExpectation,
     Scope,
-    SystemTimeExpectation,
-    WriteSockExpectation,
-)
-
-ExpectationType = (
-    Expectation
-    | SystemTimeExpectation
-    | OpenClientFdExpectation
-    | WriteSockExpectation
-    | ReadSockExpectation
-    | BatchHttpRequestExpectation
 )
 from moounit.passthrough import (
     RealSocketManager,
@@ -61,32 +39,8 @@ from moounit.sanitize import sanitize_main_command
 
 current_scope = contextvars.ContextVar("current_scope", default=Scope.SESSION)
 
-ATTR_MAP: dict[str, tuple[str, str]] = {
-    "command": ("local_expectations", "session_expectations"),
-    "system_time": (
-        "local_system_time_expectations",
-        "session_system_time_expectations",
-    ),
-    "open_clientfd": (
-        "local_open_clientfd_expectations",
-        "session_open_clientfd_expectations",
-    ),
-    "write_sock": (
-        "local_write_sock_expectations",
-        "session_write_sock_expectations",
-    ),
-    "read_sock": (
-        "local_read_sock_expectations",
-        "session_read_sock_expectations",
-    ),
-    "batch_http_request": (
-        "local_batch_http_request_expectations",
-        "session_batch_http_request_expectations",
-    ),
-}
 
-
-class ExpectationManager:
+class ExpectationManager(GeneratedMoounitExpectationClient):
     def __init__(
         self,
         recorder: Recorder | None = None,
@@ -97,10 +51,8 @@ class ExpectationManager:
         self._socket_manager: RealSocketManager | None = None
         self.accounts: dict[str, ExtensionAccountDetail] = {}
         self._last_http_result: HttpResult | None = None
-
-        for local_attr, session_attr in ATTR_MAP.values():
-            setattr(self, local_attr, [])
-            setattr(self, session_attr, [])
+        self.local_expectations: list[Expectation] = []
+        self.session_expectations: list[Expectation] = []
 
     @property
     def passthrough_enabled(self) -> bool:
@@ -120,14 +72,6 @@ class ExpectationManager:
             return getattr(self.moounit, "package_name", "")
         return ""
 
-    def _add_expectation(self, kind: str, exp: ExpectationType) -> None:
-        local_attr, session_attr = ATTR_MAP[kind]
-        target = getattr(
-            self,
-            local_attr if current_scope.get() == Scope.LOCAL else session_attr,
-        )
-        target.append(exp)
-
     def expect_command(
         self,
         command: MainCommand,
@@ -136,71 +80,12 @@ class ExpectationManager:
     ):
         pkg_name = getattr(self.moounit, "package_name", "") if self.moounit else ""
         sanitize_main_command(command, pkg_name)
-        self._add_expectation(
-            "command",
-            Expectation(command=command, response=response, times=times),
+        target = (
+            self.local_expectations
+            if current_scope.get() == Scope.LOCAL
+            else self.session_expectations
         )
-
-    def expect_system_time(self, return_value: int | Callable[[], int], times: int = 1):
-        self._add_expectation(
-            "system_time",
-            SystemTimeExpectation(return_value=return_value, times=times),
-        )
-
-    def expect_open_clientfd(
-        self, path: str, return_value: int | Callable[[], int], times: int = 1
-    ):
-        self._add_expectation(
-            "open_clientfd",
-            OpenClientFdExpectation(path=path, return_value=return_value, times=times),
-        )
-
-    def expect_write_sock(
-        self,
-        sock_id: int,
-        buf: bytes = b"",
-        return_value: int | Callable[[], int] = 0,
-        times: int = 1,
-    ):
-        self._add_expectation(
-            "write_sock",
-            WriteSockExpectation(
-                sock_id=sock_id,
-                buf=buf,
-                return_value=return_value,
-                times=times,
-            ),
-        )
-
-    def expect_read_sock(
-        self,
-        sock_id: int,
-        read_len: int = 0,
-        return_value: bytes | Callable[[], bytes] = b"",
-        times: int = 1,
-    ):
-        self._add_expectation(
-            "read_sock",
-            ReadSockExpectation(
-                sock_id=sock_id,
-                read_len=read_len,
-                return_value=return_value,
-                times=times,
-            ),
-        )
-
-    def expect_batch_http_request(
-        self,
-        requests: BatchHttpRequest,
-        response: BatchHttpResponse | Callable[[], BatchHttpResponse],
-        times: int = 1,
-    ):
-        self._add_expectation(
-            "batch_http_request",
-            BatchHttpRequestExpectation(
-                requests=requests, response=response, times=times
-            ),
-        )
+        target.append(Expectation(command=command, response=response, times=times))
 
     def replay_ignore(
         self,
@@ -229,41 +114,31 @@ class ExpectationManager:
     def clear_local_expectations(self):
         self.accounts.clear()
         self._last_http_result = None
-        for local_attr, _ in ATTR_MAP.values():
-            getattr(self, local_attr).clear()
+        self.local_expectations.clear()
 
     def verify_and_clear_local_expectations(self):
         if self.recorder.record_mode:
             self.clear_local_expectations()
             return
 
-        errors = [
-            f"Unused {kind} expectations: {[e for e in getattr(self, local_attr) if e.times > 0]}"
-            for kind, (local_attr, _) in ATTR_MAP.items()
-            if any(e.times > 0 for e in getattr(self, local_attr))
-        ]
+        unused = [e for e in self.local_expectations if e.times > 0]
         self.clear_local_expectations()
-        if errors:
-            raise AssertionError("\n".join(errors))
+        if unused:
+            raise AssertionError(f"Unused command expectations: {unused}")
 
     def clear_session_expectations(self):
         self._last_http_result = None
-        for _, session_attr in ATTR_MAP.values():
-            getattr(self, session_attr).clear()
+        self.session_expectations.clear()
 
     def verify_and_clear_session_expectations(self):
         if self.recorder.record_mode:
             self.clear_session_expectations()
             return
 
-        errors = [
-            f"Unused session {kind} expectations: {[e for e in getattr(self, session_attr) if e.times > 0]}"
-            for kind, (_, session_attr) in ATTR_MAP.items()
-            if any(e.times > 0 for e in getattr(self, session_attr))
-        ]
+        unused = [e for e in self.session_expectations if e.times > 0]
         self.clear_session_expectations()
-        if errors:
-            raise AssertionError("\n".join(errors))
+        if unused:
+            raise AssertionError(f"Unused session command expectations: {unused}")
 
     def _get_value(self, val: T | Callable[[], T]) -> T:
         if callable(val):
@@ -289,7 +164,7 @@ class ExpectationManager:
         return None
 
     def _replay_or_fail(
-        self, call_type: str, request_obj: RequestInfoType, default_error_msg: str
+        self, call_type: str, request_obj: Message, default_error_msg: str
     ) -> object:
         scope = current_scope.get()
         if self.recorder.has_replay_expectations(scope):
@@ -320,7 +195,7 @@ class ExpectationManager:
         local_list: list[E],
         session_list: list[E],
         matcher: Callable[[E], bool],
-        req_info: RequestInfoType,
+        req_info: Message,
         passthrough_fn: Callable[[], T] | None,
         default_fn: Callable[[], T],
         record_name: str,
@@ -329,9 +204,7 @@ class ExpectationManager:
         scope = current_scope.get()
         exp = self._consume_expectation(local_list, session_list, matcher)
         if exp is not None:
-            ret = self._get_value(
-                getattr(exp, "return_value", getattr(exp, "response", None))
-            )
+            ret = self._get_value(getattr(exp, "response", None))
             if not self.recorder.record_mode and self.recorder.has_replay_expectations(
                 scope
             ):
@@ -344,11 +217,7 @@ class ExpectationManager:
                     ret = passthrough_fn()
                 except Exception:
                     ret = default_fn()
-                if ret is None or (
-                    isinstance(ret, int)
-                    and ret == -1
-                    and kind in ("open_clientfd", "write_sock")
-                ):
+                if ret is None:
                     ret = default_fn()
             else:
                 ret = default_fn()
@@ -358,89 +227,6 @@ class ExpectationManager:
 
         self.recorder.record_call(record_name, req_info, ret, scope)
         return ret
-
-    def _check_system_time(self) -> int:
-        return self._dispatch(
-            "system_time",
-            self.local_system_time_expectations,
-            self.session_system_time_expectations,
-            lambda _: True,
-            {},
-            get_real_system_time,
-            default_system_time,
-            "system_time",
-            "Unexpected call to system_time. If this call is expected, please ensure you have set an expectation using expect_system_time.",
-        )
-
-    def _check_open_clientfd(self, path: str) -> int:
-        return self._dispatch(
-            "open_clientfd",
-            self.local_open_clientfd_expectations,
-            self.session_open_clientfd_expectations,
-            lambda e: e.path == path,
-            path,
-            lambda: self.socket_manager.open_clientfd(path)
-            if self.socket_manager
-            else -1,
-            lambda: default_open_clientfd(path),
-            "open_clientfd",
-            f"Unexpected call to open_clientfd with path: {path}. If this call is expected, please ensure you have set an expectation using expect_open_clientfd.",
-        )
-
-    def _check_write_sock(self, sock_id: int, buf: bytes) -> int:
-        req_info = {"sock_id": sock_id, "buf": buf}
-        return self._dispatch(
-            "write_sock",
-            self.local_write_sock_expectations,
-            self.session_write_sock_expectations,
-            lambda e: e.sock_id == sock_id,
-            req_info,
-            lambda: self.socket_manager.write_sock(sock_id, buf)
-            if self.socket_manager
-            else -1,
-            lambda: default_write_sock(sock_id, buf),
-            "write_sock",
-            f"Unexpected call to write_sock with sock_id: {sock_id}. If this call is expected, please ensure you have set an expectation using expect_write_sock.",
-        )
-
-    def _check_read_sock(self, sock_id: int, read_len: int) -> bytes:
-        req_info = {"sock_id": sock_id, "read_len": read_len}
-        return self._dispatch(
-            "read_sock",
-            self.local_read_sock_expectations,
-            self.session_read_sock_expectations,
-            lambda e: e.sock_id == sock_id,
-            req_info,
-            lambda: self.socket_manager.read_sock(sock_id, read_len)
-            if self.socket_manager
-            else b"",
-            lambda: default_read_sock(sock_id, read_len),
-            "read_sock",
-            f"Unexpected call to read_sock with sock_id: {sock_id}. If this call is expected, please ensure you have set an expectation using expect_read_sock.",
-        )
-
-    def _check_batch_http_request(self, data: bytes) -> bytes:
-        req = BatchHttpRequest.FromString(data)
-        ignore_rules, _ = self.recorder._collect_ignore_rules_for_request(
-            "batch_http_request", req
-        )
-        resp = self._dispatch(
-            "batch_http_request",
-            self.local_batch_http_request_expectations,
-            self.session_batch_http_request_expectations,
-            lambda e: partial_match(
-                e.requests,
-                req,
-                ignored_fields=ignore_rules,
-                root_call="batch_http_request",
-            )[0],
-            req,
-            lambda: execute_real_batch_http_request(req),
-            lambda: default_batch_http_response(req),
-            "batch_http_request",
-            f"Unexpected batch_http_request: {req}. If this request is expected, please ensure you have set an expectation using expect_batch_http_request.",
-        )
-        return resp.SerializeToString()
 
     def _check_http_request(
         self, plugin: extism.CurrentPlugin, req_offs: int, body_offs: int
@@ -462,8 +248,10 @@ class ExpectationManager:
             body=body,
         )
         batch_req = BatchHttpRequest(requests=[http_req])
-        batch_resp_bytes = self._check_batch_http_request(batch_req.SerializeToString())
-        batch_resp = BatchHttpResponse.FromString(batch_resp_bytes)
+        cmd = MainCommand(batch_http_request=batch_req)
+        res_bytes = self.handle_main_command(cmd.SerializeToString())
+        res = MainCommandResponse.FromString(res_bytes)
+        batch_resp = res.batch_http_request
         result = batch_resp.responses[0] if batch_resp.responses else HttpResult()
         self._last_http_result = result
 
@@ -496,19 +284,30 @@ class ExpectationManager:
     def _get_main_command_passthrough(
         self, command: MainCommand, which: str | None
     ) -> Callable[[], MainCommandResponse] | None:
-        if not which or not self.moounit:
+        if not which:
             return None
-        for mgr_attr in ("ws_manager", "process_manager"):
+        if which == "system_time":
+            return lambda: MainCommandResponse(
+                system_time=get_real_system_time(command.system_time)
+            )
+        if which == "batch_http_request":
+            return lambda: MainCommandResponse(
+                batch_http_request=execute_real_batch_http_request(
+                    command.batch_http_request
+                )
+            )
+        if not self.moounit:
+            return None
+        for mgr_attr in ("ws_manager", "process_manager", "socket_manager"):
             mgr = getattr(self.moounit, mgr_attr, None)
             handler = getattr(mgr, which, None) if mgr else None
             if handler:
                 def _invoke(h=handler, w=which, c=command):
                     try:
-                        return MainCommandResponse(
-                            **{w: h(getattr(c, w))}
-                        )
+                        return MainCommandResponse(**{w: h(getattr(c, w))})
                     except Exception as e:
                         return MainCommandResponse(error=Error(message=str(e)))
+
                 return _invoke
         return None
 

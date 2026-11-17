@@ -28,19 +28,20 @@ class GeneratorTest(unittest.TestCase):
         self.assertGreaterEqual(len(host_methods), 20)
         self.assertGreaterEqual(len(guest_methods), 20)
 
-        # Check direct host function
         sys_time = next((m for m in host_methods if m["name"] == "SystemTime"), None)
         self.assertIsNotNone(sys_time)
-        self.assertEqual(sys_time["transport"], 1)
-        self.assertEqual(sys_time["wasm_symbol"], "system_time")
+        self.assertEqual(sys_time["oneof_variant"], "system_time")
+        self.assertFalse(sys_time["has_wrapper"])
 
-        # Check multiplexed main command
+        open_fd = next((m for m in host_methods if m["name"] == "OpenClientFd"), None)
+        self.assertIsNotNone(open_fd)
+        self.assertEqual(open_fd["oneof_variant"], "open_client_fd")
+        self.assertTrue(open_fd["has_wrapper"])
+
         get_song = next((m for m in host_methods if m["name"] == "GetSong"), None)
         self.assertIsNotNone(get_song)
-        self.assertEqual(get_song["transport"], 0)
         self.assertEqual(get_song["oneof_variant"], "get_song")
 
-        # Check event vs non-event in guest methods
         queue_changed = next((m for m in guest_methods if m["name"] == "SongQueueChanged"), None)
         self.assertIsNotNone(queue_changed)
         self.assertTrue(queue_changed["is_event"])
@@ -49,7 +50,6 @@ class GeneratorTest(unittest.TestCase):
         self.assertIsNotNone(req_playlists)
         self.assertFalse(req_playlists["is_event"])
 
-        # Test rendering all 4 languages into temporary directory
         templates_base = "tools/sdk_generator/templates"
         with tempfile.TemporaryDirectory() as tmp_dir:
             for lang in ["rust", "ts", "go", "py"]:
@@ -63,7 +63,6 @@ class GeneratorTest(unittest.TestCase):
                 self.assertGreater(os.path.getsize(out_api), 100)
                 self.assertGreater(os.path.getsize(out_disp), 100)
 
-            # Test rendering moounit
             moounit_dir = os.path.join(templates_base, "moounit")
             out_moounit = os.path.join(tmp_dir, "moounit_generated.py")
             render_template(moounit_dir, "client.jinja", metadata, out_moounit)
@@ -75,11 +74,13 @@ class GeneratorTest(unittest.TestCase):
             self.assertIn("class GeneratedMoounitExpectationClient:", content)
             self.assertIn("MAIN_COMMAND_DEFAULT_RESPONSES", content)
             self.assertIn("def expect_spawn_process(", content)
+            self.assertIn("def expect_open_client_fd(", content)
+            self.assertIn("def expect_system_time(", content)
+            self.assertIn("def expect_batch_http_request(", content)
             self.assertIn("def requested_cover_art(", content)
             self.assertIn("def can_play(", content)
             self.assertIn("def player_play(", content)
 
-            # Verify docs in metadata and generated code
             self.assertTrue(get_song.get("doc"), "Docstring should be extracted for GetSong")
             with open(os.path.join(tmp_dir, "rust_api.txt"), "r", encoding="utf-8") as f:
                 rust_content = f.read()

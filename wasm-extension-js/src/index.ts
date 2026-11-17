@@ -23,7 +23,7 @@ export * from "./generated_api";
 export * from "./generated_events";
 export type { Extension } from "./generated_events";
 export { ChildProcess, spawnProcess } from "./process";
-export { SocketClient } from "./socket";
+export { SocketClient, openSock } from "./socket";
 export { WebSocketClient } from "./websocket";
 export type { WebSocketMessage } from "./websocket";
 export { getPlatform } from "./platform";
@@ -45,6 +45,7 @@ import type { Extension, ExtensionEventMap } from "./generated_events";
 import { fetch, batchFetch } from "./http";
 import { getCache, setCache } from "./cache";
 import { spawnProcess } from "./process";
+import { openSock } from "./socket";
 import {
   ExtensionCommand,
   ExtensionCommandResponse,
@@ -95,6 +96,7 @@ export type ExtensionApi = typeof generatedApi & {
   getCache: typeof getCache;
   setCache: typeof setCache;
   spawnProcess: typeof spawnProcess;
+  openSock: typeof openSock;
   on: typeof on;
   fetch: typeof fetch;
   batchFetch: typeof batchFetch;
@@ -109,6 +111,7 @@ export function getApi(): ExtensionApi {
     getCache,
     setCache,
     spawnProcess,
+    openSock,
     on,
     fetch,
     batchFetch,

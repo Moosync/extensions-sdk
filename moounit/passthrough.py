@@ -15,6 +15,14 @@ from core.types.protos.extensions_pb2 import (
     HttpRequest,
     HttpResponse,
     HttpResult,
+    OpenClientFdRequest,
+    OpenClientFdResponse,
+    ReadSockRequest,
+    ReadSockResponse,
+    SystemTimeRequest,
+    SystemTimeResponse,
+    WriteSockRequest,
+    WriteSockResponse,
     WsCloseRequest,
     WsCloseResponse,
     WsConnectRequest,
@@ -49,6 +57,22 @@ class RealSocketManager:
         self.allowed_paths = resolve_allowed_paths(allowed_paths)
         self.sockets: list[socket.socket | None] = []
 
+    def open_client_fd(self, req: OpenClientFdRequest) -> OpenClientFdResponse:
+        sock_id = self.open_clientfd(req.path)
+        if sock_id < 0:
+            raise ConnectionError(f"Failed to connect to socket: {req.path}")
+        return OpenClientFdResponse(sock_id=sock_id)
+
+    def write_sock(self, req: WriteSockRequest) -> WriteSockResponse:
+        written = self._write_sock_raw(req.sock_id, req.buf)
+        if written < 0:
+            raise ConnectionError(f"Failed to write to socket: {req.sock_id}")
+        return WriteSockResponse(bytes_written=written)
+
+    def read_sock(self, req: ReadSockRequest) -> ReadSockResponse:
+        data = self._read_sock_raw(req.sock_id, req.read_len)
+        return ReadSockResponse(data=data)
+
     def open_clientfd(self, sock_path: str) -> int:
         # Match sock_path against allowed_paths
         for host_dir, virtual_dir in self.allowed_paths.items():
@@ -82,7 +106,7 @@ class RealSocketManager:
 
         return -1
 
-    def write_sock(self, sock_id: int, buf: bytes) -> int:
+    def _write_sock_raw(self, sock_id: int, buf: bytes) -> int:
         if sock_id < 0 or sock_id >= len(self.sockets):
             return -1
         sock = self.sockets[sock_id]
@@ -95,7 +119,7 @@ class RealSocketManager:
             print(f"RealSocketManager: write error on {sock_id}: {e}")
             return -1
 
-    def read_sock(self, sock_id: int, read_len: int) -> bytes:
+    def _read_sock_raw(self, sock_id: int, read_len: int) -> bytes:
         if sock_id < 0 or sock_id >= len(self.sockets):
             return b""
         sock = self.sockets[sock_id]
@@ -126,8 +150,8 @@ class RealSocketManager:
         self.sockets.clear()
 
 
-def get_real_system_time() -> int:
-    return int(time.time())
+def get_real_system_time(_req: SystemTimeRequest | None = None) -> SystemTimeResponse:
+    return SystemTimeResponse(timestamp=int(time.time()))
 
 
 def execute_single_http_request(req: HttpRequest) -> HttpResult:
