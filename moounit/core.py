@@ -1,6 +1,7 @@
 # pylint: disable=duplicate-code
 import os
 import platform
+import re
 import sys
 import tempfile
 import uuid
@@ -213,12 +214,20 @@ class Moounit(GeneratedMoounitGuestClient):
         HOST_FN_REGISTRY.extend(fns)
 
         allowed_paths = {}
-        for src, dest in manifest.permissions.paths.items():
+        cache_dir = getattr(self, "_cache_dir", None)
+        ext_cache_dir = cache_dir.name if cache_dir is not None else tempfile.gettempdir()
+        for p in manifest.permissions.paths:
+            resolved_src = re.sub(
+                r"\{([A-Z_][A-Z0-9_]*)\}",
+                lambda m: ext_cache_dir if m.group(1) == "CACHE_DIR" else os.environ.get(m.group(1), ""),
+                p.source,
+            )
             temp_dir = tempfile.TemporaryDirectory()
             self._temp_dirs.append(temp_dir)
-            allowed_paths[temp_dir.name] = dest
-            self._mapped_paths[src] = temp_dir.name
-            self._mapped_paths[dest] = temp_dir.name
+            allowed_paths[temp_dir.name] = p.target
+            self._mapped_paths[resolved_src] = temp_dir.name
+            self._mapped_paths[p.source] = temp_dir.name
+            self._mapped_paths[p.target] = temp_dir.name
 
         if hasattr(self, "process_manager") and self.process_manager is not None:
             self.process_manager.mapped_paths = self._mapped_paths
@@ -252,7 +261,7 @@ class Moounit(GeneratedMoounitGuestClient):
                         "name": manifest.display_name,
                     }
                 ],
-                "allowed_hosts": manifest.permissions.hosts._values,
+                "allowed_hosts": [h.host for h in manifest.permissions.hosts],
                 "allowed_paths": allowed_paths,
                 "config": {
                     "pid": str(os.getpid()),
@@ -330,7 +339,7 @@ class Moounit(GeneratedMoounitGuestClient):
             and self.manifest is not None
         ):
             required_scope = EVENT_TO_PROVIDER_SCOPE[event]
-            scopes = set(self.manifest.scopes)
+            scopes = {s.scope for s in self.manifest.scopes}
             assert required_scope in scopes, (
                 f"Cannot call '{event}': extension does not have required scope "
                 f"'{ExtensionProviderScope.Name(required_scope)}' in manifest scopes: "
@@ -369,17 +378,26 @@ class Moounit(GeneratedMoounitGuestClient):
         self.manager = ExpectationManager(recorder=self.recorder, moounit=self)
         self._host_exception: Exception | None = None
         self._temp_dirs: list[tempfile.TemporaryDirectory] = []
+        self._cache_dir = tempfile.TemporaryDirectory()
+        self._temp_dirs.append(self._cache_dir)
         self._mapped_paths: dict[str, str] = {}
 
         manifest = self._parse_manifest(path)
         self.manifest = manifest
         self._called_player_commands: set[str] = set()
-        if ExtensionProviderScope.PLAYER_PROVIDER in self.manifest.scopes:
+        if any(
+            s.scope == ExtensionProviderScope.PLAYER_PROVIDER
+            for s in self.manifest.scopes
+        ):
             Moounit._has_player_provider_extension = True
         self.package_name = package_name or manifest.name or manifest.display_name or ""
-        self.socket_manager = RealSocketManager(dict(manifest.permissions.paths))
-        self.ws_manager = RealWebSocketManager(list(manifest.permissions.hosts._values))
-        self.process_manager = RealProcessManager()
+        allowed_paths = {p.source: p.target for p in manifest.permissions.paths}
+        allowed_hosts = [h.host for h in manifest.permissions.hosts]
+        self.socket_manager = RealSocketManager(allowed_paths)
+        self.ws_manager = RealWebSocketManager(allowed_hosts)
+        self.process_manager = RealProcessManager(
+            allowed_binaries=list(manifest.permissions.binaries)
+        )
         self._load_extension(manifest)
 
     @property

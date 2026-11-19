@@ -1,4 +1,5 @@
 # pylint: disable=unused-import,too-many-locals,too-many-statements,protected-access,no-member,too-few-public-methods,line-too-long,import-outside-toplevel,unspecified-encoding,too-many-lines,duplicate-code
+import hashlib
 import inspect
 import json
 import uuid
@@ -11,6 +12,7 @@ from core.types.protos.extensions_pb2 import (
     AddToPlaylistRequest,
     BatchHttpRequest,
     BatchHttpResponse,
+    BinaryPermission,
     ExtensionAccountDetail,
     ExtensionCommand,
     ExtensionCommandResponse,
@@ -39,6 +41,7 @@ from core.types.protos.extensions_pb2 import (
     RequestedRecommendationsResponse,
     RequestedSearchResultResponse,
     RequestedSongFromIdResponse,
+    ScopePermission,
     SetAccountRequest,
     SetCacheRequest,
     SetPreferenceRequest,
@@ -1267,7 +1270,13 @@ def test_send_command_provider_scopes_and_login_assertions():
     moo.package_name = "test.ext"
     moo.plugin = MockPlugin()
     moo._host_exception = None
-    moo.manifest = ExtensionManifest(scopes=[ExtensionProviderScope.SEARCH])
+    moo.manifest = ExtensionManifest(
+        scopes=[
+            ScopePermission(
+                scope=ExtensionProviderScope.SEARCH, justification="Search catalog"
+            )
+        ]
+    )
     moo.manager = ExpectationManager(moounit=moo)
 
     with pytest.raises(
@@ -1287,7 +1296,11 @@ def test_send_command_provider_scopes_and_login_assertions():
             )
         )
 
-    moo.manifest.scopes.append(ExtensionProviderScope.ACCOUNTS)
+    moo.manifest.scopes.append(
+        ScopePermission(
+            scope=ExtensionProviderScope.ACCOUNTS, justification="Account login"
+        )
+    )
 
     with pytest.raises(AssertionError, match="no account exists"):
         moo.send_command(
@@ -1362,7 +1375,12 @@ def test_player_provider_scope_enforcement():
     ):
         moo.can_play(CanPlayRequest(src="spotify:track:123"))
 
-    moo.manifest.scopes.append(ExtensionProviderScope.PLAYER_PROVIDER)
+    moo.manifest.scopes.append(
+        ScopePermission(
+            scope=ExtensionProviderScope.PLAYER_PROVIDER,
+            justification="Custom playback",
+        )
+    )
     res = moo.can_play(CanPlayRequest(src="spotify:track:123"))
     assert res is not None
 
@@ -1376,7 +1394,14 @@ def test_player_methods_warning_when_methods_missing():
     moo.package_name = "test.player_warning"
     moo.plugin = MockPlugin()
     moo._host_exception = None
-    moo.manifest = ExtensionManifest(scopes=[ExtensionProviderScope.PLAYER_PROVIDER])
+    moo.manifest = ExtensionManifest(
+        scopes=[
+            ScopePermission(
+                scope=ExtensionProviderScope.PLAYER_PROVIDER,
+                justification="Custom playback",
+            )
+        ]
+    )
     moo.manager = ExpectationManager(moounit=moo)
 
     moo.can_play(CanPlayRequest(src="spotify:track:123"))
@@ -1386,3 +1411,69 @@ def test_player_methods_warning_when_methods_missing():
         match=r"\[Moosync Extension Warning\] Not all player methods are registered or called\. Missing: player_play",
     ):
         moo.close()
+
+
+def test_process_manager_binary_hash_validation(tmp_path):
+    from moounit.passthrough import RealProcessManager
+
+    allowed_dir = tmp_path / "bin"
+    allowed_dir.mkdir()
+    script_path = allowed_dir / "helper.sh"
+    script_bytes = b"#!/bin/sh\necho ok\n"
+    script_path.write_bytes(script_bytes)
+
+    sha256_hex = hashlib.sha256(script_bytes).hexdigest()
+    sha512_hex = hashlib.sha512(script_bytes).hexdigest()
+    md5_hex = hashlib.md5(script_bytes).hexdigest()
+
+    manager = RealProcessManager(
+        allowed_binaries=[
+            BinaryPermission(
+                name="/guest/bin/helper.sh",
+                hashes={"sha256": sha256_hex, "sha512": sha512_hex, "md5": md5_hex},
+                justification="Run test helper",
+            )
+        ]
+    )
+    manager.mapped_paths = {"/guest/bin": str(allowed_dir)}
+
+    resp = manager.spawn_process(SpawnProcessRequest(path="/guest/bin/helper.sh"))
+    assert resp.process_id == 1
+    assert resp.pid > 0
+    manager.kill_process(KillProcessRequest(process_id=resp.process_id))
+
+    with pytest.raises(PermissionError, match="not permitted by manifest"):
+        manager.spawn_process(SpawnProcessRequest(path="/guest/bin/other.sh"))
+
+    outside_bin = tmp_path / "outside.sh"
+    outside_bin.write_bytes(script_bytes)
+    with pytest.raises(PermissionError, match="not inside any allowed_paths"):
+        manager.spawn_process(SpawnProcessRequest(path=str(outside_bin)))
+
+    bad_hash_manager = RealProcessManager(
+        allowed_binaries=[
+            BinaryPermission(
+                name="/guest/bin/helper.sh",
+                hashes={"sha256": "0" * 64},
+                justification="Run test helper",
+            )
+        ]
+    )
+    bad_hash_manager.mapped_paths = {"/guest/bin": str(allowed_dir)}
+    with pytest.raises(PermissionError, match="hash mismatch"):
+        bad_hash_manager.spawn_process(SpawnProcessRequest(path="/guest/bin/helper.sh"))
+
+    empty_hash_manager = RealProcessManager(
+        allowed_binaries=[
+            BinaryPermission(
+                name="/guest/bin/helper.sh",
+                hashes={},
+                justification="Run test helper",
+            )
+        ]
+    )
+    empty_hash_manager.mapped_paths = {"/guest/bin": str(allowed_dir)}
+    with pytest.raises(PermissionError, match="no hashes declared"):
+        empty_hash_manager.spawn_process(
+            SpawnProcessRequest(path="/guest/bin/helper.sh")
+        )

@@ -10,6 +10,13 @@ exports_files(
 )
 
 py_binary(
+    name = "hash_binary",
+    srcs = ["hash_binary.py"],
+    main = "hash_binary.py",
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
     name = "scaffold",
     srcs = ["scaffold.py"],
     data = glob(["templates/**"]),

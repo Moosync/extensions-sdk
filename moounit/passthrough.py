@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import os
 import re
 import socket
@@ -333,6 +334,7 @@ class RealWebSocketManager:
 import subprocess
 import select
 from core.types.protos.extensions_pb2 import (
+    BinaryPermission,
     SpawnProcessRequest,
     SpawnProcessResponse,
     WriteProcessStdinRequest,
@@ -345,11 +347,18 @@ from core.types.protos.extensions_pb2 import (
     GetProcessStatusResponse,
 )
 
+SUPPORTED_HASH_ALGORITHMS = {
+    "sha256": hashlib.sha256,
+    "sha512": hashlib.sha512,
+    "md5": hashlib.md5,
+}
+
 
 class RealProcessManager:
-    def __init__(self):
+    def __init__(self, allowed_binaries: list[BinaryPermission] | None = None):
         self.processes: dict[int, subprocess.Popen] = {}
         self.mapped_paths: dict[str, str] = {}
+        self.allowed_binaries: list[BinaryPermission] = allowed_binaries or []
         self.next_id = 1
 
     def resolve_path(self, path: str) -> str:
@@ -361,8 +370,65 @@ class RealProcessManager:
                 return os.path.join(host_path, rel)
         return path
 
+    def is_in_allowed(self, resolved_bin: str) -> bool:
+        if not self.mapped_paths:
+            return False
+        real_target = os.path.realpath(resolved_bin)
+        for base in set(self.mapped_paths.values()):
+            real_base = os.path.realpath(base)
+            try:
+                if os.path.commonpath([real_base, real_target]) == real_base:
+                    return True
+            except ValueError:
+                continue
+        return False
+
+    def verify_binary_hash(self, resolved_bin: str, requested_path: str) -> None:
+        if not self.is_in_allowed(resolved_bin):
+            raise PermissionError(
+                f"Binary '{requested_path}' ({resolved_bin}) is not inside any allowed_paths"
+            )
+
+        real_bin = os.path.realpath(resolved_bin)
+        matching_perm = None
+        for perm in self.allowed_binaries:
+            if perm.name == requested_path:
+                matching_perm = perm
+                break
+            resolved_perm = self.resolve_path(perm.name)
+            if os.path.realpath(resolved_perm) == real_bin or real_bin.endswith(perm.name):
+                matching_perm = perm
+                break
+
+        if matching_perm is None:
+            raise PermissionError(
+                f"Binary '{requested_path}' is not permitted by manifest permissions.binaries"
+            )
+
+        if not matching_perm.hashes:
+            raise PermissionError(
+                f"Binary '{requested_path}' has no hashes declared in manifest permissions.binaries"
+            )
+
+        with open(real_bin, "rb") as f:
+            file_bytes = f.read()
+
+        for algo, expected_hash in matching_perm.hashes.items():
+            hasher_fn = SUPPORTED_HASH_ALGORITHMS.get(algo.lower())
+            if hasher_fn is None:
+                raise PermissionError(
+                    f"Unsupported hash algorithm '{algo}' for binary '{requested_path}'"
+                )
+            computed = hasher_fn(file_bytes).hexdigest()
+            if computed.lower() != expected_hash.lower():
+                raise PermissionError(
+                    f"Binary hash mismatch for '{requested_path}' ({algo}): "
+                    f"expected {expected_hash}, got {computed}"
+                )
+
     def spawn_process(self, req: SpawnProcessRequest) -> SpawnProcessResponse:
         resolved_bin = self.resolve_path(req.path)
+        self.verify_binary_hash(resolved_bin, req.path)
         if os.path.isfile(resolved_bin):
             try:
                 os.chmod(resolved_bin, 0o755)

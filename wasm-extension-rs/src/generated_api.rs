@@ -315,11 +315,11 @@ pub fn get_song(req: GetSongRequest) -> MoosyncResult<GetSongResponse> {
         Err(MoosyncError::String("Host returned invalid response".into()))
     }
 }
-/// Retrieves detailed entity information (such as artist or album) from the host database.
-pub fn get_entity(req: GetEntityRequest) -> MoosyncResult<GetEntityResponse> {
+/// Queries and retrieves album entities matching the given criteria from the host database.
+pub fn get_albums(req: GetAlbumsRequest) -> MoosyncResult<GetAlbumsResponse> {
     unsafe {
         let cmd = MainCommand {
-            command: Some(main_command::Command::GetEntity(req)),
+            command: Some(main_command::Command::GetAlbums(req)),
         };
         let Prost(res) = raw_host::send_main_command(Prost(cmd))
             .map_err(|e| MoosyncError::String(e.to_string()))?;
@@ -328,7 +328,67 @@ pub fn get_entity(req: GetEntityRequest) -> MoosyncResult<GetEntityResponse> {
             return Err(MoosyncError::String(e.message));
         }
 
-        if let Some(main_command_response::Response::GetEntity(data)) = res.response {
+        if let Some(main_command_response::Response::GetAlbums(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
+    }
+}
+/// Queries and retrieves artist entities matching the given criteria from the host database.
+pub fn get_artists(req: GetArtistsRequest) -> MoosyncResult<GetArtistsResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetArtists(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
+        }
+
+        if let Some(main_command_response::Response::GetArtists(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
+    }
+}
+/// Queries and retrieves genre entities matching the given criteria from the host database.
+pub fn get_genres(req: GetGenresRequest) -> MoosyncResult<GetGenresResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetGenres(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
+        }
+
+        if let Some(main_command_response::Response::GetGenres(data)) = res.response {
+            return Ok(data);
+        }
+
+        Err(MoosyncError::String("Host returned invalid response".into()))
+    }
+}
+/// Queries and retrieves playlist entities matching the given criteria from the host database.
+pub fn get_playlists(req: GetPlaylistsRequest) -> MoosyncResult<GetPlaylistsResponse> {
+    unsafe {
+        let cmd = MainCommand {
+            command: Some(main_command::Command::GetPlaylists(req)),
+        };
+        let Prost(res) = raw_host::send_main_command(Prost(cmd))
+            .map_err(|e| MoosyncError::String(e.to_string()))?;
+
+        if let Some(main_command_response::Response::Error(e)) = res.response {
+            return Err(MoosyncError::String(e.message));
+        }
+
+        if let Some(main_command_response::Response::GetPlaylists(data)) = res.response {
             return Ok(data);
         }
 

@@ -190,19 +190,67 @@ func GetSong(req *extensions.GetSongRequest) (*extensions.GetSongResponse, error
 	}
 	return nil, errors.New("Invalid response type from host")
 }
-// GetEntity Retrieves detailed entity information (such as artist or album) from the host database.
-func GetEntity(req *extensions.GetEntityRequest) (*extensions.GetEntityResponse, error) {
+// GetAlbums Queries and retrieves album entities matching the given criteria from the host database.
+func GetAlbums(req *extensions.GetAlbumsRequest) (*extensions.GetAlbumsResponse, error) {
 	cmd := &extensions.MainCommand{
-		Command: &extensions.MainCommand_GetEntity{
-			GetEntity: req,
+		Command: &extensions.MainCommand_GetAlbums{
+			GetAlbums: req,
 		},
 	}
 	res, err := DispatchMainCommand(cmd)
 	if err != nil {
 		return nil, err
 	}
-	if v, ok := res.Response.(*extensions.MainCommandResponse_GetEntity); ok {
-		return v.GetEntity, nil
+	if v, ok := res.Response.(*extensions.MainCommandResponse_GetAlbums); ok {
+		return v.GetAlbums, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+// GetArtists Queries and retrieves artist entities matching the given criteria from the host database.
+func GetArtists(req *extensions.GetArtistsRequest) (*extensions.GetArtistsResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_GetArtists{
+			GetArtists: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_GetArtists); ok {
+		return v.GetArtists, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+// GetGenres Queries and retrieves genre entities matching the given criteria from the host database.
+func GetGenres(req *extensions.GetGenresRequest) (*extensions.GetGenresResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_GetGenres{
+			GetGenres: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_GetGenres); ok {
+		return v.GetGenres, nil
+	}
+	return nil, errors.New("Invalid response type from host")
+}
+// GetPlaylists Queries and retrieves playlist entities matching the given criteria from the host database.
+func GetPlaylists(req *extensions.GetPlaylistsRequest) (*extensions.GetPlaylistsResponse, error) {
+	cmd := &extensions.MainCommand{
+		Command: &extensions.MainCommand_GetPlaylists{
+			GetPlaylists: req,
+		},
+	}
+	res, err := DispatchMainCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := res.Response.(*extensions.MainCommandResponse_GetPlaylists); ok {
+		return v.GetPlaylists, nil
 	}
 	return nil, errors.New("Invalid response type from host")
 }

@@ -202,18 +202,57 @@ def get_song(req: extensions_pb2.GetSongRequest | None = None) -> extensions_pb2
     if which == "get_song":
         return getattr(res, "get_song")
     raise RuntimeError(f"Unexpected response variant: {which}")
-def get_entity(req: extensions_pb2.GetEntityRequest | None = None) -> extensions_pb2.GetEntityResponse:
-    """Retrieves detailed entity information (such as artist or album) from the host database."""
+def get_albums(req: extensions_pb2.GetAlbumsRequest | None = None) -> extensions_pb2.GetAlbumsResponse:
+    """Queries and retrieves album entities matching the given criteria from the host database."""
     if req is None:
-        req = extensions_pb2.GetEntityRequest()
+        req = extensions_pb2.GetAlbumsRequest()
     cmd = extensions_pb2.MainCommand()
-    getattr(cmd, "get_entity").CopyFrom(req)
+    getattr(cmd, "get_albums").CopyFrom(req)
     res = send_main_command(cmd)
     which = res.WhichOneof("response")
     if which == "error":
         raise RuntimeError(f"Host error: {res.error.message}")
-    if which == "get_entity":
-        return getattr(res, "get_entity")
+    if which == "get_albums":
+        return getattr(res, "get_albums")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def get_artists(req: extensions_pb2.GetArtistsRequest | None = None) -> extensions_pb2.GetArtistsResponse:
+    """Queries and retrieves artist entities matching the given criteria from the host database."""
+    if req is None:
+        req = extensions_pb2.GetArtistsRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "get_artists").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "get_artists":
+        return getattr(res, "get_artists")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def get_genres(req: extensions_pb2.GetGenresRequest | None = None) -> extensions_pb2.GetGenresResponse:
+    """Queries and retrieves genre entities matching the given criteria from the host database."""
+    if req is None:
+        req = extensions_pb2.GetGenresRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "get_genres").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "get_genres":
+        return getattr(res, "get_genres")
+    raise RuntimeError(f"Unexpected response variant: {which}")
+def get_playlists(req: extensions_pb2.GetPlaylistsRequest | None = None) -> extensions_pb2.GetPlaylistsResponse:
+    """Queries and retrieves playlist entities matching the given criteria from the host database."""
+    if req is None:
+        req = extensions_pb2.GetPlaylistsRequest()
+    cmd = extensions_pb2.MainCommand()
+    getattr(cmd, "get_playlists").CopyFrom(req)
+    res = send_main_command(cmd)
+    which = res.WhichOneof("response")
+    if which == "error":
+        raise RuntimeError(f"Host error: {res.error.message}")
+    if which == "get_playlists":
+        return getattr(res, "get_playlists")
     raise RuntimeError(f"Unexpected response variant: {which}")
 def get_current_song(req: extensions_pb2.GetCurrentSongRequest | None = None) -> extensions_pb2.GetCurrentSongResponse:
     """Retrieves the currently playing song from the active player session."""
@@ -666,9 +705,18 @@ class ExtensionApi:
     def get_song(self, req: extensions_pb2.GetSongRequest | None = None) -> extensions_pb2.GetSongResponse:
         """Queries and retrieves song entities matching the given criteria from the host database."""
         return get_song(req)
-    def get_entity(self, req: extensions_pb2.GetEntityRequest | None = None) -> extensions_pb2.GetEntityResponse:
-        """Retrieves detailed entity information (such as artist or album) from the host database."""
-        return get_entity(req)
+    def get_albums(self, req: extensions_pb2.GetAlbumsRequest | None = None) -> extensions_pb2.GetAlbumsResponse:
+        """Queries and retrieves album entities matching the given criteria from the host database."""
+        return get_albums(req)
+    def get_artists(self, req: extensions_pb2.GetArtistsRequest | None = None) -> extensions_pb2.GetArtistsResponse:
+        """Queries and retrieves artist entities matching the given criteria from the host database."""
+        return get_artists(req)
+    def get_genres(self, req: extensions_pb2.GetGenresRequest | None = None) -> extensions_pb2.GetGenresResponse:
+        """Queries and retrieves genre entities matching the given criteria from the host database."""
+        return get_genres(req)
+    def get_playlists(self, req: extensions_pb2.GetPlaylistsRequest | None = None) -> extensions_pb2.GetPlaylistsResponse:
+        """Queries and retrieves playlist entities matching the given criteria from the host database."""
+        return get_playlists(req)
     def get_current_song(self, req: extensions_pb2.GetCurrentSongRequest | None = None) -> extensions_pb2.GetCurrentSongResponse:
         """Retrieves the currently playing song from the active player session."""
         return get_current_song(req)

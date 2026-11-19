@@ -35,8 +35,17 @@ MAIN_COMMAND_DEFAULT_RESPONSES: dict[str, Callable[[], extensions_pb2.MainComman
     "get_song": lambda: extensions_pb2.MainCommandResponse(
         get_song=extensions_pb2.GetSongResponse()
     ),
-    "get_entity": lambda: extensions_pb2.MainCommandResponse(
-        get_entity=extensions_pb2.GetEntityResponse()
+    "get_albums": lambda: extensions_pb2.MainCommandResponse(
+        get_albums=extensions_pb2.GetAlbumsResponse()
+    ),
+    "get_artists": lambda: extensions_pb2.MainCommandResponse(
+        get_artists=extensions_pb2.GetArtistsResponse()
+    ),
+    "get_genres": lambda: extensions_pb2.MainCommandResponse(
+        get_genres=extensions_pb2.GetGenresResponse()
+    ),
+    "get_playlists": lambda: extensions_pb2.MainCommandResponse(
+        get_playlists=extensions_pb2.GetPlaylistsResponse()
     ),
     "get_current_song": lambda: extensions_pb2.MainCommandResponse(
         get_current_song=extensions_pb2.GetCurrentSongResponse()
@@ -239,19 +248,67 @@ class GeneratedMoounitExpectationClient:
         )
         self.expect_command(cmd, res, times=times)
 
-    def expect_get_entity(
+    def expect_get_albums(
         self,
-        req: extensions_pb2.GetEntityRequest,
-        response: extensions_pb2.GetEntityResponse | Callable[[], extensions_pb2.GetEntityResponse] | None = None,
+        req: extensions_pb2.GetAlbumsRequest,
+        response: extensions_pb2.GetAlbumsResponse | Callable[[], extensions_pb2.GetAlbumsResponse] | None = None,
         times: int = 1,
     ) -> None:
-        """Expects host call to get_entity: Retrieves detailed entity information (such as artist or album) from the host database."""
-        cmd = extensions_pb2.MainCommand(get_entity=req)
-        res_val = response if response is not None else extensions_pb2.GetEntityResponse()
+        """Expects host call to get_albums: Queries and retrieves album entities matching the given criteria from the host database."""
+        cmd = extensions_pb2.MainCommand(get_albums=req)
+        res_val = response if response is not None else extensions_pb2.GetAlbumsResponse()
         res = (
-            (lambda r=res_val: extensions_pb2.MainCommandResponse(get_entity=r()))
+            (lambda r=res_val: extensions_pb2.MainCommandResponse(get_albums=r()))
             if callable(res_val)
-            else extensions_pb2.MainCommandResponse(get_entity=res_val)
+            else extensions_pb2.MainCommandResponse(get_albums=res_val)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_get_artists(
+        self,
+        req: extensions_pb2.GetArtistsRequest,
+        response: extensions_pb2.GetArtistsResponse | Callable[[], extensions_pb2.GetArtistsResponse] | None = None,
+        times: int = 1,
+    ) -> None:
+        """Expects host call to get_artists: Queries and retrieves artist entities matching the given criteria from the host database."""
+        cmd = extensions_pb2.MainCommand(get_artists=req)
+        res_val = response if response is not None else extensions_pb2.GetArtistsResponse()
+        res = (
+            (lambda r=res_val: extensions_pb2.MainCommandResponse(get_artists=r()))
+            if callable(res_val)
+            else extensions_pb2.MainCommandResponse(get_artists=res_val)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_get_genres(
+        self,
+        req: extensions_pb2.GetGenresRequest,
+        response: extensions_pb2.GetGenresResponse | Callable[[], extensions_pb2.GetGenresResponse] | None = None,
+        times: int = 1,
+    ) -> None:
+        """Expects host call to get_genres: Queries and retrieves genre entities matching the given criteria from the host database."""
+        cmd = extensions_pb2.MainCommand(get_genres=req)
+        res_val = response if response is not None else extensions_pb2.GetGenresResponse()
+        res = (
+            (lambda r=res_val: extensions_pb2.MainCommandResponse(get_genres=r()))
+            if callable(res_val)
+            else extensions_pb2.MainCommandResponse(get_genres=res_val)
+        )
+        self.expect_command(cmd, res, times=times)
+
+    def expect_get_playlists(
+        self,
+        req: extensions_pb2.GetPlaylistsRequest,
+        response: extensions_pb2.GetPlaylistsResponse | Callable[[], extensions_pb2.GetPlaylistsResponse] | None = None,
+        times: int = 1,
+    ) -> None:
+        """Expects host call to get_playlists: Queries and retrieves playlist entities matching the given criteria from the host database."""
+        cmd = extensions_pb2.MainCommand(get_playlists=req)
+        res_val = response if response is not None else extensions_pb2.GetPlaylistsResponse()
+        res = (
+            (lambda r=res_val: extensions_pb2.MainCommandResponse(get_playlists=r()))
+            if callable(res_val)
+            else extensions_pb2.MainCommandResponse(get_playlists=res_val)
         )
         self.expect_command(cmd, res, times=times)
 

@@ -15,8 +15,14 @@ import {
   BatchHttpResponse,
   GetSongRequest,
   GetSongResponse,
-  GetEntityRequest,
-  GetEntityResponse,
+  GetAlbumsRequest,
+  GetAlbumsResponse,
+  GetArtistsRequest,
+  GetArtistsResponse,
+  GetGenresRequest,
+  GetGenresResponse,
+  GetPlaylistsRequest,
+  GetPlaylistsResponse,
   GetCurrentSongRequest,
   GetCurrentSongResponse,
   GetPlayerStateRequest,
@@ -195,18 +201,72 @@ export async function getSong(req?: GetSongRequest): Promise<GetSongResponse | u
 }
 
 /**
- * Retrieves detailed entity information (such as artist or album) from the host database.
+ * Queries and retrieves album entities matching the given criteria from the host database.
  */
-export async function getEntity(req?: GetEntityRequest): Promise<GetEntityResponse | undefined> {
+export async function getAlbums(req?: GetAlbumsRequest): Promise<GetAlbumsResponse | undefined> {
   const response = await sendMainCommand(
     new MainCommand({
       command: {
-        case: "getEntity",
-        value: req ?? new GetEntityRequest(),
+        case: "getAlbums",
+        value: req ?? new GetAlbumsRequest(),
       },
     })
   );
-  if (response.response.case === "getEntity") {
+  if (response.response.case === "getAlbums") {
+    return response.response.value;
+  }
+  return undefined;
+}
+
+/**
+ * Queries and retrieves artist entities matching the given criteria from the host database.
+ */
+export async function getArtists(req?: GetArtistsRequest): Promise<GetArtistsResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "getArtists",
+        value: req ?? new GetArtistsRequest(),
+      },
+    })
+  );
+  if (response.response.case === "getArtists") {
+    return response.response.value;
+  }
+  return undefined;
+}
+
+/**
+ * Queries and retrieves genre entities matching the given criteria from the host database.
+ */
+export async function getGenres(req?: GetGenresRequest): Promise<GetGenresResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "getGenres",
+        value: req ?? new GetGenresRequest(),
+      },
+    })
+  );
+  if (response.response.case === "getGenres") {
+    return response.response.value;
+  }
+  return undefined;
+}
+
+/**
+ * Queries and retrieves playlist entities matching the given criteria from the host database.
+ */
+export async function getPlaylists(req?: GetPlaylistsRequest): Promise<GetPlaylistsResponse | undefined> {
+  const response = await sendMainCommand(
+    new MainCommand({
+      command: {
+        case: "getPlaylists",
+        value: req ?? new GetPlaylistsRequest(),
+      },
+    })
+  );
+  if (response.response.case === "getPlaylists") {
     return response.response.value;
   }
   return undefined;

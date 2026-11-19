@@ -1,6 +1,6 @@
 use extensions_proto::moosync::types::PlayerState;
 use extensions_proto::moosync::types::*;
-use songs_proto::moosync::types::{EntityResult, LyricLine, Lyrics, Song};
+use songs_proto::moosync::types::{Album, Artist, Genre, LyricLine, Lyrics, Playlist, Song};
 
 /// Converts a standard Rust `Duration` into a protobuf `Duration`.
 pub fn duration_to_proto(d: std::time::Duration) -> duration_proto::google::protobuf::Duration {
@@ -69,18 +69,18 @@ pub fn parse_lrc(lrc_text: &str) -> Result<Lyrics, LrcParseError> {
             }
         }
 
-        let text = remaining.trim();
+        let text = strip_inline_lrc_tags(remaining);
         if !timestamps.is_empty() {
             has_timestamps = true;
             for time_ms in timestamps {
                 lines.push(LyricLine {
-                    text: text.to_string(),
+                    text: text.clone(),
                     time_ms,
                 });
             }
         } else if !has_timestamps && !text.is_empty() {
             lines.push(LyricLine {
-                text: text.to_string(),
+                text,
                 time_ms: 0,
             });
         }
@@ -94,6 +94,25 @@ pub fn parse_lrc(lrc_text: &str) -> Result<Lyrics, LrcParseError> {
         lines,
         is_synced: has_timestamps,
     })
+}
+
+fn strip_inline_lrc_tags(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut rest = input.trim();
+    while let Some(open_idx) = rest.find('<') {
+        if let Some(rel_close) = rest[open_idx + 1..].find('>') {
+            let tag = &rest[open_idx + 1..open_idx + 1 + rel_close];
+            if parse_lrc_timestamp(tag).is_some() {
+                out.push_str(&rest[..open_idx]);
+                rest = &rest[open_idx + 1 + rel_close + 1..];
+                continue;
+            }
+        }
+        out.push_str(&rest[..open_idx + 1]);
+        rest = &rest[open_idx + 1..];
+    }
+    out.push_str(rest);
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 fn parse_lrc_timestamp(tag: &str) -> Option<i64> {
@@ -173,9 +192,27 @@ impl Extract<String> for AddPlaylistResponse {
     }
 }
 
-impl Extract<Option<EntityResult>> for GetEntityResponse {
-    fn extract(self) -> Option<EntityResult> {
-        self.entity
+impl Extract<Vec<Album>> for GetAlbumsResponse {
+    fn extract(self) -> Vec<Album> {
+        self.albums
+    }
+}
+
+impl Extract<Vec<Artist>> for GetArtistsResponse {
+    fn extract(self) -> Vec<Artist> {
+        self.artists
+    }
+}
+
+impl Extract<Vec<Genre>> for GetGenresResponse {
+    fn extract(self) -> Vec<Genre> {
+        self.genres
+    }
+}
+
+impl Extract<Vec<Playlist>> for GetPlaylistsResponse {
+    fn extract(self) -> Vec<Playlist> {
+        self.playlists
     }
 }
 

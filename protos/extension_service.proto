@@ -53,8 +53,17 @@ service ExtensionHostService {
   // Queries and retrieves song entities matching the given criteria from the host database.
   rpc GetSong(GetSongRequest) returns (GetSongResponse);
 
-  // Retrieves detailed entity information (such as artist or album) from the host database.
-  rpc GetEntity(GetEntityRequest) returns (GetEntityResponse);
+  // Queries and retrieves album entities matching the given criteria from the host database.
+  rpc GetAlbums(GetAlbumsRequest) returns (GetAlbumsResponse);
+
+  // Queries and retrieves artist entities matching the given criteria from the host database.
+  rpc GetArtists(GetArtistsRequest) returns (GetArtistsResponse);
+
+  // Queries and retrieves genre entities matching the given criteria from the host database.
+  rpc GetGenres(GetGenresRequest) returns (GetGenresResponse);
+
+  // Queries and retrieves playlist entities matching the given criteria from the host database.
+  rpc GetPlaylists(GetPlaylistsRequest) returns (GetPlaylistsResponse);
 
   // Retrieves the currently playing song from the active player session.
   rpc GetCurrentSong(GetCurrentSongRequest) returns (GetCurrentSongResponse);
