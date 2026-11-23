@@ -25,6 +25,12 @@ pub fn handle_command(
 {% endif %}
                 }
 {% endfor %}
+{% for m in internal_guest_methods %}
+                Event::{{ m.pascal_name }}(req) => {
+                    {{ m.sdk_manager.rust }}::handle_event(req);
+                    Response::{{ m.pascal_name }}({{ m.resp_type }} {})
+                }
+{% endfor %}
                 _ => return Err(extism_pdk::Error::msg("Unhandled event")),
             };
             response.response = Some(resp);

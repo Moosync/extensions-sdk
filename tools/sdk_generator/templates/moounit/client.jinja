@@ -53,7 +53,7 @@ class GeneratedMoounitExpectationClient:
 class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
     """Strongly-typed guest caller methods generated from protobuf service definitions."""
 
-{% for m in guest_methods %}
+{% for m in all_guest_methods %}
     def {{ m.snake_name }}(
         self, req: extensions_pb2.{{ m.req_type }} | None = None
     ) -> extensions_pb2.{{ m.resp_type }}:

@@ -61,6 +61,13 @@ func handle_extension_command() int32 {
 		}
 {% endif %}
 {% endfor %}
+{% for m in internal_guest_methods %}
+	case *extensions.ExtensionCommand_{{ m.pascal_name }}:
+		{{ m.sdk_manager.go }}.handleEvent(e.{{ m.pascal_name }})
+		resp.Response = &extensions.ExtensionCommandResponse_{{ m.pascal_name }}{
+			{{ m.pascal_name }}: &extensions.{{ m.resp_type }}{},
+		}
+{% endfor %}
 	default:
 		pdk.SetError(errors.New("Unhandled event"))
 		return 1

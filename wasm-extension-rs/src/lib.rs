@@ -50,7 +50,7 @@ pub mod types {
     pub use crate::process::ChildProcess;
     pub use crate::response_utils::LrcParseError;
     pub use crate::socket::SocketClient;
-    pub use crate::websocket::{WebSocketClient, WebSocketMessage};
+    pub use crate::websocket::{WebSocketClient, WebSocketManager, WebSocketMessage, WsCloseEvent};
     pub use duration_proto::google::protobuf::Duration;
     pub use extensions_proto::moosync::types::*;
     pub use extensions_proto::struct_proto::google::protobuf::{

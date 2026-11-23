@@ -34,6 +34,7 @@ import jinja2
 
 TAG_IS_EVENT_NOTIFICATION = 60001
 TAG_HAS_WRAPPER = 60004
+TAG_SDK_MANAGER = 60005
 
 
 def to_snake_case(name: str) -> str:
@@ -139,13 +140,35 @@ def decode_method_options(options_bytes: bytes) -> Dict[int, Any]:
             opts[field_num] = val
         elif wire_type == 2:
             length, pos = decoder._DecodeVarint(options_bytes, pos)
-            opts[field_num] = options_bytes[pos : pos + length].decode(
-                "utf-8", errors="replace"
-            )
+            opts[field_num] = options_bytes[pos : pos + length]
             pos += length
         else:
             break
     return opts
+
+
+def decode_sdk_manager_options(raw_bytes: Optional[bytes]) -> Optional[Dict[str, str]]:
+    if not raw_bytes:
+        return None
+    fields = decode_method_options(raw_bytes)
+    rust = fields.get(1, b"").decode("utf-8", errors="replace")
+    go = fields.get(2, b"").decode("utf-8", errors="replace")
+    py = fields.get(3, b"").decode("utf-8", errors="replace")
+    ts = fields.get(4, b"").decode("utf-8", errors="replace")
+    if not (rust or go or py or ts):
+        return None
+    py_mod = py.rsplit(".", 1)[0] if "." in py else py
+    ts_parts = ts.rsplit(".", 1)
+    ts_mod = ts_parts[0] if len(ts_parts) == 2 else ts
+    ts_class = ts_parts[1] if len(ts_parts) == 2 else ts
+    return {
+        "rust": rust,
+        "go": go,
+        "py": py,
+        "py_module": py_mod,
+        "ts": ts_class,
+        "ts_module": ts_mod,
+    }
 
 
 def build_descriptor_pool(descriptor_files: List[str]) -> descriptor_pool.DescriptorPool:
@@ -216,6 +239,7 @@ def extract_metadata(
 
     guest_services = []
     guest_methods = []
+    internal_guest_methods = []
     for service_name, s in service_file.services_by_name.items():
         if service_name == "ExtensionHostService":
             continue
@@ -230,6 +254,8 @@ def extract_metadata(
             custom_opts = decode_method_options(raw_opts)
 
             is_event_val = bool(custom_opts.get(TAG_IS_EVENT_NOTIFICATION, 0))
+            sdk_manager_val = decode_sdk_manager_options(custom_opts.get(TAG_SDK_MANAGER))
+            is_sdk_internal_val = sdk_manager_val is not None
             req_name = m.input_type.name
             resp_name = m.output_type.name
 
@@ -244,20 +270,27 @@ def extract_metadata(
                 "oneof_variant": guest_req_to_oneof.get(req_name, to_snake_case(m.name)),
                 "resp_oneof_variant": guest_resp_to_oneof.get(resp_name, to_snake_case(m.name)),
                 "service_trait": trait_name,
+                "sdk_manager": sdk_manager_val,
                 "doc": proto_docs.get(m.name, ""),
             }
-            methods_in_service.append(method_info)
-            guest_methods.append(method_info)
+            if is_sdk_internal_val:
+                internal_guest_methods.append(method_info)
+            else:
+                methods_in_service.append(method_info)
+                guest_methods.append(method_info)
 
-        guest_services.append({
-            "name": service_name,
-            "trait_name": trait_name,
-            "methods": methods_in_service,
-        })
+        if methods_in_service:
+            guest_services.append({
+                "name": service_name,
+                "trait_name": trait_name,
+                "methods": methods_in_service,
+            })
 
     return {
         "host_methods": host_methods,
         "guest_methods": guest_methods,
+        "internal_guest_methods": internal_guest_methods,
+        "all_guest_methods": guest_methods + internal_guest_methods,
         "guest_services": guest_services,
     }
 

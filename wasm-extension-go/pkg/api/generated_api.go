@@ -750,22 +750,6 @@ func WsSend(req *extensions.WsSendRequest) (*extensions.WsSendResponse, error) {
 	}
 	return nil, errors.New("Invalid response type from host")
 }
-// WsReceive Receives the next incoming message frame from an active WebSocket connection.
-func WsReceive(req *extensions.WsReceiveRequest) (*extensions.WsReceiveResponse, error) {
-	cmd := &extensions.MainCommand{
-		Command: &extensions.MainCommand_WsReceive{
-			WsReceive: req,
-		},
-	}
-	res, err := DispatchMainCommand(cmd)
-	if err != nil {
-		return nil, err
-	}
-	if v, ok := res.Response.(*extensions.MainCommandResponse_WsReceive); ok {
-		return v.WsReceive, nil
-	}
-	return nil, errors.New("Invalid response type from host")
-}
 // WsClose Closes an active WebSocket connection with an optional code and reason.
 func WsClose(req *extensions.WsCloseRequest) (*extensions.WsCloseResponse, error) {
 	cmd := &extensions.MainCommand{

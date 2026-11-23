@@ -140,9 +140,6 @@ MAIN_COMMAND_DEFAULT_RESPONSES: dict[str, Callable[[], extensions_pb2.MainComman
     "ws_send": lambda: extensions_pb2.MainCommandResponse(
         ws_send=extensions_pb2.WsSendResponse()
     ),
-    "ws_receive": lambda: extensions_pb2.MainCommandResponse(
-        ws_receive=extensions_pb2.WsReceiveResponse()
-    ),
     "ws_close": lambda: extensions_pb2.MainCommandResponse(
         ws_close=extensions_pb2.WsCloseResponse()
     ),
@@ -808,22 +805,6 @@ class GeneratedMoounitExpectationClient:
         )
         self.expect_command(cmd, res, times=times)
 
-    def expect_ws_receive(
-        self,
-        req: extensions_pb2.WsReceiveRequest,
-        response: extensions_pb2.WsReceiveResponse | Callable[[], extensions_pb2.WsReceiveResponse] | None = None,
-        times: int = 1,
-    ) -> None:
-        """Expects host call to ws_receive: Receives the next incoming message frame from an active WebSocket connection."""
-        cmd = extensions_pb2.MainCommand(ws_receive=req)
-        res_val = response if response is not None else extensions_pb2.WsReceiveResponse()
-        res = (
-            (lambda r=res_val: extensions_pb2.MainCommandResponse(ws_receive=r()))
-            if callable(res_val)
-            else extensions_pb2.MainCommandResponse(ws_receive=res_val)
-        )
-        self.expect_command(cmd, res, times=times)
-
     def expect_ws_close(
         self,
         req: extensions_pb2.WsCloseRequest,
@@ -1229,4 +1210,26 @@ class GeneratedMoounitGuestClient(GeneratedMoounitExpectationClient):
         )
         res = self.send_command(cmd)
         return getattr(res, "player_load_track")
+
+    def ws_event(
+        self, req: extensions_pb2.WsEventRequest | None = None
+    ) -> extensions_pb2.WsEventResponse:
+        """Invokes extension method ws_event: Notified when a frame or close event occurs on an active WebSocket connection."""
+        req = req or extensions_pb2.WsEventRequest()
+        cmd = extensions_pb2.ExtensionCommand(
+            package_name=self.package_name, ws_event=req
+        )
+        res = self.send_command(cmd)
+        return getattr(res, "ws_event")
+
+    def process_event(
+        self, req: extensions_pb2.ProcessEventRequest | None = None
+    ) -> extensions_pb2.ProcessEventResponse:
+        """Invokes extension method process_event: Notified when a spawned child process writes to stdout/stderr or exits."""
+        req = req or extensions_pb2.ProcessEventRequest()
+        cmd = extensions_pb2.ExtensionCommand(
+            package_name=self.package_name, process_event=req
+        )
+        res = self.send_command(cmd)
+        return getattr(res, "process_event")
 

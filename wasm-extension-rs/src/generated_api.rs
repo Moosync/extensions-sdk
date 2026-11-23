@@ -1015,26 +1015,6 @@ pub fn ws_send(req: WsSendRequest) -> MoosyncResult<WsSendResponse> {
         Err(MoosyncError::String("Host returned invalid response".into()))
     }
 }
-/// Receives the next incoming message frame from an active WebSocket connection.
-pub fn ws_receive(req: WsReceiveRequest) -> MoosyncResult<WsReceiveResponse> {
-    unsafe {
-        let cmd = MainCommand {
-            command: Some(main_command::Command::WsReceive(req)),
-        };
-        let Prost(res) = raw_host::send_main_command(Prost(cmd))
-            .map_err(|e| MoosyncError::String(e.to_string()))?;
-
-        if let Some(main_command_response::Response::Error(e)) = res.response {
-            return Err(MoosyncError::String(e.message));
-        }
-
-        if let Some(main_command_response::Response::WsReceive(data)) = res.response {
-            return Ok(data);
-        }
-
-        Err(MoosyncError::String("Host returned invalid response".into()))
-    }
-}
 /// Closes an active WebSocket connection with an optional code and reason.
 pub fn ws_close(req: WsCloseRequest) -> MoosyncResult<WsCloseResponse> {
     unsafe {

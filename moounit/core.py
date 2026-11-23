@@ -4,6 +4,7 @@ import platform
 import re
 import sys
 import tempfile
+import threading
 import uuid
 import warnings
 from collections.abc import Callable
@@ -215,11 +216,15 @@ class Moounit(GeneratedMoounitGuestClient):
 
         allowed_paths = {}
         cache_dir = getattr(self, "_cache_dir", None)
-        ext_cache_dir = cache_dir.name if cache_dir is not None else tempfile.gettempdir()
+        ext_cache_dir = (
+            cache_dir.name if cache_dir is not None else tempfile.gettempdir()
+        )
         for p in manifest.permissions.paths:
             resolved_src = re.sub(
                 r"\{([A-Z_][A-Z0-9_]*)\}",
-                lambda m: ext_cache_dir if m.group(1) == "CACHE_DIR" else os.environ.get(m.group(1), ""),
+                lambda m: ext_cache_dir
+                if m.group(1) == "CACHE_DIR"
+                else os.environ.get(m.group(1), ""),
                 p.source,
             )
             temp_dir = tempfile.TemporaryDirectory()
@@ -360,11 +365,26 @@ class Moounit(GeneratedMoounitGuestClient):
 
         sanitize_extension_command(command, self.package_name)
         data = command.SerializeToString()
-        resp = self.plugin.call("handle_extension_command", data)
+        lock = getattr(self, "_plugin_lock", None)
+        if lock is not None:
+            with lock:
+                resp = self.plugin.call("handle_extension_command", data)
+        else:
+            resp = self.plugin.call("handle_extension_command", data)
         self._check_host_exception()
         res_obj = ExtensionCommandResponse.FromString(resp)
         sanitize_extension_response(res_obj, self.package_name)
         return res_obj
+
+    def _on_ws_event(self, req) -> None:
+        self.send_command(
+            ExtensionCommand(package_name=self.package_name, ws_event=req)
+        )
+
+    def _on_process_event(self, req) -> None:
+        self.send_command(
+            ExtensionCommand(package_name=self.package_name, process_event=req)
+        )
 
     def __init__(
         self,
@@ -374,6 +394,7 @@ class Moounit(GeneratedMoounitGuestClient):
         package_name: str | None = None,
     ):
         self.passthrough = passthrough
+        self._plugin_lock = threading.RLock()
         self.recorder = recorder or Recorder()
         self.manager = ExpectationManager(recorder=self.recorder, moounit=self)
         self._host_exception: Exception | None = None
@@ -394,9 +415,12 @@ class Moounit(GeneratedMoounitGuestClient):
         allowed_paths = {p.source: p.target for p in manifest.permissions.paths}
         allowed_hosts = [h.host for h in manifest.permissions.hosts]
         self.socket_manager = RealSocketManager(allowed_paths)
-        self.ws_manager = RealWebSocketManager(allowed_hosts)
+        self.ws_manager = RealWebSocketManager(
+            allowed_hosts, event_callback=self._on_ws_event
+        )
         self.process_manager = RealProcessManager(
-            allowed_binaries=list(manifest.permissions.binaries)
+            allowed_binaries=list(manifest.permissions.binaries),
+            event_callback=self._on_process_event,
         )
         self._load_extension(manifest)
 

@@ -245,3 +245,31 @@ js_test(
     ],
     entry_point = "tests/parse_lrc_test.mjs",
 )
+
+js_test(
+    name = "websocket_test",
+    data = [
+        ":protos_to_lib",
+        ":wasm_extension_js",
+        ":node_modules/@bufbuild/protobuf",
+        ":node_modules/@extism/js-pdk",
+        ":node_modules/fast-text-encoding",
+        ":node_modules/@whatwg-node/fetch",
+        ":node_modules/ts-proto",
+    ],
+    entry_point = "tests/websocket_test.mjs",
+)
+
+js_test(
+    name = "process_test",
+    data = [
+        ":protos_to_lib",
+        ":wasm_extension_js",
+        ":node_modules/@bufbuild/protobuf",
+        ":node_modules/@extism/js-pdk",
+        ":node_modules/fast-text-encoding",
+        ":node_modules/@whatwg-node/fetch",
+        ":node_modules/ts-proto",
+    ],
+    entry_point = "tests/process_test.mjs",
+)

@@ -4,6 +4,7 @@ import {
   ReadProcessStdoutRequest,
   KillProcessRequest,
   GetProcessStatusRequest,
+  ProcessEventRequest,
 } from "./protos/extensions_pb.js";
 import {
   hostSpawnProcess as generatedSpawnProcess,
@@ -13,14 +14,46 @@ import {
   getProcessStatus as generatedGetProcessStatus,
 } from "./generated_api.js";
 
+interface ProcessHandlers {
+  onStdout?: (data: Uint8Array) => void | Promise<void>;
+  onStderr?: (data: Uint8Array) => void | Promise<void>;
+  onExit?: (code: number) => void | Promise<void>;
+}
+
 /**
  * Handle to a spawned child process managed by the host.
  */
 export class ChildProcess {
+  private static handlers = new Map<bigint, ProcessHandlers>();
+
   constructor(
     readonly id: number,
     readonly pid: number,
   ) {}
+
+  static async handleEvent(req: ProcessEventRequest): Promise<void> {
+    const processId = req.processId;
+    const entry = this.handlers.get(processId);
+    if (!req.event.case) return;
+
+    if (req.event.case === "output") {
+      const output = req.event.value;
+      if (output.stdout.length > 0 && entry?.onStdout) {
+        await entry.onStdout(output.stdout);
+      }
+      if (output.stderr.length > 0 && entry?.onStderr) {
+        await entry.onStderr(output.stderr);
+      }
+      return;
+    }
+
+    if (req.event.case === "exited") {
+      this.handlers.delete(processId);
+      if (entry?.onExit) {
+        await entry.onExit(req.event.value);
+      }
+    }
+  }
 
   /**
    * Writes bytes or a UTF-8 string to the child process's standard input stream.
@@ -55,6 +88,37 @@ export class ChildProcess {
   async readStdoutString(maxBytes?: number): Promise<string> {
     const bytes = await this.readStdout(maxBytes);
     return new TextDecoder().decode(bytes);
+  }
+
+  private setHandler<K extends keyof ProcessHandlers>(
+    key: K,
+    callback: ProcessHandlers[K],
+  ): void {
+    const processId = BigInt(this.id);
+    const entry = ChildProcess.handlers.get(processId) ?? {};
+    entry[key] = callback;
+    ChildProcess.handlers.set(processId, entry);
+  }
+
+  /**
+   * Registers a callback for stdout chunks emitted by the child process.
+   */
+  onStdout(callback: (data: Uint8Array) => void | Promise<void>): void {
+    this.setHandler("onStdout", callback);
+  }
+
+  /**
+   * Registers a callback for stderr chunks emitted by the child process.
+   */
+  onStderr(callback: (data: Uint8Array) => void | Promise<void>): void {
+    this.setHandler("onStderr", callback);
+  }
+
+  /**
+   * Registers a callback invoked when the child process exits.
+   */
+  onExit(callback: (code: number) => void | Promise<void>): void {
+    this.setHandler("onExit", callback);
   }
 
   /**

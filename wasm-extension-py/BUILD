@@ -37,6 +37,24 @@ py_test(
     ],
 )
 
+py_test(
+    name = "websocket_test",
+    srcs = ["tests/test_websocket.py"],
+    main = "tests/test_websocket.py",
+    deps = [
+        ":moosync_edk",
+    ],
+)
+
+py_test(
+    name = "process_test",
+    srcs = ["tests/test_process.py"],
+    main = "tests/test_process.py",
+    deps = [
+        ":moosync_edk",
+    ],
+)
+
 genrule(
     name = "doc",
     srcs = glob(["moosync_edk/**/*.py"]) + [

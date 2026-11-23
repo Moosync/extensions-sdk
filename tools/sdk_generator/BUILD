@@ -44,6 +44,7 @@ py_binary(
         "$(rootpath //protos:preferences_proto)",
         "$(rootpath //protos:songs_proto)",
         "$(rootpath //protos:ui_proto)",
+        "$(rootpath @com_google_protobuf//:timestamp_proto)",
     ],
     data = [
         ":all_templates",
@@ -53,6 +54,7 @@ py_binary(
         "//protos:preferences_proto",
         "//protos:songs_proto",
         "//protos:ui_proto",
+        "@com_google_protobuf//:timestamp_proto",
     ],
     main = "generator.py",
     deps = [
@@ -73,6 +75,7 @@ py_test(
         "//protos:preferences_proto",
         "//protos:songs_proto",
         "//protos:ui_proto",
+        "@com_google_protobuf//:timestamp_proto",
     ],
     main = "generator_test.py",
     deps = [

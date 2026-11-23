@@ -1,4 +1,4 @@
-load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_library", "py_test")
 load("@rules_python//python/entry_points:py_console_script_binary.bzl", "py_console_script_binary")
 
 exports_files(
@@ -7,6 +7,27 @@ exports_files(
         ".pylintrc",
     ],
     visibility = ["//visibility:public"],
+)
+
+py_library(
+    name = "elf_align_lib",
+    srcs = ["elf_align.py"],
+    imports = [".."],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "elf_align",
+    srcs = ["elf_align.py"],
+    main = "elf_align.py",
+    visibility = ["//visibility:public"],
+)
+
+py_test(
+    name = "elf_align_test",
+    srcs = ["test_elf_align.py"],
+    main = "test_elf_align.py",
+    deps = [":elf_align_lib"],
 )
 
 py_binary(

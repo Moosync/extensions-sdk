@@ -63,6 +63,7 @@ proto_library(
     deps = [
         "@com_google_protobuf//:descriptor_proto",
         "@com_google_protobuf//:duration_proto",
+        "@com_google_protobuf//:timestamp_proto",
         "@moosync//core/types/protos:extensions_proto",
     ],
 )

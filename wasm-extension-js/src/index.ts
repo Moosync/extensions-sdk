@@ -24,8 +24,9 @@ export * from "./generated_events";
 export type { Extension } from "./generated_events";
 export { ChildProcess, spawnProcess } from "./process";
 export { SocketClient, openSock } from "./socket";
-export { WebSocketClient } from "./websocket";
-export type { WebSocketMessage } from "./websocket";
+export { WebSocketClient, WebSocketManager } from "./websocket";
+export type { WebSocketMessage, WsCloseEvent } from "./websocket";
+import { handleInternalEvent } from "./generated_events";
 export { getPlatform } from "./platform";
 export type { PlatformInfo } from "./platform";
 export * from "./lrc";
@@ -122,6 +123,9 @@ export async function handle(
   command: ExtensionCommand,
 ): Promise<ExtensionCommandResponse | undefined> {
   if (!command.event.case) return undefined;
+
+  const internalResp = await handleInternalEvent(command);
+  if (internalResp) return internalResp;
 
   const caseStr = command.event.case;
   const payload = command.event.value;

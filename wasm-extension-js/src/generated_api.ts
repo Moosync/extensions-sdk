@@ -85,8 +85,6 @@ import {
   WsConnectResponse,
   WsSendRequest,
   WsSendResponse,
-  WsReceiveRequest,
-  WsReceiveResponse,
   WsCloseRequest,
   WsCloseResponse,
 } from "./protos/extensions_pb.js";
@@ -825,24 +823,6 @@ export async function wsSend(req?: WsSendRequest): Promise<WsSendResponse | unde
     })
   );
   if (response.response.case === "wsSend") {
-    return response.response.value;
-  }
-  return undefined;
-}
-
-/**
- * Receives the next incoming message frame from an active WebSocket connection.
- */
-export async function wsReceive(req?: WsReceiveRequest): Promise<WsReceiveResponse | undefined> {
-  const response = await sendMainCommand(
-    new MainCommand({
-      command: {
-        case: "wsReceive",
-        value: req ?? new WsReceiveRequest(),
-      },
-    })
-  );
-  if (response.response.case === "wsReceive") {
     return response.response.value;
   }
   return undefined;

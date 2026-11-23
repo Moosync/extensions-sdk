@@ -5,11 +5,13 @@ import re
 import socket
 import ssl
 import struct
+import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 from core.types.protos.extensions_pb2 import (
     BatchHttpRequest,
     BatchHttpResponse,
@@ -18,6 +20,8 @@ from core.types.protos.extensions_pb2 import (
     HttpResult,
     OpenClientFdRequest,
     OpenClientFdResponse,
+    ProcessEventRequest,
+    ProcessOutput,
     ReadSockRequest,
     ReadSockResponse,
     SystemTimeRequest,
@@ -26,10 +30,10 @@ from core.types.protos.extensions_pb2 import (
     WriteSockResponse,
     WsCloseRequest,
     WsCloseResponse,
+    WsClosed,
     WsConnectRequest,
     WsConnectResponse,
-    WsReceiveRequest,
-    WsReceiveResponse,
+    WsEventRequest,
     WsSendRequest,
     WsSendResponse,
 )
@@ -226,10 +230,56 @@ def is_host_allowed(host: str, allowed_hosts: list[str] | None) -> bool:
 
 
 class RealWebSocketManager:
-    def __init__(self, allowed_hosts: list[str] | None = None):
+    def __init__(self, allowed_hosts: list[str] | None = None, event_callback=None):
         self.allowed_hosts = allowed_hosts
+        self.event_callback = event_callback
         self.connections: dict[int, Any] = {}
+        self._stop_events: dict[int, threading.Event] = {}
+        self._threads: dict[int, threading.Thread] = {}
         self.next_id = 1
+
+    def _reader_loop(self, conn_id: int, ws: Any, stop_event: threading.Event) -> None:
+        import websocket
+
+        ws.settimeout(0.2)
+        while not stop_event.is_set():
+            try:
+                opcode, data = ws.recv_data()
+                if opcode == websocket.ABNF.OPCODE_TEXT:
+                    if self.event_callback:
+                        self.event_callback(
+                            WsEventRequest(
+                                connection_id=conn_id,
+                                text=data.decode("utf-8", errors="replace"),
+                            )
+                        )
+                elif opcode == websocket.ABNF.OPCODE_BINARY:
+                    if self.event_callback:
+                        self.event_callback(
+                            WsEventRequest(connection_id=conn_id, binary=data)
+                        )
+                elif opcode == websocket.ABNF.OPCODE_PING:
+                    ws.pong(data)
+                elif opcode == websocket.ABNF.OPCODE_CLOSE:
+                    self._emit_closed(conn_id, stop_event)
+                    break
+            except (websocket.WebSocketTimeoutException, socket.timeout):
+                continue
+            except (websocket.WebSocketConnectionClosedException, ConnectionError):
+                self._emit_closed(conn_id, stop_event)
+                break
+            except Exception as err:
+                self._emit_closed(conn_id, stop_event, error=str(err))
+                break
+
+    def _emit_closed(
+        self, conn_id: int, stop_event: threading.Event, error: str | None = None
+    ) -> None:
+        self.connections.pop(conn_id, None)
+        if self.event_callback and not stop_event.is_set():
+            self.event_callback(
+                WsEventRequest(connection_id=conn_id, closed=WsClosed(error=error))
+            )
 
     def ws_connect(self, req: WsConnectRequest) -> WsConnectResponse:
         import websocket
@@ -255,6 +305,16 @@ class RealWebSocketManager:
         conn_id = self.next_id
         self.next_id += 1
         self.connections[conn_id] = ws
+        if self.event_callback is not None:
+            stop_event = threading.Event()
+            self._stop_events[conn_id] = stop_event
+            thread = threading.Thread(
+                target=self._reader_loop,
+                args=(conn_id, ws, stop_event),
+                daemon=True,
+            )
+            self._threads[conn_id] = thread
+            thread.start()
         return WsConnectResponse(connection_id=conn_id)
 
     def ws_send(self, req: WsSendRequest) -> WsSendResponse:
@@ -273,45 +333,12 @@ class RealWebSocketManager:
 
         return WsSendResponse(success=True)
 
-    def ws_receive(self, req: WsReceiveRequest) -> WsReceiveResponse:
-        import websocket
-
-        conn_id = req.connection_id
-        ws = self.connections.get(conn_id)
-        if not ws:
-            raise ConnectionError(f"WebSocket connection {conn_id} not found")
-
-        timeout_s = (
-            (req.timeout_ms / 1000.0)
-            if req.HasField("timeout_ms") and req.timeout_ms > 0
-            else 1.0
-        )
-        ws.settimeout(timeout_s)
-
-        try:
-            opcode, data = ws.recv_data()
-            if opcode == websocket.ABNF.OPCODE_TEXT:
-                text_str = data.decode("utf-8", errors="replace")
-                return WsReceiveResponse(text=text_str)
-            elif opcode == websocket.ABNF.OPCODE_BINARY:
-                return WsReceiveResponse(binary=data)
-            elif opcode == websocket.ABNF.OPCODE_CLOSE:
-                self.ws_close(WsCloseRequest(connection_id=conn_id))
-                return WsReceiveResponse()
-            elif opcode == websocket.ABNF.OPCODE_PING:
-                ws.pong(data)
-                return self.ws_receive(req)
-        except (websocket.WebSocketTimeoutException, socket.timeout):
-            return WsReceiveResponse()
-        except (websocket.WebSocketConnectionClosedException, ConnectionError):
-            return WsReceiveResponse()
-        except Exception:
-            return WsReceiveResponse()
-
-        return WsReceiveResponse()
-
     def ws_close(self, req: WsCloseRequest) -> WsCloseResponse:
         conn_id = req.connection_id
+        stop_event = self._stop_events.pop(conn_id, None)
+        if stop_event:
+            stop_event.set()
+        self._threads.pop(conn_id, None)
         ws = self.connections.pop(conn_id, None)
         if ws:
             try:
@@ -323,6 +350,10 @@ class RealWebSocketManager:
         return WsCloseResponse(success=True)
 
     def close_all(self):
+        for stop_event in list(self._stop_events.values()):
+            stop_event.set()
+        self._stop_events.clear()
+        self._threads.clear()
         for ws in list(self.connections.values()):
             try:
                 ws.close()
@@ -355,18 +386,26 @@ SUPPORTED_HASH_ALGORITHMS = {
 
 
 class RealProcessManager:
-    def __init__(self, allowed_binaries: list[BinaryPermission] | None = None):
+    def __init__(
+        self,
+        allowed_binaries: list[BinaryPermission] | None = None,
+        event_callback: Any = None,
+    ):
         self.processes: dict[int, subprocess.Popen] = {}
         self.mapped_paths: dict[str, str] = {}
         self.allowed_binaries: list[BinaryPermission] = allowed_binaries or []
+        self.event_callback = event_callback
+        self._stdout_buffers: dict[int, bytearray] = {}
+        self._buffer_locks: dict[int, threading.Lock] = {}
+        self._threads: dict[int, list[threading.Thread]] = {}
         self.next_id = 1
 
     def resolve_path(self, path: str) -> str:
         for guest_path, host_path in self.mapped_paths.items():
             if path == guest_path:
                 return host_path
-            if path.startswith(guest_path.rstrip('/') + '/'):
-                rel = path[len(guest_path.rstrip('/') + '/'):]
+            if path.startswith(guest_path.rstrip("/") + "/"):
+                rel = path[len(guest_path.rstrip("/") + "/") :]
                 return os.path.join(host_path, rel)
         return path
 
@@ -396,7 +435,9 @@ class RealProcessManager:
                 matching_perm = perm
                 break
             resolved_perm = self.resolve_path(perm.name)
-            if os.path.realpath(resolved_perm) == real_bin or real_bin.endswith(perm.name):
+            if os.path.realpath(resolved_perm) == real_bin or real_bin.endswith(
+                perm.name
+            ):
                 matching_perm = perm
                 break
 
@@ -426,6 +467,43 @@ class RealProcessManager:
                     f"expected {expected_hash}, got {computed}"
                 )
 
+    def _stream_reader(
+        self, proc_id: int, pipe: Any, is_stderr: bool, buf_lock: Any
+    ) -> None:
+        try:
+            while True:
+                chunk = os.read(pipe.fileno(), 4096)
+                if not chunk:
+                    break
+                if not is_stderr and buf_lock is not None:
+                    with buf_lock:
+                        buf = self._stdout_buffers.setdefault(proc_id, bytearray())
+                        if len(buf) + len(chunk) > 1024 * 1024:
+                            del buf[: (len(buf) + len(chunk)) - 1024 * 1024]
+                        buf.extend(chunk)
+                if self.event_callback is not None:
+                    output = (
+                        ProcessOutput(stderr=chunk)
+                        if is_stderr
+                        else ProcessOutput(stdout=chunk)
+                    )
+                    self.event_callback(
+                        ProcessEventRequest(process_id=proc_id, output=output)
+                    )
+        except Exception:
+            pass
+
+    def _wait_and_emit_exit(
+        self, proc_id: int, proc: subprocess.Popen, io_threads: list[threading.Thread]
+    ) -> None:
+        code = proc.wait()
+        for t in io_threads:
+            t.join(timeout=1.0)
+        if self.event_callback is not None:
+            self.event_callback(
+                ProcessEventRequest(process_id=proc_id, exited=code)
+            )
+
     def spawn_process(self, req: SpawnProcessRequest) -> SpawnProcessResponse:
         resolved_bin = self.resolve_path(req.path)
         self.verify_binary_hash(resolved_bin, req.path)
@@ -438,22 +516,53 @@ class RealProcessManager:
         cmd = [resolved_bin] + resolved_args
         env = dict(os.environ)
         env.update(req.env)
+        has_callback = self.event_callback is not None
         proc = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stderr=subprocess.PIPE if has_callback else subprocess.STDOUT,
             env=env,
         )
         proc_id = self.next_id
         self.next_id += 1
         self.processes[proc_id] = proc
+        if has_callback:
+            buf_lock = threading.Lock()
+            self._buffer_locks[proc_id] = buf_lock
+            self._stdout_buffers[proc_id] = bytearray()
+            io_threads: list[threading.Thread] = []
+            if proc.stdout is not None:
+                t_out = threading.Thread(
+                    target=self._stream_reader,
+                    args=(proc_id, proc.stdout, False, buf_lock),
+                    daemon=True,
+                )
+                t_out.start()
+                io_threads.append(t_out)
+            if proc.stderr is not None:
+                t_err = threading.Thread(
+                    target=self._stream_reader,
+                    args=(proc_id, proc.stderr, True, None),
+                    daemon=True,
+                )
+                t_err.start()
+                io_threads.append(t_err)
+            t_wait = threading.Thread(
+                target=self._wait_and_emit_exit,
+                args=(proc_id, proc, io_threads),
+                daemon=True,
+            )
+            t_wait.start()
+            self._threads[proc_id] = [*io_threads, t_wait]
         return SpawnProcessResponse(
             process_id=proc_id,
             pid=proc.pid,
         )
 
-    def write_process_stdin(self, req: WriteProcessStdinRequest) -> WriteProcessStdinResponse:
+    def write_process_stdin(
+        self, req: WriteProcessStdinRequest
+    ) -> WriteProcessStdinResponse:
         proc = self.processes.get(req.process_id)
         if not proc or not proc.stdin or proc.poll() is not None:
             return WriteProcessStdinResponse(bytes_written=0)
@@ -464,11 +573,24 @@ class RealProcessManager:
         except Exception:
             return WriteProcessStdinResponse(bytes_written=0)
 
-    def read_process_stdout(self, req: ReadProcessStdoutRequest) -> ReadProcessStdoutResponse:
+    def read_process_stdout(
+        self, req: ReadProcessStdoutRequest
+    ) -> ReadProcessStdoutResponse:
         proc = self.processes.get(req.process_id)
         if not proc or not proc.stdout:
-            return ReadProcessStdoutResponse(data=b)
-        max_bytes = req.max_bytes if req.HasField(max_bytes) and req.max_bytes > 0 else 4096
+            return ReadProcessStdoutResponse(data=b"")
+        max_bytes = (
+            req.max_bytes if req.HasField("max_bytes") and req.max_bytes > 0 else 4096
+        )
+        buf_lock = self._buffer_locks.get(req.process_id)
+        if buf_lock is not None:
+            with buf_lock:
+                buf = self._stdout_buffers.get(req.process_id)
+                if not buf:
+                    return ReadProcessStdoutResponse(data=b"")
+                data = bytes(buf[:max_bytes])
+                del buf[:max_bytes]
+                return ReadProcessStdoutResponse(data=data)
         try:
             rlist, _, _ = select.select([proc.stdout], [], [], 0.1)
             if rlist:
@@ -476,7 +598,7 @@ class RealProcessManager:
                 return ReadProcessStdoutResponse(data=data)
         except Exception:
             pass
-        return ReadProcessStdoutResponse(data=b)
+        return ReadProcessStdoutResponse(data=b"")
 
     def kill_process(self, req: KillProcessRequest) -> KillProcessResponse:
         proc = self.processes.get(req.process_id)
@@ -493,7 +615,9 @@ class RealProcessManager:
             except Exception:
                 return KillProcessResponse(success=False)
 
-    def get_process_status(self, req: GetProcessStatusRequest) -> GetProcessStatusResponse:
+    def get_process_status(
+        self, req: GetProcessStatusRequest
+    ) -> GetProcessStatusResponse:
         proc = self.processes.get(req.process_id)
         if not proc:
             return GetProcessStatusResponse(is_running=False)

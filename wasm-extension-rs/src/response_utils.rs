@@ -93,6 +93,7 @@ pub fn parse_lrc(lrc_text: &str) -> Result<Lyrics, LrcParseError> {
     Ok(Lyrics {
         lines,
         is_synced: has_timestamps,
+        ..Default::default()
     })
 }
 

@@ -154,6 +154,14 @@ pub fn handle_command(
                     let res = ext.player_load_track(req).map_err(|e| extism_pdk::Error::msg(format!("Error: {:?}", e)))?;
                     Response::PlayerLoadTrack(res)
                 }
+                Event::WsEvent(req) => {
+                    crate::websocket::WebSocketManager::handle_event(req);
+                    Response::WsEvent(WsEventResponse {})
+                }
+                Event::ProcessEvent(req) => {
+                    crate::process::ChildProcess::handle_event(req);
+                    Response::ProcessEvent(ProcessEventResponse {})
+                }
                 _ => return Err(extism_pdk::Error::msg("Unhandled event")),
             };
             response.response = Some(resp);

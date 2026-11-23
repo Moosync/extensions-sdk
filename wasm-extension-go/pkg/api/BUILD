@@ -15,6 +15,7 @@ exports_files([
     "generated_api.go",
     "generated_exports.go",
     "platform.go",
+    "process.go",
     "socket.go",
     "websocket.go",
 ])
@@ -27,6 +28,7 @@ go_library(
         "generated_api.go",
         "generated_exports.go",
         "platform.go",
+        "process.go",
         "socket.go",
         "websocket.go",
     ],
@@ -48,6 +50,10 @@ go_library(
 
 go_test(
     name = "api_test",
-    srcs = ["api_test.go"],
+    srcs = [
+        "api_test.go",
+        "process_test.go",
+        "websocket_test.go",
+    ],
     embed = [":api"],
 )

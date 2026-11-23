@@ -20,6 +20,21 @@ def handle_extension_command() -> int:
     if which is None:
         return 0
 
+    if which == "ws_event":
+        import moosync_edk.websocket
+        moosync_edk.websocket.WebSocketManager._handle_event(getattr(cmd, "ws_event"))
+        response = extensions_pb2.ExtensionCommandResponse()
+        getattr(response, "ws_event").SetInParent()
+        extism.output_bytes(response.SerializeToString())
+        return 0
+    if which == "process_event":
+        import moosync_edk.process
+        moosync_edk.process.ChildProcess._handle_event(getattr(cmd, "process_event"))
+        response = extensions_pb2.ExtensionCommandResponse()
+        getattr(response, "process_event").SetInParent()
+        extism.output_bytes(response.SerializeToString())
+        return 0
+
     response = extensions_pb2.ExtensionCommandResponse()
 
     if which == "get_remote_url":

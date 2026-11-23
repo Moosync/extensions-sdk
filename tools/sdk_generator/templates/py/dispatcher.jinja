@@ -20,6 +20,16 @@ def handle_extension_command() -> int:
     if which is None:
         return 0
 
+{% for m in internal_guest_methods %}
+    if which == "{{ m.oneof_variant }}":
+        import {{ m.sdk_manager.py_module }}
+        {{ m.sdk_manager.py }}._handle_event(getattr(cmd, "{{ m.oneof_variant }}"))
+        response = extensions_pb2.ExtensionCommandResponse()
+        getattr(response, "{{ m.resp_oneof_variant }}").SetInParent()
+        extism.output_bytes(response.SerializeToString())
+        return 0
+{% endfor %}
+
     response = extensions_pb2.ExtensionCommandResponse()
 
 {% for m in guest_methods %}

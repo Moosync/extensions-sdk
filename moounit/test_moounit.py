@@ -1477,3 +1477,112 @@ def test_process_manager_binary_hash_validation(tmp_path):
         empty_hash_manager.spawn_process(
             SpawnProcessRequest(path="/guest/bin/helper.sh")
         )
+
+
+def test_real_websocket_manager_pushes_events():
+    import base64
+    import socket
+    import threading
+    from core.types.protos.extensions_pb2 import WsConnectRequest, WsCloseRequest
+    from moounit.passthrough import RealWebSocketManager
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    port = server.getsockname()[1]
+
+    def handle_client():
+        conn, _ = server.accept()
+        req = conn.recv(4096).decode("utf-8", errors="ignore")
+        key = ""
+        for line in req.splitlines():
+            if line.lower().startswith("sec-websocket-key:"):
+                key = line.split(":", 1)[1].strip()
+        accept = base64.b64encode(
+            hashlib.sha1(
+                (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()
+            ).digest()
+        ).decode()
+        conn.sendall(
+            (
+                "HTTP/1.1 101 Switching Protocols\r\n"
+                "Upgrade: websocket\r\n"
+                "Connection: Upgrade\r\n"
+                f"Sec-WebSocket-Accept: {accept}\r\n\r\n"
+            ).encode()
+        )
+        # Send text frame "pong"
+        payload = b"pong"
+        conn.sendall(bytes([0x81, len(payload)]) + payload)
+        # Send binary frame b"\x01\x02"
+        bin_payload = b"\x01\x02"
+        conn.sendall(bytes([0x82, len(bin_payload)]) + bin_payload)
+        # Send close frame
+        conn.sendall(bytes([0x88, 0x00]))
+        conn.close()
+        server.close()
+
+    t = threading.Thread(target=handle_client, daemon=True)
+    t.start()
+
+    events = []
+    done = threading.Event()
+
+    def on_event(ev):
+        events.append(ev)
+        if ev.WhichOneof("event") == "closed":
+            done.set()
+
+    manager = RealWebSocketManager(["127.0.0.1"], event_callback=on_event)
+    resp = manager.ws_connect(WsConnectRequest(url=f"ws://127.0.0.1:{port}/ws"))
+    assert resp.connection_id == 1
+    assert done.wait(timeout=3.0)
+    manager.ws_close(WsCloseRequest(connection_id=resp.connection_id))
+
+    assert len(events) == 3
+    assert events[0].WhichOneof("event") == "text"
+    assert events[0].text == "pong"
+    assert events[1].WhichOneof("event") == "binary"
+    assert events[1].binary == b"\x01\x02"
+    assert events[2].WhichOneof("event") == "closed"
+
+
+def test_real_process_manager_pushes_events(tmp_path):
+    import threading
+    from moounit.passthrough import RealProcessManager
+
+    script = tmp_path / "emit.sh"
+    script.write_text("#!/bin/sh\necho out_msg\necho err_msg >&2\nexit 7\n")
+    script.chmod(0o755)
+    raw = script.read_bytes()
+    perm = BinaryPermission(
+        name="emit.sh",
+        hashes={"sha256": hashlib.sha256(raw).hexdigest()},
+        justification="test",
+    )
+
+    events = []
+    done = threading.Event()
+
+    def on_event(ev):
+        events.append(ev)
+        if ev.WhichOneof("event") == "exited":
+            done.set()
+
+    manager = RealProcessManager(allowed_binaries=[perm], event_callback=on_event)
+    manager.mapped_paths = {"/guest/bin": str(tmp_path)}
+    resp = manager.spawn_process(SpawnProcessRequest(path="/guest/bin/emit.sh"))
+    assert resp.process_id == 1
+    assert done.wait(timeout=3.0)
+    manager.close_all()
+
+    stdout = b"".join(
+        e.output.stdout for e in events if e.WhichOneof("event") == "output"
+    )
+    stderr = b"".join(
+        e.output.stderr for e in events if e.WhichOneof("event") == "output"
+    )
+    exits = [e.exited for e in events if e.WhichOneof("event") == "exited"]
+    assert stdout == b"out_msg\n"
+    assert stderr == b"err_msg\n"
+    assert exits == [7]

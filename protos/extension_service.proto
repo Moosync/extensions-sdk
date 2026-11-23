@@ -21,9 +21,17 @@ package moosync.types;
 import "core/types/protos/extensions.proto";
 import "google/protobuf/descriptor.proto";
 
+message SdkManagerOptions {
+  string rust = 1;
+  string go = 2;
+  string py = 3;
+  string ts = 4;
+}
+
 extend google.protobuf.MethodOptions {
   optional bool is_event_notification = 60001;
   optional bool has_wrapper = 60004;
+  optional SdkManagerOptions sdk_manager = 60005;
 }
 
 service ExtensionHostService {
@@ -163,9 +171,6 @@ service ExtensionHostService {
 
   // Sends a text or binary message through an active WebSocket connection.
   rpc WsSend(WsSendRequest) returns (WsSendResponse);
-
-  // Receives the next incoming message frame from an active WebSocket connection.
-  rpc WsReceive(WsReceiveRequest) returns (WsReceiveResponse);
 
   // Closes an active WebSocket connection with an optional code and reason.
   rpc WsClose(WsCloseRequest) returns (WsCloseResponse);
@@ -310,4 +315,30 @@ service PlayerProviderService {
 
   // Commands the custom player engine to load a track for playback.
   rpc PlayerLoadTrack(PlayerLoadTrackRequest) returns (PlayerLoadTrackResponse);
+}
+
+service WebSocketEventsService {
+  // Notified when a frame or close event occurs on an active WebSocket connection.
+  rpc WsEvent(WsEventRequest) returns (WsEventResponse) {
+    option (moosync.types.is_event_notification) = true;
+    option (moosync.types.sdk_manager) = {
+      rust: "crate::websocket::WebSocketManager"
+      go: "getWebSocketManager()"
+      py: "moosync_edk.websocket.WebSocketManager"
+      ts: "./websocket.js.WebSocketManager"
+    };
+  }
+}
+
+service ProcessEventsService {
+  // Notified when a spawned child process writes to stdout/stderr or exits.
+  rpc ProcessEvent(ProcessEventRequest) returns (ProcessEventResponse) {
+    option (moosync.types.is_event_notification) = true;
+    option (moosync.types.sdk_manager) = {
+      rust: "crate::process::ChildProcess"
+      go: "defaultChildProcess"
+      py: "moosync_edk.process.ChildProcess"
+      ts: "./process.js.ChildProcess"
+    };
+  }
 }

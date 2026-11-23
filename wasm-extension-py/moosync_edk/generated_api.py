@@ -657,19 +657,6 @@ def ws_send(req: extensions_pb2.WsSendRequest | None = None) -> extensions_pb2.W
     if which == "ws_send":
         return getattr(res, "ws_send")
     raise RuntimeError(f"Unexpected response variant: {which}")
-def ws_receive(req: extensions_pb2.WsReceiveRequest | None = None) -> extensions_pb2.WsReceiveResponse:
-    """Receives the next incoming message frame from an active WebSocket connection."""
-    if req is None:
-        req = extensions_pb2.WsReceiveRequest()
-    cmd = extensions_pb2.MainCommand()
-    getattr(cmd, "ws_receive").CopyFrom(req)
-    res = send_main_command(cmd)
-    which = res.WhichOneof("response")
-    if which == "error":
-        raise RuntimeError(f"Host error: {res.error.message}")
-    if which == "ws_receive":
-        return getattr(res, "ws_receive")
-    raise RuntimeError(f"Unexpected response variant: {which}")
 def ws_close(req: extensions_pb2.WsCloseRequest | None = None) -> extensions_pb2.WsCloseResponse:
     """Closes an active WebSocket connection with an optional code and reason."""
     if req is None:
@@ -810,9 +797,6 @@ class ExtensionApi:
     def ws_send(self, req: extensions_pb2.WsSendRequest | None = None) -> extensions_pb2.WsSendResponse:
         """Sends a text or binary message through an active WebSocket connection."""
         return ws_send(req)
-    def ws_receive(self, req: extensions_pb2.WsReceiveRequest | None = None) -> extensions_pb2.WsReceiveResponse:
-        """Receives the next incoming message frame from an active WebSocket connection."""
-        return ws_receive(req)
     def ws_close(self, req: extensions_pb2.WsCloseRequest | None = None) -> extensions_pb2.WsCloseResponse:
         """Closes an active WebSocket connection with an optional code and reason."""
         return ws_close(req)

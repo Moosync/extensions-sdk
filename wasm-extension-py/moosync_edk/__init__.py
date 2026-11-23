@@ -61,7 +61,7 @@ from .generated_dispatcher import *
 from .platform import PlatformInfo, get_platform
 from .cache import get_cache, set_cache
 from .socket import SocketClient, open_sock
-from .websocket import WebSocketClient, WebSocketMessage
+from .websocket import WebSocketClient, WebSocketManager, WebSocketMessage, WsCloseEvent
 from .lrc import parse_lrc
 from .http import (
     HttpRequest,

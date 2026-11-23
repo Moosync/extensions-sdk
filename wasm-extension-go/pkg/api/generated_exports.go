@@ -585,6 +585,16 @@ func handle_extension_command() int32 {
 			pdk.SetError(errors.New("Not implemented"))
 			return 1
 		}
+	case *extensions.ExtensionCommand_WsEvent:
+		getWebSocketManager().handleEvent(e.WsEvent)
+		resp.Response = &extensions.ExtensionCommandResponse_WsEvent{
+			WsEvent: &extensions.WsEventResponse{},
+		}
+	case *extensions.ExtensionCommand_ProcessEvent:
+		defaultChildProcess.handleEvent(e.ProcessEvent)
+		resp.Response = &extensions.ExtensionCommandResponse_ProcessEvent{
+			ProcessEvent: &extensions.ProcessEventResponse{},
+		}
 	default:
 		pdk.SetError(errors.New("Unhandled event"))
 		return 1

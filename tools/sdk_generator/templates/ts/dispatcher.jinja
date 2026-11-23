@@ -2,11 +2,16 @@
 // Regenerate with: bazel run //tools/sdk_generator:update
 
 import {
+  ExtensionCommand,
+  ExtensionCommandResponse,
 {% for m in guest_methods %}
   {{ m.req_type }},
   {{ m.resp_type }},
 {% endfor %}
 } from "./protos/extensions_pb.js";
+{% for m in internal_guest_methods %}
+import { {{ m.sdk_manager.ts }} } from "{{ m.sdk_manager.ts_module }}";
+{% endfor %}
 
 {% for s in guest_services %}
 export interface {{ s.trait_name }} {
@@ -46,3 +51,20 @@ export interface ExtensionEventMap extends
   {{ s.trait_name }}Events{% if not loop.last %},{% endif %}
 {% endfor %}
 {}
+
+export async function handleInternalEvent(
+  command: ExtensionCommand,
+): Promise<ExtensionCommandResponse | undefined> {
+{% for m in internal_guest_methods %}
+  if (command.event.case === "{{ m.camel_name }}" && command.event.value) {
+    await {{ m.sdk_manager.ts }}.handleEvent(command.event.value);
+    return new ExtensionCommandResponse({
+      response: {
+        case: "{{ m.camel_name }}",
+        value: {},
+      },
+    });
+  }
+{% endfor %}
+  return undefined;
+}

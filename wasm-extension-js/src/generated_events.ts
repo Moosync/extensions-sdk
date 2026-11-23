@@ -2,6 +2,8 @@
 // Regenerate with: bazel run //tools/sdk_generator:update
 
 import {
+  ExtensionCommand,
+  ExtensionCommandResponse,
   GetRemoteUrlRequest,
   GetRemoteUrlResponse,
   RequestedSearchResultRequest,
@@ -73,6 +75,8 @@ import {
   PlayerLoadTrackRequest,
   PlayerLoadTrackResponse,
 } from "./protos/extensions_pb.js";
+import { WebSocketManager } from "./websocket.js";
+import { ChildProcess } from "./process.js";
 
 export interface Provider {
   /**
@@ -506,3 +510,27 @@ export interface Extension extends
 
 export interface ExtensionEventMap extends
   ProviderEvents,  AccountsEvents,  ContextMenuEvents,  PlayerEventsEvents,  DatabaseEventsEvents,  PreferenceEventsEvents,  PlayerProviderEvents{}
+
+export async function handleInternalEvent(
+  command: ExtensionCommand,
+): Promise<ExtensionCommandResponse | undefined> {
+  if (command.event.case === "wsEvent" && command.event.value) {
+    await WebSocketManager.handleEvent(command.event.value);
+    return new ExtensionCommandResponse({
+      response: {
+        case: "wsEvent",
+        value: {},
+      },
+    });
+  }
+  if (command.event.case === "processEvent" && command.event.value) {
+    await ChildProcess.handleEvent(command.event.value);
+    return new ExtensionCommandResponse({
+      response: {
+        case: "processEvent",
+        value: {},
+      },
+    });
+  }
+  return undefined;
+}
