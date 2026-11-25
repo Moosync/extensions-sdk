@@ -4,6 +4,9 @@ set -euo pipefail
 WORKSPACE_DIR="$(git rev-parse --show-toplevel 2>/dev/null || jj root 2>/dev/null || pwd)"
 cd "$WORKSPACE_DIR"
 
+echo "=== Checking MODULE.bazel Git Overrides ==="
+ANDROID_HOME="" ANDROID_SDK_ROOT="" bazel run //tools:check_git_override
+
 echo "=== Updating Moosync SDKs from Protobuf RPC definitions ==="
 ANDROID_HOME="" ANDROID_SDK_ROOT="" bazel run //tools/sdk_generator:update
 

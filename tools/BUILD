@@ -38,6 +38,13 @@ py_binary(
 )
 
 py_binary(
+    name = "check_git_override",
+    srcs = ["check_git_override.py"],
+    main = "check_git_override.py",
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
     name = "scaffold",
     srcs = ["scaffold.py"],
     data = glob(["templates/**"]),
